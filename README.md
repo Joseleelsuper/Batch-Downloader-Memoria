@@ -37,9 +37,9 @@ Esta memoria está licenciada bajo la licencia Creative Commons Attribution-NonC
     <tr>
         <td align="center">
             <a href="https://github.com/JoseManuelAroca">
-                <img src="https://github.com/JoseManuelAroca.png" width="100px;" alt="José Manuel Aroca"/>
+                <img src="https://github.com/JoseManuelAroca.png" width="100px;" alt="José Manuel Aroca Fernández"/>
                 <br />
-                <sub><b>José Manuel Aroca</b></sub>
+                <sub><b>José Manuel Aroca Fernández</b></sub>
             </a>
         </td>
         <td align="center">
