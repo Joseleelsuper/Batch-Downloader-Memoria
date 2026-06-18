@@ -1,0 +1,63 @@
+sequenceDiagram
+    actor U as Usuario
+    participant F as Frontend (Astro)
+    participant A as API Backend
+    participant DB as PostgreSQL
+    participant C as Redis Cache
+    participant Q as Cola BullMQ
+    participant W as Worker
+    participant R as Resolver
+    participant O as Fuente oficial
+    participant Z as Generador ZIP
+
+    U->>F: Busca y selecciona aplicaciones
+    F->>A: Solicitar catálogo / búsqueda / filtros
+    A->>DB: Leer aplicaciones disponibles
+    DB-->>A: Lista de aplicaciones
+    A-->>F: Mostrar resultados
+
+    U->>F: Selecciona apps y pulsa "Generar ZIP"
+    F->>A: Enviar selección + SO + arquitectura + región
+
+    A->>A: Validar selección
+    A->>Q: Crear job de descarga
+    Q-->>A: jobId
+    A-->>F: Confirmar creación del job
+
+    F->>A: Consultar progreso(jobId)
+    A->>Q: Obtener estado inicial
+    Q-->>A: queued / resolving_urls
+    A-->>F: Estado del job
+
+    Q->>W: Iniciar procesamiento del job
+    loop Por cada app seleccionada
+        W->>C: Buscar URL resuelta en caché
+        alt URL en caché válida
+            C-->>W: URL oficial resuelta
+        else No hay caché o está caducada
+            W->>R: Resolver instalador oficial
+            R->>O: Consultar página oficial / descargar metadatos
+            O-->>R: URL final del instalador
+            R-->>W: URL resuelta + metadatos
+            W->>C: Guardar resultado en caché
+        end
+
+        W->>O: Descargar instalador temporalmente
+        O-->>W: Archivo temporal descargado
+    end
+
+    W->>Z: Crear ZIP con instaladores + manifest.json + README.txt
+    Z-->>W: ZIP generado
+    W->>Q: Actualizar estado = ready
+
+    F->>A: Consultar progreso(jobId)
+    A->>Q: Obtener estado final
+    Q-->>A: ready
+    A-->>F: ZIP listo para descargar
+
+    U->>F: Pulsar "Descargar ZIP"
+    F->>A: Solicitar descarga(jobId)
+    A-->>F: Entregar archivo ZIP
+    F-->>U: Descarga del ZIP
+
+    W->>W: Eliminar instaladores temporales y limpiar job

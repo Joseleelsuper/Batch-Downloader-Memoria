@@ -1,0 +1,35 @@
+sequenceDiagram
+    actor U as Usuario
+    participant F as Frontend
+    participant A as API Backend
+    participant E as Servicio de Embeddings
+    participant V as PostgreSQL + pgvector
+    participant DB as PostgreSQL
+    participant L as LLM embebido/local
+    participant Z as Validador Zod
+
+    U->>F: Escribe consulta en lenguaje natural
+    Note over U,F: Ejemplo: "apps para programar en Java en Windows"
+    F->>A: Enviar consulta + filtros (SO, arquitectura, categoría)
+
+    A->>E: Generar embedding de la consulta
+    E-->>A: Vector de la consulta
+
+    A->>V: Buscar apps similares (top-k)
+    V-->>A: Candidatos semánticos
+
+    A->>DB: Obtener metadatos de candidatos
+    DB-->>A: Nombre, descripción, SO, estado, etc.
+
+    A->>A: Aplicar filtros de negocio
+    Note over A: SO compatible, app activa, disponibilidad, etc.
+
+    opt Explicación o recomendación asistida
+        A->>L: Enviar consulta + apps candidatas + contexto recuperado
+        L-->>A: Ranking explicado / sugerencia textual / JSON
+        A->>Z: Validar salida estructurada
+        Z-->>A: Salida válida
+    end
+
+    A-->>F: Resultados ordenados + explicación opcional
+    F-->>U: Mostrar apps relevantes y sugerencias
