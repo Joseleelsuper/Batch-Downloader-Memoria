@@ -1,3 +1,58 @@
 \capitulo{2}{Objetivos del proyecto}
 
-Este apartado explica de forma precisa y concisa cuales son los objetivos que se persiguen con la realización del proyecto. Se puede distinguir entre los objetivos marcados por los requisitos del software a construir y los objetivos de carácter técnico que plantea a la hora de llevar a la práctica el proyecto.
+\section{Objetivo general}
+
+El objetivo general es diseñar e implementar una plataforma web que permita localizar aplicaciones, seleccionar uno o varios instaladores y descargarlos agrupados desde sus fuentes oficiales, evitando el almacenamiento permanente de ejecutables y ofreciendo información clara sobre el origen y el estado de cada archivo.
+
+\section{Objetivos funcionales}
+
+\begin{enumerate}
+	\item Construir un catálogo administrable de software con nombre, descripción, etiquetas, página oficial, sistemas operativos, arquitecturas y estado de disponibilidad.
+	\item Permitir búsquedas parciales por nombre y filtros por etiquetas. El filtrado podrá exigir todas las etiquetas seleccionadas o un mínimo configurado por el usuario.
+	\item Permitir la selección de una o varias aplicaciones. Una selección múltiple se tratará como un bundle temporal para generar un ZIP.
+	\item Crear bundles oficiales, públicos y privados. Los usuarios anónimos podrán personalizar temporalmente los bundles públicos; los usuarios registrados podrán, además, guardar y publicar sus propios bundles.
+	\item Asignar un enlace estable a cada bundle público y ordenar el catálogo de bundles por popularidad, fecha, nombre o etiquetas.
+	\item Incorporar una estrella binaria por usuario y bundle. Cada usuario registrado podrá añadirla o retirarla una vez, y el número total servirá para ordenar los bundles.
+	\item Permitir a los usuarios registrados solicitar la incorporación de una aplicación, proporcionando al menos su nombre y su página oficial.
+	\item Proporcionar al administrador funciones para mantener aplicaciones, etiquetas, reglas de resolución, dominios permitidos y estados del catálogo.
+	\item Informar del progreso de cada descarga, de los archivos incluidos y de los errores que impidan completar una parte de la solicitud.
+\end{enumerate}
+
+\section{Objetivos de descarga y procesamiento}
+
+\begin{enumerate}
+	\item Resolver dinámicamente el enlace del instalador desde una fuente oficial mediante una estrategia específica o, como respaldo, mediante navegación automatizada con Playwright.
+	\item Validar protocolo, dominio final, redirecciones, tipo de contenido, extensión y tamaño antes de aceptar un archivo.
+	\item Descargar los instaladores en el servidor, generar un ZIP con un manifiesto y eliminar todos los archivos temporales al terminar, cancelar o expirar el trabajo.
+	\item Procesar las solicitudes de manera asíncrona con RabbitMQ para separar la interacción web de las operaciones de resolución, descarga y compresión.
+	\item Aplicar reintentos controlados y permitir un resultado parcial cuando una aplicación falle, manteniendo una explicación individual para cada incidencia.
+	\item Calcular, cuando las fuentes lo permitan, un tamaño estimado antes de iniciar el trabajo y aplicar límites por archivo, ZIP, usuario, dirección IP y número de operaciones concurrentes.
+\end{enumerate}
+
+\section{Objetivos de búsqueda semántica}
+
+\begin{enumerate}
+	\item Representar las aplicaciones mediante embeddings generados a partir de sus metadatos y almacenarlos en PostgreSQL mediante pgvector.
+	\item Interpretar consultas en lenguaje natural y recuperar candidatos semánticamente próximos antes de aplicar los filtros ordinarios del catálogo.
+	\item Utilizar un modelo de lenguaje para proponer bundles, explicar recomendaciones y resumir errores a partir de información recuperada del sistema.
+	\item Validar las salidas del modelo mediante esquemas estrictos y mantener desacoplado el proveedor para poder sustituir Groq por un modelo local o por otro servicio.
+	\item Impedir que el modelo resuelva o apruebe enlaces, cambie dominios autorizados, ejecute descargas o modifique reglas sin revisión administrativa.
+\end{enumerate}
+
+\section{Objetivos técnicos y de calidad}
+
+\begin{itemize}
+	\item Desarrollar un cliente ligero con Vite, HTML, CSS y TypeScript.
+	\item Construir el backend con Java 26 y Spring Boot, separando las responsabilidades en servicios desplegables y escalables.
+	\item Documentar la API HTTP mediante OpenAPI, cuyo propósito es describir de forma independiente del lenguaje las capacidades de una API~\cite{openapi}.
+	\item Utilizar MySQL para la información transaccional y PostgreSQL con pgvector para la búsqueda vectorial.
+	\item Contenerizar los componentes con Docker y preparar su despliegue compatible con Compose.
+	\item Definir pruebas unitarias, de integración, de seguridad, de resolución de enlaces, de generación de ZIP y de extremo a extremo.
+	\item Mantener trazabilidad mediante registros de administración, resolución, descargas y uso del asistente.
+\end{itemize}
+
+\section{Objetivos de seguridad y sostenibilidad}
+
+El sistema deberá reducir los riesgos derivados de procesar URL externas y ejecutables. Para ello se definirán listas de dominios oficiales, bloqueo de redes privadas, límites de redirección, sanitización de nombres, protección frente a SSRF, control de acceso y cuotas de uso. La plataforma no ejecutará los instaladores descargados.
+
+Desde el punto de vista de sostenibilidad, se buscará evitar copias permanentes, eliminar temporales, limitar trabajos innecesarios, reutilizar metadatos válidos y escalar los servicios según su carga. También se atenderá a la accesibilidad, la claridad de la información, la protección de datos y el acceso equitativo a la funcionalidad básica.
