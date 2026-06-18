@@ -1,67 +1,57 @@
 sequenceDiagram
     actor U as Usuario registrado
-    participant F as Frontend
-    participant A as API Backend
-    participant DB as PostgreSQL
-    participant Q as Cola BullMQ
-    participant W as Worker
-    participant R as Resolver
-    participant O as Fuente oficial
-    participant Z as Generador ZIP
+    actor V as Visitante
+    participant F as Frontend Vite
+    participant A as API Spring Boot
+    participant DB as MySQL
+    participant Q as RabbitMQ
+    participant W as Worker de descarga
 
-    U->>F: Busca y selecciona aplicaciones
-    F->>A: Solicitar apps / filtros
-    A->>DB: Leer catálogo
-    DB-->>A: Aplicaciones disponibles
-    A-->>F: Mostrar catálogo
-
-    U->>F: Crear nuevo bundle
-    F->>A: Enviar nombre + descripción + apps seleccionadas
-    A->>A: Validar datos
-    A->>DB: Guardar bundle
-    DB-->>A: bundleId
-    A-->>F: Bundle creado correctamente
+    U->>F: Seleccionar aplicaciones
+    U->>F: Crear bundle
+    F->>A: Nombre, descripción y aplicaciones
+    A->>A: Validar propietario y composición
+    A->>DB: Guardar bundle privado
+    DB-->>A: Identificador y slug
+    A-->>F: Bundle creado
 
     opt Publicar bundle
-        U->>F: Marcar bundle como público
-        F->>A: Actualizar visibilidad
-        A->>DB: Guardar visibilidad
-        DB-->>A: OK
-        A-->>F: Bundle publicado
+        U->>F: Cambiar visibilidad a pública
+        F->>A: Publicar bundle
+        A->>DB: Guardar visibilidad y enlace
+        DB-->>A: Bundle público
+        A-->>F: Enlace compartible
     end
 
-    U->>F: Abrir bundle y pulsar "Descargar"
+    V->>F: Abrir bundle público
+    F->>A: Consultar bundle
+    A->>DB: Leer composición vigente
+    DB-->>A: Aplicaciones del bundle
+    A-->>F: Mostrar bundle
+
     opt Personalización temporal
-        U->>F: Añadir o quitar apps temporalmente
-        F->>A: Enviar composición temporal del bundle
+        V->>F: Añadir o retirar aplicaciones
+        Note over V,F: El bundle original no cambia
     end
 
-    A->>Q: Crear job de descarga del bundle
-    Q-->>A: jobId
-    A-->>F: Job creado
+    V->>F: Generar ZIP
+    F->>A: Enviar composición temporal
+    A->>A: Validar aplicaciones y cuotas
+    A->>DB: Crear trabajo
+    A->>Q: Publicar trabajo
+    A-->>F: Trabajo aceptado
 
-    Q->>W: Procesar bundle
-    loop Por cada app del bundle
-        W->>R: Resolver enlace oficial
-        R->>O: Consultar fuente oficial
-        O-->>R: URL del instalador
-        R-->>W: Resultado de resolución
-        W->>O: Descargar instalador temporal
-        O-->>W: Archivo temporal
+    Q->>W: Procesar descarga
+    W->>DB: Actualizar progreso y resultado
+    F->>A: Consultar progreso
+    A->>DB: Leer estado
+    DB-->>A: ZIP listo
+    A-->>F: Descarga disponible
+
+    opt Asignar estrella
+        U->>F: Activar estrella
+        F->>A: Crear valoración
+        A->>DB: Insertar relación única y actualizar contador
+        DB-->>A: Nuevo total
+        A-->>F: Estrella registrada
     end
-
-    W->>Z: Generar ZIP del bundle
-    Z-->>W: ZIP listo
-    W->>Q: Estado = ready
-
-    F->>A: Consultar progreso(jobId)
-    A->>Q: Obtener estado
-    Q-->>A: ready
-    A-->>F: ZIP listo
-
-    U->>F: Descargar ZIP del bundle
-    F->>A: Solicitar archivo
-    A-->>F: ZIP del bundle
-    F-->>U: Descarga final
-
-    W->>W: Limpiar temporales

@@ -1,35 +1,39 @@
 sequenceDiagram
     actor U as Usuario
-    participant F as Frontend
-    participant A as API Backend
-    participant E as Servicio de Embeddings
-    participant V as PostgreSQL + pgvector
-    participant DB as PostgreSQL
-    participant L as LLM embebido/local
-    participant Z as Validador Zod
+    participant F as Frontend Vite
+    participant A as API Spring Boot
+    participant E as Servicio de embeddings
+    participant V as PostgreSQL y pgvector
+    participant DB as MySQL
+    participant L as LLM Groq o local
+    participant J as Validador de esquema
 
-    U->>F: Escribe consulta en lenguaje natural
-    Note over U,F: Ejemplo: "apps para programar en Java en Windows"
-    F->>A: Enviar consulta + filtros (SO, arquitectura, categoría)
+    U->>F: Escribir consulta en lenguaje natural
+    Note over U,F: Ejemplo: aplicaciones para programar en Java
+    F->>A: Consulta y filtros
+    A->>A: Validar longitud, permisos y cuota
 
     A->>E: Generar embedding de la consulta
-    E-->>A: Vector de la consulta
+    E-->>A: Vector y modelo utilizado
+    A->>V: Buscar candidatos próximos
+    V-->>A: Identificadores y distancias
 
-    A->>V: Buscar apps similares (top-k)
-    V-->>A: Candidatos semánticos
+    A->>DB: Obtener catálogo vigente
+    DB-->>A: Metadatos, estado y compatibilidad
+    A->>A: Aplicar filtros deterministas
 
-    A->>DB: Obtener metadatos de candidatos
-    DB-->>A: Nombre, descripción, SO, estado, etc.
-
-    A->>A: Aplicar filtros de negocio
-    Note over A: SO compatible, app activa, disponibilidad, etc.
-
-    opt Explicación o recomendación asistida
-        A->>L: Enviar consulta + apps candidatas + contexto recuperado
-        L-->>A: Ranking explicado / sugerencia textual / JSON
-        A->>Z: Validar salida estructurada
-        Z-->>A: Salida válida
+    opt Explicación o propuesta de bundle
+        A->>L: Enviar consulta y candidatos filtrados
+        L-->>A: Respuesta estructurada
+        A->>J: Validar esquema y referencias
+        alt Respuesta válida
+            J-->>A: Explicación aceptada
+        else Respuesta inválida
+            J-->>A: Descartar salida generativa
+        end
     end
 
-    A-->>F: Resultados ordenados + explicación opcional
-    F-->>U: Mostrar apps relevantes y sugerencias
+    A-->>F: Resultados válidos y explicación opcional
+    F-->>U: Mostrar aplicaciones y permitir selección
+
+    Note over A,L: El LLM no resuelve URL, no descarga y no cambia dominios

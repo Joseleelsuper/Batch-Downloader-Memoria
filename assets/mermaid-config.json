@@ -1,0 +1,15 @@
+{
+  "theme": "neutral",
+  "fontFamily": "Arial, sans-serif",
+  "sequence": {
+    "diagramMarginX": 30,
+    "diagramMarginY": 20,
+    "actorMargin": 45,
+    "width": 150,
+    "height": 55,
+    "boxMargin": 10,
+    "messageMargin": 28,
+    "mirrorActors": false,
+    "useMaxWidth": true
+  }
+}
