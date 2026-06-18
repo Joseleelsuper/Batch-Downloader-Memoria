@@ -1,4 +1,4 @@
-\documentclass[a4paper,12pt,twoside]{memoir}
+\documentclass[a4paper,12pt,oneside]{memoir}
 
 % Castellano
 \usepackage[spanish,es-tabla]{babel}
@@ -8,6 +8,9 @@
 \usepackage{lmodern} % Scalable font
 \usepackage{microtype}
 \usepackage{placeins}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage{tabularx}
 
 \RequirePackage{booktabs}
 \RequirePackage[table]{xcolor}
@@ -17,8 +20,14 @@
 % Links
 \PassOptionsToPackage{hyphens}{url}\usepackage[colorlinks]{hyperref}
 \hypersetup{
-	allcolors = {red}
+	colorlinks = true,
+	linkcolor = {blue!45!black},
+	citecolor = {blue!45!black},
+	urlcolor = {blue!55!black},
+	pdftitle = {Diseño e implementación de una plataforma web para la descarga centralizada de software},
+	pdfauthor = {José Gallardo Caballero}
 }
+\urlstyle{same}
 
 % Ecuaciones
 \usepackage{amsmath}
@@ -32,6 +41,8 @@
 % Huérfanas y viudas
 \widowpenalty100000
 \clubpenalty100000
+\setlength{\headheight}{16pt}
+\nouppercaseheads
 
 % Imágenes
 
@@ -61,6 +72,19 @@
 		\includegraphics[width=#3\textwidth]{#1}
 		\caption{#2}\label{fig:#1}
 	\end{figure}
+}
+
+% Diagrama en página apaisada.
+\newcommand{\diagramaapaisado}[3]{
+	\begin{landscape}
+		\begin{figure}[p]
+			\centering
+			\includegraphics[width=0.96\linewidth,height=0.86\textheight,keepaspectratio]{#1}
+			\caption{#2}
+			\label{#3}
+		\end{figure}
+	\end{landscape}
+	\FloatBarrier
 }
 
 % El comando \figura nos permite insertar figuras comodamente, y utilizando
@@ -352,7 +376,7 @@
   }
 \makeatother
 
-\newcommand{\nombre}{José Gallardo Caballero} %%% cambio de comando
+\newcommand{\nombre}{José Gallardo Caballero}
 
 % Datos de portada
 \title{Diseño e implementación de una plataforma web para la descarga centralizada de software con gestión de bundles y búsqueda semántica mediante LLMs}
@@ -374,7 +398,7 @@
 
 \noindent\includegraphics[width=\textwidth]{cabecera}\vspace{1cm}
 
-\noindent D. José Manuel Aroca Fernández, profesor del departamento de Ingeniería Informática, área de % TODO: Poner nombre del área.
+\noindent D. José Manuel Aroca Fernández, profesor del Departamento de Ingeniería Informática de la Universidad de Burgos,
 
 \noindent Expone:
 
@@ -422,12 +446,18 @@ En Burgos, {\large \today}
 % Abstract en castellano
 \renewcommand*\abstractname{Resumen}
 \begin{abstract}
-En este primer apartado se hace una \textbf{breve} presentación del tema que se aborda en el proyecto.
+La instalación inicial de un equipo obliga habitualmente a localizar y descargar cada aplicación desde una página distinta. Este Trabajo de Fin de Grado plantea el diseño de \emph{Batch Downloader}, una plataforma web que centralizará un catálogo de software y permitirá seleccionar varias aplicaciones para obtener sus instaladores oficiales agrupados en un único archivo ZIP.
+
+La plataforma no mantendrá ejecutables almacenados de forma permanente. Cada solicitud dará lugar a un trabajo asíncrono que resolverá los enlaces oficiales, validará los destinos, descargará temporalmente los archivos, generará el ZIP y eliminará los artefactos cuando termine o expire el proceso. El sistema incorporará cuentas de usuario, bundles públicos y privados, una valoración binaria mediante estrellas, solicitudes de nuevas aplicaciones y un panel de administración para mantener el catálogo y revisar errores.
+
+Como ampliación, se diseña una capa de búsqueda semántica basada en embeddings y un modelo de lenguaje. Esta capa permitirá interpretar consultas expresadas en lenguaje natural, proponer bundles y explicar incidencias, pero no tendrá autoridad para descargar archivos, modificar dominios permitidos ni eludir las validaciones de seguridad.
+
+La arquitectura propuesta utiliza Vite y TypeScript en el cliente, Java 26 y Spring Boot en el servidor, MySQL para los datos transaccionales, PostgreSQL con pgvector para los vectores semánticos, RabbitMQ para el procesamiento asíncrono, Playwright para la resolución dinámica de páginas y contenedores Docker para cada servicio.
 \end{abstract}
 
 \renewcommand*\abstractname{Descriptores}
 \begin{abstract}
-Palabras separadas por comas que identifiquen el contenido del proyecto Ej: servidor web, buscador de vuelos, android \ldots
+descarga de software, bundles, Spring Boot, Playwright, procesamiento asíncrono, búsqueda semántica, embeddings, modelos de lenguaje, seguridad web
 \end{abstract}
 
 \clearpage
@@ -435,12 +465,18 @@ Palabras separadas por comas que identifiquen el contenido del proyecto Ej: serv
 % Abstract en inglés
 \renewcommand*\abstractname{Abstract}
 \begin{abstract}
-A \textbf{brief} presentation of the topic addressed in the project.
+Setting up a computer usually requires locating and downloading every application from a different website. This Bachelor's Degree Final Project proposes the design of \emph{Batch Downloader}, a web platform that will provide a centralized software catalogue and allow users to select several applications and obtain their official installers grouped into a single ZIP archive.
+
+The platform will not store executable files permanently. Each request will create an asynchronous job that resolves official links, validates destinations, temporarily downloads the files, generates the ZIP archive, and removes all temporary artefacts when the process finishes or expires. The system will include user accounts, public and private bundles, binary star ratings, software requests, and an administration panel for catalogue maintenance and error review.
+
+As an extension, the design includes a semantic search layer based on embeddings and a language model. This layer will interpret natural-language queries, suggest bundles, and provide clearer explanations of failures. However, it will not be allowed to download files, change trusted domains, or bypass the platform's security controls.
+
+The proposed architecture uses Vite and TypeScript for the client, Java 26 and Spring Boot for the server, MySQL for transactional data, PostgreSQL with pgvector for semantic vectors, RabbitMQ for asynchronous processing, Playwright for dynamic page resolution, and Docker containers for each service.
 \end{abstract}
 
 \renewcommand*\abstractname{Keywords}
 \begin{abstract}
-keywords separated by commas.
+software download, bundles, Spring Boot, Playwright, asynchronous processing, semantic search, embeddings, large language models, web security
 \end{abstract}
 
 \clearpage

@@ -1,4 +1,4 @@
-\documentclass[a4paper,12pt,twoside]{memoir}
+\documentclass[a4paper,12pt,oneside]{memoir}
 
 % Castellano
 \usepackage[spanish,es-tabla]{babel}
@@ -8,6 +8,9 @@
 \usepackage{lmodern} % scalable font
 \usepackage{microtype}
 \usepackage{placeins}
+\usepackage{pdflscape}
+\usepackage{tabularx}
+\usepackage{longtable}
 
 \RequirePackage{booktabs}
 \RequirePackage[table]{xcolor}
@@ -17,8 +20,14 @@
 % Links
 \PassOptionsToPackage{hyphens}{url}\usepackage[colorlinks]{hyperref}
 \hypersetup{
-	allcolors = {red}
+	colorlinks = true,
+	linkcolor = {blue!45!black},
+	citecolor = {blue!45!black},
+	urlcolor = {blue!55!black},
+	pdftitle = {Batch Downloader - Documentación técnica},
+	pdfauthor = {José Gallardo Caballero}
 }
+\urlstyle{same}
 
 % Ecuaciones
 \usepackage{amsmath}
@@ -32,6 +41,7 @@
 % Huérfanas y viudas
 \widowpenalty100000
 \clubpenalty100000
+\setlength{\headheight}{16pt}
 
 % Evitar solapes en el header
 \nouppercaseheads
@@ -353,7 +363,7 @@
 
 
 % Datos de portada
-\title{título del TFG \\Documentación Técnica}
+\title{Diseño e implementación de una plataforma web para la descarga centralizada de software con gestión de bundles y búsqueda semántica mediante LLMs\\Documentación técnica}
 \author{José Gallardo Caballero}
 \tutor{José Manuel Aroca Fernández}
 \date{\today}
