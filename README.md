@@ -12,9 +12,7 @@ Memoria del proyecto de mi TFG Batch Downloader. Puedes encontrar el código del
 Esta memoria está licenciada bajo la licencia Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. Para más información, abre [LICENSE](LICENSE).
 
 <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">
-    <div align="center">
-        <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-nd.svg" alt="BY-NC-ND 4.0" />
-    </div>
+    <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-nd.svg" alt="BY-NC-ND 4.0" />
 </a>
 
 ## Personas
