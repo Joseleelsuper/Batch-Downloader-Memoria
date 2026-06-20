@@ -1,7 +1,200 @@
 \capitulo{5}{Aspectos relevantes del desarrollo del proyecto}
 
-Este apartado pretende recoger los aspectos más interesantes del desarrollo del proyecto, comentados por los autores del mismo.
-Debe incluir desde la exposición del ciclo de vida utilizado, hasta los detalles de mayor relevancia de las fases de análisis, diseño e implementación.
-Se busca que no sea una mera operación de copiar y pegar diagramas y extractos del código fuente, sino que realmente se justifiquen los caminos de solución que se han tomado, especialmente aquellos que no sean triviales.
-Puede ser el lugar más adecuado para documentar los aspectos más interesantes del diseño y de la implementación, con un mayor hincapié en aspectos tales como el tipo de arquitectura elegido, los índices de las tablas de la base de datos, normalización y desnormalización, distribución en ficheros3, reglas de negocio dentro de las bases de datos (EDVHV GH GDWRV DFWLYDV), aspectos de desarrollo relacionados con el WWW...
-Este apartado, debe convertirse en el resumen de la experiencia práctica del proyecto, y por sí mismo justifica que la memoria se convierta en un documento útil, fuente de referencia para los autores, los tutores y futuros alumnos.
+\section{Enfoque de desarrollo}
+
+El proyecto se abordará de forma incremental. Antes de implementar la búsqueda semántica o el despliegue distribuido será necesario validar el flujo esencial: mantener un catálogo, resolver una fuente oficial, descargar un archivo de forma segura, producir un ZIP y eliminar los temporales.
+
+Las iteraciones previstas son:
+
+\begin{enumerate}
+	\item catálogo, roles y búsqueda convencional;
+	\item selección de aplicaciones y generación asíncrona de ZIP;
+	\item bundles, estrellas y administración;
+	\item resolvers específicos, comprobaciones periódicas y observabilidad;
+	\item embeddings, búsqueda semántica y asistencia con LLM;
+	\item contenerización, pruebas de carga y despliegue escalable.
+\end{enumerate}
+
+Esta secuencia reduce el riesgo de integrar inteligencia artificial sobre un núcleo todavía inestable. Cada iteración deberá producir un flujo demostrable y pruebas automatizadas.
+
+\section{Actores y permisos}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.19\textwidth}XXX}
+\toprule
+\textbf{Acción} & \textbf{Anónimo} & \textbf{Registrado} & \textbf{Administrador}\\
+\midrule
+Consultar catálogo & Sí & Sí & Sí\\
+Generar ZIP & Sí, con cuotas & Sí, con cuotas propias & Sí\\
+Usar búsqueda semántica & Sí, limitada & Sí & Sí\\
+Personalizar bundle público & Temporalmente & Temporalmente & Temporalmente\\
+Guardar bundle & No & Sí & Sí\\
+Publicar bundle & No & Sí & Sí\\
+Asignar estrella & No & Sí & Sí\\
+Solicitar software & No & Sí & Sí\\
+Mantener catálogo y resolvers & No & No & Sí\\
+Revisar registros & No & Solo los propios & Sí\\
+\bottomrule
+\end{tabularx}
+\caption{Permisos generales por actor.}
+\label{tabla:permisos-actores}
+\end{table}
+
+La personalización temporal no otorga permisos de edición. Al descargar un bundle se construirá una copia de su composición para la solicitud actual. Únicamente el propietario podrá guardar cambios permanentes y los bundles oficiales quedarán bajo control administrativo.
+
+\section{Arquitectura planificada}
+
+La solución seguirá una arquitectura de servicios con responsabilidades delimitadas:
+
+\begin{description}
+	\item[Frontend:] presenta catálogo, selección, bundles, progreso y administración.
+	\item[API:] valida entradas, aplica permisos, mantiene entidades y publica trabajos.
+	\item[Servicio de catálogo:] gestiona aplicaciones, fuentes, etiquetas y estados.
+	\item[Servicio de bundles:] gestiona composición, visibilidad, enlaces y estrellas.
+	\item[Servicio de resolución:] selecciona el resolver, controla Playwright y valida URL.
+	\item[Workers de descarga:] consumen trabajos, descargan archivos y notifican progreso.
+	\item[Generador de ZIP:] crea el paquete, el manifiesto y los informes de error.
+	\item[Servicio semántico:] genera embeddings, consulta pgvector y coordina el LLM.
+	\item[Servicio de notificaciones:] envía avisos cuando exista consentimiento y configuración.
+\end{description}
+
+Los servicios podrán desplegarse inicialmente dentro de una aplicación modular. La separación lógica se mantendrá para permitir que las tareas intensivas se extraigan a procesos independientes cuando la carga lo justifique.
+
+\section{Flujo general de descarga}
+
+La figura~\ref{fig:secuencia-general} resume el recorrido desde la selección del usuario hasta la eliminación de los temporales.
+
+\diagramaapaisado{sequenceDiagram_general.pdf}{Secuencia general de generación y descarga de un ZIP.}{fig:secuencia-general}
+
+El backend no devolverá el ZIP en la misma petición que crea el trabajo. Tras validar la selección y las cuotas, persistirá el estado inicial y publicará un mensaje en RabbitMQ. La respuesta inmediata contendrá un identificador que el frontend utilizará para consultar el progreso.
+
+El worker procesará cada aplicación de forma aislada. Una incidencia no debe ocultar el estado de las demás. Cuando haya al menos un archivo válido, el trabajo podrá producir un ZIP parcial acompañado de errores legibles. Si no se incluye ningún archivo, el estado será \emph{failed}.
+
+\section{Resolución de instaladores}
+
+Cada fuente combinará datos declarativos y una estrategia:
+
+\begin{itemize}
+	\item sistema operativo, arquitectura, región y país;
+	\item página oficial de partida;
+	\item dominios permitidos;
+	\item tipo de resolver y configuración;
+	\item extensiones y tipos de contenido esperados;
+	\item tiempo máximo, reintentos y número de redirecciones;
+	\item fecha y resultado de la última comprobación.
+\end{itemize}
+
+El \emph{DefaultResolver} intentará una resolución genérica con Playwright. Abrirá la página oficial, buscará elementos configurados, observará respuestas de red y detectará descargas. Los proveedores con flujos estables pero particulares dispondrán de resolvers dedicados.
+
+El resultado del navegador no será suficiente. Un validador independiente repetirá las comprobaciones de dominio y red, realizará una petición controlada y verificará que la respuesta se corresponde con un instalador esperado. Esta separación evita que un error en el scraping se convierta directamente en una descarga.
+
+\section{Generación y contenido del ZIP}
+
+El trabajo dispondrá de un espacio temporal aislado. Los nombres de archivo se normalizarán, se eliminarán componentes de ruta y se resolverán duplicados. El contenido previsto será:
+
+\begin{verbatim}
+apps/
+  instalador-aplicacion.exe
+  instalador-aplicacion2.exe
+errors/
+  aplicacion-no-incluida.txt
+manifest.json
+README.txt
+\end{verbatim}
+
+El manifiesto indicará la fecha de creación, la política de fuentes oficiales, la naturaleza temporal del procesamiento y el resultado de cada elemento. La URL resuelta podrá omitirse o protegerse en la entrega si contiene credenciales temporales; la página oficial y el dominio final sí deberán quedar identificados.
+
+El ZIP tendrá una fecha de expiración. Después de su descarga o al superar ese plazo, el objeto se eliminará. Una tarea periódica limpiará trabajos abandonados, archivos incompletos y objetos cuyo estado no coincida con la base de datos.
+
+\section{Bundles y estrellas}
+
+La figura~\ref{fig:secuencia-bundles} muestra la creación, publicación, personalización y descarga de un bundle.
+
+\diagramaapaisado{sequenceDiagram_bundle.pdf}{Secuencia de creación y descarga de un bundle.}{fig:secuencia-bundles}
+
+La visibilidad se modelará explícitamente como privada o pública. La marca de bundle oficial será independiente de la visibilidad y requerirá rol de administrador. Si un bundle público pasa a privado, su enlace dejará de ser accesible y se conservará un registro de la operación. Las estrellas dejarán de participar en los rankings mientras no sea público.
+
+La valoración será binaria: un usuario puede asignar o retirar una estrella. La restricción única entre usuario y bundle impedirá duplicados. El contador agregado podrá almacenarse para ordenar resultados, pero deberá ser recalculable desde las valoraciones individuales.
+
+\section{Búsqueda semántica y asistencia}
+
+La figura~\ref{fig:secuencia-semantica} refleja el flujo de una consulta expresada en lenguaje natural.
+
+\diagramaapaisado{sequenceDiagram_llmSearch.pdf}{Secuencia de búsqueda semántica y explicación mediante LLM.}{fig:secuencia-semantica}
+
+La API generará el embedding de la consulta y recuperará un conjunto limitado de candidatos en pgvector. A continuación obtendrá la versión vigente de cada aplicación desde MySQL y descartará elementos incompatibles, inactivos o no disponibles.
+
+El LLM recibirá la consulta, los candidatos ya filtrados y un esquema de salida. Podrá ordenar o explicar resultados, pero la lista final no podrá contener aplicaciones ausentes del contexto recuperado. Si la validación falla o el proveedor no responde, el usuario seguirá recibiendo los resultados vectoriales sin explicación generativa.
+
+El mismo patrón se aplicará a la creación asistida de bundles. La propuesta será un borrador editable; la selección se validará de nuevo antes de guardarse o descargarse.
+
+\section{Seguridad}
+
+\subsection{Prevención de SSRF}
+
+Las URL externas se considerarán datos no confiables. Antes de cualquier conexión se validarán esquema, host y puerto; se resolverán todas las direcciones; y se rechazarán redes privadas, loopback, enlace local, direcciones reservadas y puntos de metadatos de proveedores cloud. La validación se repetirá tras cada redirección para reducir ataques de cambio de DNS.
+
+\subsection{Allowlist de dominios}
+
+Cada fuente tendrá una lista explícita de dominios oficiales. Se compararán nombres normalizados y límites de subdominio, evitando aceptar coincidencias parciales como \ruta{dominio-oficial.ejemplo-malicioso.com}. Las modificaciones de la lista requerirán privilegios administrativos y quedarán auditadas.
+
+\subsection{Límites y protección frente a abuso}
+
+Se configurarán máximos de aplicaciones por ZIP, tamaño por archivo, tamaño total, tiempo del trabajo, redirecciones, reintentos, descargas paralelas y trabajos activos. Los límites se aplicarán por dirección IP, sesión anónima, usuario y, si se habilitan integraciones, clave de API.
+
+Los usuarios anónimos conservarán la funcionalidad básica con cuotas inferiores. Podrá activarse un CAPTCHA cuando se detecten patrones abusivos, sin convertirlo en requisito permanente para el uso normal.
+
+\subsection{Archivos y ZIP}
+
+La plataforma no ejecutará los instaladores. Los nombres se sanitizarán para impedir rutas absolutas, secuencias \ruta{../}, nombres reservados o colisiones. Se validará el tamaño real y se interrumpirá la descarga si supera el límite, aunque la fuente hubiera anunciado un valor menor.
+
+\subsection{Autenticación y autorización}
+
+Spring Security protegerá las operaciones por rol y propietario. Los permisos no dependerán de botones ocultos en el frontend. Cada modificación de catálogo, resolver, dominio o bundle oficial será verificada en el backend y registrada con usuario, fecha, objetivo y datos relevantes.
+
+\section{Gestión de errores}
+
+Los errores se clasificarán por fase:
+
+\begin{description}
+	\item[Resolución:] no existe enlace, cambió la página, se requiere interacción no soportada o el dominio final no es válido.
+	\item[Validación:] protocolo, tamaño, extensión, tipo o redirección no permitidos.
+	\item[Descarga:] timeout, conexión interrumpida, límite externo o archivo incompleto.
+	\item[Compresión:] falta de espacio, cancelación o error al construir el ZIP.
+	\item[Asistencia:] proveedor no disponible, esquema inválido o contexto insuficiente.
+\end{description}
+
+El usuario recibirá una explicación comprensible y un identificador de incidencia, mientras que el registro técnico conservará detalles para el administrador sin exponer secretos ni trazas internas.
+
+\section{Observabilidad}
+
+Spring Actuator y las métricas de los componentes permitirán observar:
+
+\begin{itemize}
+	\item trabajos creados, completados, parciales, fallidos y expirados;
+	\item duración de resolución, descarga y compresión;
+	\item longitud de las colas y número de consumidores;
+	\item aplicaciones con más fallos y dominios que cambian;
+	\item espacio temporal utilizado y objetos pendientes de limpieza;
+	\item consultas semánticas, fallos del proveedor y validaciones rechazadas.
+\end{itemize}
+
+Estas métricas no se presentan como resultados del proyecto; constituyen el plan de instrumentación que deberá implementarse y evaluarse.
+
+\section{Estrategia de pruebas}
+
+La calidad se verificará en varios niveles:
+
+\begin{itemize}
+	\item pruebas unitarias de URL, dominios, IP privadas, nombres, permisos, estrellas y estados;
+	\item pruebas de integración con MySQL, PostgreSQL, RabbitMQ y MinIO;
+	\item páginas controladas para probar resolvers, redirecciones y descargas;
+	\item pruebas de ZIP correcto, parcial, cancelado y expirado;
+	\item pruebas de seguridad para SSRF, cuotas, autorización y datos maliciosos;
+	\item pruebas de extremo a extremo del catálogo, selección, progreso, bundles y administración;
+	\item pruebas de carga que midan concurrencia, recursos y comportamiento del escalado.
+\end{itemize}
+
+La aceptación de la primera versión requerirá demostrar que los instaladores proceden de dominios autorizados, que ningún temporal permanece después del plazo establecido y que un fallo individual no provoca estados incoherentes.
