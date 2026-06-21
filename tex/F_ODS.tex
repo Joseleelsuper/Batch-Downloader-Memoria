@@ -1,9 +1,37 @@
 \apendice{Anexo de sostenibilización curricular}
 
 \section{Introducción}
-Este anexo incluirá una reflexión personal del alumnado sobre los aspectos de la sostenibilidad que se abordan en el trabajo.
-Se pueden incluir tantas subsecciones como sean necesarias con la intención de explicar las competencias de sostenibilidad adquiridas durante el alumnado y aplicadas al Trabajo de Fin de Grado.
 
-Más información en el documento de la CRUE \url{https://www.crue.org/wp-content/uploads/2020/02/Directrices_Sosteniblidad_Crue2012.pdf}.
+Las directrices de la CRUE entienden la sostenibilidad como la búsqueda conjunta de calidad ambiental, justicia social y una economía viable y equitativa, y proponen cuatro competencias transversales: contextualización crítica, uso sostenible de recursos, participación y aplicación de principios éticos~\cite{crue2012}. El diseño de Batch Downloader permite reflexionar sobre estas dimensiones antes de implementar el sistema y obliga a considerar consecuencias que no aparecen si el proyecto se analiza solo como un problema técnico.
 
-Este anexo tendrá una extensión comprendida entre 600 y 800 palabras.
+\section{SOS1: contextualización crítica}
+
+La utilidad de la plataforma nace de una práctica extendida: al preparar un ordenador, cada usuario repite búsquedas y descargas en múltiples páginas. Centralizar el catálogo puede ahorrar tiempo y reducir el acceso accidental a sitios no oficiales. Sin embargo, esa comodidad también concentra responsabilidad. El servicio procesa ejecutables de terceros, depende de proveedores globales y puede generar un consumo elevado de red, disco y energía si se usa de forma indiscriminada.
+
+El análisis debe relacionar, por tanto, la experiencia individual con efectos más amplios. Una descarga fallida no es solo un error de programación: puede deberse a restricciones regionales, condiciones de uso, accesibilidad insuficiente o cambios comerciales del proveedor. La búsqueda semántica también tiene implicaciones sociales, porque un modelo podría favorecer aplicaciones populares y ocultar alternativas pequeñas o libres. Para evitarlo, las recomendaciones se limitarán al catálogo controlado, mostrarán su fundamento y nunca sustituirán los filtros explícitos del usuario.
+
+\section{SOS2: uso sostenible de recursos}
+
+El principio técnico más directamente relacionado con la sostenibilidad es no almacenar instaladores de forma permanente. Mantener copias de cada versión multiplicaría el uso de almacenamiento y obligaría a gestionar duplicados obsoletos. Batch Downloader descargará los archivos únicamente durante el trabajo, generará el ZIP y eliminará los temporales al finalizar o expirar.
+
+Esta decisión no elimina el impacto. Agrupar aplicaciones puede aumentar la transferencia si el usuario selecciona programas que después no necesita. La interfaz deberá mostrar tamaño estimado, fuentes y contenido antes de confirmar. Se aplicarán límites de tamaño, concurrencia y duración, y se reutilizarán metadatos de resolución durante periodos breves para evitar navegaciones repetidas. Los workers se escalarán según la carga real y los contenedores tendrán límites de recursos.
+
+La inteligencia artificial merece una atención específica. Generar embeddings y consultar un LLM consume recursos adicionales. La búsqueda convencional se utilizará primero para nombres y filtros, reservando la semántica para consultas por intención. Las respuestas podrán servirse sin LLM cuando la búsqueda vectorial sea suficiente. En una fase posterior se compararán proveedor remoto y modelo local atendiendo no solo a calidad y coste, sino también a consumo energético.
+
+\section{SOS3: participación}
+
+Los bundles públicos, las estrellas y las solicitudes de software permiten que la comunidad contribuya al catálogo. Esta participación debe diseñarse para que no se convierta en spam, manipulación de rankings o difusión de fuentes dudosas. Solo los administradores podrán aprobar aplicaciones y dominios. Las estrellas serán binarias y trazables, mientras que los usuarios podrán clonar o personalizar un bundle sin alterar el trabajo de su autor.
+
+La participación también implica escuchar problemas de accesibilidad y uso. El proyecto deberá ofrecer navegación por teclado, mensajes comprensibles y mecanismos para informar de enlaces rotos. Los registros técnicos no bastan para conocer la experiencia: las pruebas con usuarios y la revisión de solicitudes deberán influir en la priorización.
+
+\section{SOS4: principios éticos}
+
+La plataforma deberá actuar con transparencia. Antes de descargar se explicará que los archivos proceden de fuentes oficiales, se procesan temporalmente y no se ejecutan. El manifiesto identificará aplicaciones y dominios, y los errores no se ocultarán detrás de mensajes genéricos.
+
+La privacidad se aplicará mediante minimización de datos, plazos de conservación y protección de cuentas, direcciones IP, registros y correos. Los logs y el contexto enviado al LLM excluirán secretos y datos innecesarios. El modelo no podrá aprobar enlaces, cambiar dominios ni realizar acciones administrativas; sus sugerencias deberán ser revisables y validadas.
+
+También existe una responsabilidad económica y social. La funcionalidad básica para usuarios anónimos evita convertir el acceso en una obligación de registro. Si se despliega públicamente, las cuotas deberán proteger la infraestructura sin discriminar a quienes tengan conexiones lentas. El proyecto respetará las licencias y condiciones de los editores, no presentará software de terceros como propio y ofrecerá información suficiente para que el usuario tome una decisión.
+
+\section{Conclusión personal}
+
+TODO: Esto es una locura.
