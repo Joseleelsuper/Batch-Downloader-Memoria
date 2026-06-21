@@ -73,7 +73,7 @@ Ataques SSRF & Media & Crítico & Allowlist, validación DNS e IP tras cada redi
 Consumo excesivo de disco o red & Media & Alta & Límites, streaming futuro, expiración, limpieza periódica y métricas.\\
 Incompatibilidad entre Java y dependencias & Baja & Media & Prototipo inicial y posibilidad de adoptar una versión LTS compatible.\\
 Respuestas incorrectas del LLM & Alta & Media & Recuperación cerrada, esquemas, filtros deterministas y degradación sin LLM.\\
-Alcance excesivo & Alta & Alta & Priorizar el núcleo; Kubernetes, resolvers avanzados y modelo local después del producto mínimo.\\
+Alcance excesivo & Alta & Alta & Priorizar el núcleo, resolvers avanzados y modelo local después del producto mínimo.\\
 Falta de tiempo para manuales & Media & Media & Mantener esqueletos y completarlos durante las pruebas de aceptación.\\
 \bottomrule
 \end{longtable}
@@ -84,7 +84,7 @@ Falta de tiempo para manuales & Media & Media & Mantener esqueletos y completarl
 
 Las tecnologías seleccionadas disponen de documentación, bibliotecas para Java y ejecución mediante contenedores. El principal riesgo técnico no es la disponibilidad de herramientas, sino la variabilidad de las fuentes externas y el tratamiento seguro de descargas. Por este motivo se requiere un prototipo temprano con varias páginas de distinta complejidad.
 
-La arquitectura puede simplificarse para el desarrollo local: un frontend, una aplicación Spring modular, un worker y servicios Docker. La separación en múltiples despliegues y Kubernetes no es obligatoria para demostrar el producto mínimo.
+La arquitectura puede simplificarse para el desarrollo local: un frontend, una aplicación Spring modular, un worker y servicios Docker.
 
 \subsection{Viabilidad económica}
 
