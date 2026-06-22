@@ -2,39 +2,268 @@
 
 \section{Introducción}
 
-Una muestra de cómo podría ser una tabla de casos de uso:
+Este documento define el comportamiento esperado de Batch Downloader antes de su implementación. Los requisitos se identifican para permitir trazabilidad con casos de uso, diseño y pruebas.
 
-% Caso de Uso 1 -> Consultar Experimentos.
-\begin{table}[p]
-	\centering
-	\begin{tabularx}{\linewidth}{ p{0.21\columnwidth} p{0.71\columnwidth} }
-		\toprule
-		\textbf{CU-1}    & \textbf{Ejemplo de caso de uso}\\
-		\toprule
-		\textbf{Versión}              & 1.0    \\
-		\textbf{Autor}                & Alumno \\
-		\textbf{Requisitos asociados} & RF-xx, RF-xx \\
-		\textbf{Descripción}          & La descripción del CU \\
-		\textbf{Precondición}         & Precondiciones (podría haber más de una) \\
-		\textbf{Acciones}             &
-		\begin{enumerate}
-			\def\labelenumi{\arabic{enumi}.}
-			\tightlist
-			\item Pasos del CU
-			\item Pasos del CU (añadir tantos como sean necesarios)
-		\end{enumerate}\\
-		\textbf{Postcondición}        & Postcondiciones (podría haber más de una) \\
-		\textbf{Excepciones}          & Excepciones \\
-		\textbf{Importancia}          & Alta o Media o Baja... \\
-		\bottomrule
-	\end{tabularx}
-	\caption{CU-1 Nombre del caso de uso.}
-\end{table}
+\section{Actores}
+
+\begin{description}
+	\item[Usuario anónimo:] consulta el catálogo, crea selecciones temporales y descarga bundles públicos dentro de cuotas.
+	\item[Usuario registrado:] conserva bundles, los publica, asigna estrellas, solicita software y consulta sus trabajos.
+	\item[Administrador:] mantiene catálogo, fuentes, dominios, resolvers y estados; revisa solicitudes y registros.
+	\item[Sistema externo oficial:] página o servicio del editor desde el que se resuelve y descarga un instalador.
+	\item[Proveedor semántico:] servicio de embeddings o LLM utilizado detrás de una interfaz controlada.
+\end{description}
 
 \section{Objetivos generales}
 
-\section{Catálogo de requisitos}
+\begin{itemize}
+	\item Reducir el trabajo necesario para descargar varias aplicaciones.
+	\item Mantener el origen oficial y la trazabilidad de cada instalador.
+	\item Evitar almacenamiento permanente y eliminar artefactos temporales.
+	\item Permitir reutilizar selecciones mediante bundles.
+	\item Mejorar el descubrimiento mediante búsqueda semántica segura.
+	\item Proteger la infraestructura frente a URL maliciosas y uso abusivo.
+\end{itemize}
 
-\section{Especificación de requisitos}
+\section{Catálogo de requisitos funcionales}
 
+\begin{longtable}{p{0.09\textwidth}p{0.56\textwidth}p{0.13\textwidth}p{0.12\textwidth}}
+\caption{Requisitos funcionales.}\label{tabla:requisitos-funcionales}\\
+\toprule
+\textbf{ID} & \textbf{Descripción} & \textbf{Prioridad} & \textbf{Actor}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Descripción} & \textbf{Prioridad} & \textbf{Actor}\\
+\midrule
+\endhead
+RF-01 & Mostrar las aplicaciones activas con nombre, descripción, sistemas, arquitecturas, etiquetas y estado. & Alta & Todos\\
+RF-02 & Buscar aplicaciones por coincidencia parcial de nombre. & Alta & Todos\\
+RF-03 & Filtrar por sistema operativo, arquitectura y etiquetas, exigiendo todas o un mínimo de etiquetas. & Alta & Todos\\
+RF-04 & Añadir o retirar aplicaciones de una selección temporal. & Alta & Todos\\
+RF-05 & Mostrar tamaño estimado, fuentes y advertencias antes de generar el ZIP. & Media & Todos\\
+RF-06 & Crear un trabajo asíncrono para generar el ZIP y devolver su identificador. & Alta & Todos\\
+RF-07 & Consultar el progreso global y el estado individual de cada aplicación. & Alta & Todos\\
+RF-08 & Permitir cancelar un trabajo que todavía no haya finalizado. & Media & Todos\\
+RF-09 & Descargar un ZIP listo antes de su expiración. & Alta & Todos\\
+RF-10 & Producir un ZIP parcial cuando alguna aplicación falle y exista al menos una descarga válida. & Alta & Sistema\\
+RF-11 & Incluir manifiesto, documento informativo y errores individuales en el ZIP. & Alta & Sistema\\
+RF-12 & Registrar y eliminar los archivos temporales al finalizar, cancelar o expirar. & Alta & Sistema\\
+RF-13 & Registrar, iniciar y cerrar sesión con controles de seguridad. & Alta & Registrado\\
+RF-14 & Crear, editar y eliminar bundles propios. & Alta & Registrado\\
+RF-15 & Definir un bundle propio como privado o público y generar un enlace compartible si es público. & Alta & Registrado\\
+RF-16 & Personalizar temporalmente cualquier bundle descargable sin modificar el original. & Alta & Todos\\
+RF-17 & Clonar un bundle público como nuevo bundle del usuario. & Media & Registrado\\
+RF-18 & Asignar o retirar una estrella de un bundle público ajeno, con un máximo de una por usuario. & Media & Registrado\\
+RF-19 & Ordenar bundles por estrellas, fecha, nombre o etiquetas. & Media & Todos\\
+RF-20 & Solicitar la incorporación de software indicando nombre y página oficial. & Media & Registrado\\
+RF-21 & Añadir, editar, desactivar y reactivar aplicaciones, fuentes y etiquetas. & Alta & Administrador\\
+RF-22 & Configurar dominios permitidos y estrategia de resolución por fuente. & Alta & Administrador\\
+RF-23 & Probar un resolver y consultar sus redirecciones, metadatos y errores. & Alta & Administrador\\
+RF-24 & Revisar trabajos, fallos de resolución, solicitudes y acciones administrativas. & Alta & Administrador\\
+RF-25 & Ejecutar comprobaciones periódicas y marcar fuentes para revisión manual. & Media & Sistema\\
+RF-26 & Buscar aplicaciones mediante lenguaje natural y devolver candidatos del catálogo. & Media & Todos\\
+RF-27 & Proponer un bundle editable a partir de una consulta semántica. & Media & Todos\\
+RF-28 & Explicar recomendaciones y resumir errores sin ejecutar acciones críticas. & Media & Todos\\
+RF-29 & Enviar un aviso de finalización por correo cuando el usuario lo solicite y exista una dirección verificada. & Baja & Registrado\\
+RF-30 & Permitir a un administrador crear y mantener bundles oficiales. & Media & Administrador\\
+\bottomrule
+\end{longtable}
 
+\section{Requisitos no funcionales}
+
+\begin{longtable}{p{0.09\textwidth}p{0.64\textwidth}p{0.17\textwidth}}
+\caption{Requisitos no funcionales.}\label{tabla:requisitos-no-funcionales}\\
+\toprule
+\textbf{ID} & \textbf{Descripción verificable} & \textbf{Categoría}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Descripción verificable} & \textbf{Categoría}\\
+\midrule
+\endhead
+RNF-01 & Solo se aceptarán descargas HTTPS desde dominios permitidos; se bloquearán redes privadas, locales y reservadas antes y después de redirecciones. & Seguridad\\
+RNF-02 & Ningún instalador se almacenará permanentemente. Los temporales y ZIP expirados se eliminarán mediante políticas automáticas verificables. & Privacidad\\
+RNF-03 & Los nombres incorporados al ZIP no podrán contener rutas, secuencias de escape, nombres reservados ni colisiones sin resolver. & Seguridad\\
+RNF-04 & Se aplicarán límites configurables de tamaño, aplicaciones, tiempo, redirecciones, reintentos y concurrencia. & Seguridad\\
+RNF-05 & Los permisos se comprobarán en el backend para cada operación protegida. & Seguridad\\
+RNF-06 & Las contraseñas se almacenarán con un algoritmo de derivación resistente y nunca aparecerán en registros. & Seguridad\\
+RNF-07 & Las operaciones administrativas y el uso de claves de API quedarán auditados. & Trazabilidad\\
+RNF-08 & La API se documentará mediante OpenAPI y mantendrá errores estructurados. & Mantenibilidad\\
+RNF-09 & La creación de un trabajo responderá sin esperar a que terminen las descargas. & Rendimiento\\
+RNF-10 & La interfaz mostrará progreso y errores con lenguaje comprensible y será operable con teclado. & Usabilidad\\
+RNF-11 & Los componentes se ejecutarán en contenedores y podrán configurarse mediante variables y secretos externos. & Portabilidad\\
+RNF-12 & La API y los workers podrán replicarse de forma independiente. & Escalabilidad\\
+RNF-13 & El sistema dispondrá de métricas de trabajos, colas, errores, temporales y tiempos por fase. & Observabilidad\\
+RNF-14 & El LLM solo recibirá el contexto mínimo, su salida se validará y el sistema continuará sin él cuando falle. & Fiabilidad\\
+RNF-15 & Las pruebas automatizadas cubrirán reglas críticas de URL, dominios, permisos, ZIP y estados. & Calidad\\
+RNF-16 & Los datos personales se conservarán durante plazos definidos y podrán ser exportados o eliminados conforme a la normativa. & Legal\\
+RNF-17 & Las páginas principales deberán adaptarse a escritorio y dispositivos móviles sin ocultar información esencial. & Usabilidad\\
+RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tamaño conocido o estimado y fecha de comprobación. & Transparencia\\
+\bottomrule
+\end{longtable}
+
+\section{Reglas de negocio}
+
+\begin{enumerate}
+	\item Una selección de dos o más aplicaciones se tratará como bundle temporal, aunque no se guarde.
+	\item Un usuario solo podrá mantener una estrella activa por bundle.
+	\item La personalización de un bundle ajeno no alterará el original.
+	\item Solo el propietario podrá editar o eliminar permanentemente su bundle; un administrador podrá moderarlo según las condiciones de uso.
+	\item Un bundle oficial solo podrá ser creado o marcado como tal por un administrador.
+	\item Un bundle privado no será accesible mediante su antiguo enlace público.
+	\item La fuente de verdad del catálogo será MySQL; pgvector mantendrá una representación derivada.
+	\item Una sugerencia del LLM nunca evitará la validación normal de aplicaciones y descargas.
+	\item El trabajo parcial será válido cuando incluya al menos un instalador y describa todos los fallos.
+	\item Un trabajo listo dejará de estar disponible cuando se descargue, se elimine o venza su plazo.
+\end{enumerate}
+
+\section{Especificación de casos de uso}
+
+\subsection{CU-01 Generar ZIP}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Usuario anónimo o registrado\\
+\textbf{Requisitos} & RF-01 a RF-12; RNF-01 a RNF-05\\
+\textbf{Precondición} & Existe al menos una aplicación seleccionada y no se superan las cuotas iniciales.\\
+\textbf{Flujo principal} & 1. El usuario revisa selección, sistema y arquitectura.\newline
+2. El sistema estima tamaño y muestra fuentes.\newline
+3. El usuario confirma.\newline
+4. La API valida y crea el trabajo.\newline
+5. El worker resuelve y descarga cada aplicación.\newline
+6. El sistema genera el ZIP y notifica que está listo.\newline
+7. El usuario descarga el archivo.\\
+\textbf{Alternativas} & Una aplicación puede fallar y producirse un ZIP parcial. El usuario puede cancelar. Si todas fallan, el trabajo termina como fallido.\\
+\textbf{Postcondición} & El resultado queda disponible temporalmente y los artefactos se eliminan al expirar.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-01 Generar ZIP.}
+\label{tabla:cu-generar-zip}
+\end{table}
+
+\subsection{CU-02 Crear y publicar bundle}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Usuario registrado\\
+\textbf{Requisitos} & RF-14, RF-15 y RF-30\\
+\textbf{Precondición} & El usuario ha iniciado sesión y existe una selección válida.\\
+\textbf{Flujo principal} & 1. Introduce nombre y descripción.\newline
+2. Revisa las aplicaciones.\newline
+3. Guarda el bundle como privado.\newline
+4. Opcionalmente cambia la visibilidad a pública.\newline
+5. El sistema genera un enlace compartible.\\
+\textbf{Excepciones} & Nombre inválido, aplicaciones eliminadas o intento de marcarlo como oficial sin permisos.\\
+\textbf{Postcondición} & El bundle queda asociado a su propietario y conserva una composición persistente.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-02 Crear y publicar bundle.}
+\label{tabla:cu-crear-bundle}
+\end{table}
+
+\subsection{CU-03 Personalizar un bundle público}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Cualquier usuario\\
+\textbf{Requisitos} & RF-16 y RF-17\\
+\textbf{Precondición} & El bundle es público o pertenece al usuario.\\
+\textbf{Flujo principal} & 1. El usuario abre el bundle.\newline
+2. Añade o retira aplicaciones para esa descarga.\newline
+3. Genera el ZIP con la composición temporal.\\
+\textbf{Postcondición} & El bundle original no cambia. Un usuario registrado puede elegir clonar la composición como uno nuevo.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-03 Personalizar un bundle público.}
+\label{tabla:cu-personalizar-bundle}
+\end{table}
+
+\subsection{CU-04 Asignar estrella}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Usuario registrado\\
+\textbf{Requisitos} & RF-18 y RF-19\\
+\textbf{Precondición} & El bundle es público y el usuario puede valorarlo.\\
+\textbf{Flujo principal} & El usuario activa o retira la estrella. El backend crea o elimina la relación única y actualiza el contador.\\
+\textbf{Excepciones} & Bundle privado, inexistente o restricción de valorar el propio bundle.\\
+\textbf{Postcondición} & El ranking refleja el nuevo número de estrellas.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-04 Asignar estrella.}
+\label{tabla:cu-estrella}
+\end{table}
+
+\subsection{CU-05 Mantener una fuente}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Administrador\\
+\textbf{Requisitos} & RF-21 a RF-25\\
+\textbf{Precondición} & El administrador está autenticado.\\
+\textbf{Flujo principal} & 1. Selecciona una aplicación.\newline
+2. Configura sistema, arquitectura, página oficial, dominios y resolver.\newline
+3. Ejecuta una prueba.\newline
+4. Revisa URL final, redirecciones y metadatos.\newline
+5. Guarda la fuente si el resultado es válido.\\
+\textbf{Excepciones} & Dominio no permitido, red privada, contenido inesperado o resolución fallida.\\
+\textbf{Postcondición} & La configuración queda versionada y la acción se registra.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-05 Mantener una fuente.}
+\label{tabla:cu-mantener-fuente}
+\end{table}
+
+\subsection{CU-06 Buscar mediante lenguaje natural}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Cualquier usuario\\
+\textbf{Requisitos} & RF-26 a RF-28; RNF-14\\
+\textbf{Precondición} & La búsqueda semántica está habilitada.\\
+\textbf{Flujo principal} & 1. El usuario escribe una necesidad.\newline
+2. El sistema genera un embedding y recupera candidatos.\newline
+3. Aplica filtros de estado y compatibilidad.\newline
+4. Opcionalmente solicita una explicación al LLM.\newline
+5. Valida y muestra los resultados.\\
+\textbf{Alternativas} & Si falla el LLM, se muestran los candidatos sin explicación. Si no hay candidatos, se informa sin inventar aplicaciones.\\
+\textbf{Postcondición} & El usuario puede añadir resultados a su selección o generar un borrador de bundle.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-06 Buscar mediante lenguaje natural.}
+\label{tabla:cu-busqueda-semantica}
+\end{table}
+
+\section{Trazabilidad inicial}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}p{0.31\textwidth}X}
+\toprule
+\textbf{Área} & \textbf{Requisitos} & \textbf{Pruebas previstas}\\
+\midrule
+Catálogo y selección & RF-01 a RF-05 & API, filtros, compatibilidad y pruebas E2E.\\
+Descarga y ZIP & RF-06 a RF-12 & Integración, descargas simuladas, ZIP parcial, cancelación y limpieza.\\
+Usuarios y bundles & RF-13 a RF-19, RF-30 & Autorización, propiedad, enlace, clonación y estrella única.\\
+Administración & RF-20 a RF-25 & Permisos, auditoría, resolver controlado y estados.\\
+Semántica & RF-26 a RF-28 & Recuperación, filtros, esquema inválido y caída del proveedor.\\
+Calidad transversal & RNF-01 a RNF-18 & Seguridad, carga, accesibilidad, observabilidad y privacidad.\\
+\bottomrule
+\end{tabularx}
+\caption{Trazabilidad entre áreas y pruebas.}
+\label{tabla:trazabilidad}
+\end{table}

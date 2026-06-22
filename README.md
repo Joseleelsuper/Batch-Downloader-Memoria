@@ -1,35 +1,57 @@
-# Plantilla LaTeX
+# Batch-Downloader-Memoria
 
-La plantilla se compone de dos documentos maestros: uno para la memoria y otro para los anexos.
+Memoria del proyecto de mi TFG Batch Downloader. Puedes encontrar el código del proyecto [aquí](https://github.com/joseleelsuper/batch-downloader).
 
-- Memoría: ```memoria.tex```
-- Anexos: ```anexos.tex```
+## Índice
 
-En la carpeta ```tex``` se encuentran los distintos documentos que forman los documentos maestros. 
-Dichos documentos contienen las secciones y subsecciones a completar.
-En el documento ```3_Conceptos_teoricos.tex``` se encuentra una breve guía de cómo usar LaTeX y los comandos propios de esta plantilla.
+- [Licencia](#licencia)
+- [Personas](#personas)
 
-# Creación y edición de documentos en LaTeX
+## Licencia
 
-LaTeX es un lenguaje de marcado. 
-Para crear y editar documentos en LaTeX se necesita un editor de LaTeX, que puede estar instalado en nuestro ordenador http://www.xm1math.net/texmaker/, o puede tratarse de un servicio web https://www.overleaf.com/.
+Esta memoria está licenciada bajo la licencia Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. Para más información, abre [LICENSE](LICENSE).
 
-Un videotutorial de la instalación de Miktex + TexMaker en windows puede verse en 
-https://www.youtube.com/watch?v=DIdHfVpIiAk
+<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">
+    <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-nd.svg" alt="BY-NC-ND 4.0" />
+</a>
 
-# Petición de cambios y sugerencias
+## Personas
 
-Se ruega a los alumnos y tutores que detecten fallos o que quieran proponer una sugerencia, que lo notifiquen mediante la creación de una issue https://github.com/ubutfgm/plantillaLatex/issues
+### Autor
 
-¡Contribuciones son bienvenidas! Sigue estos pasos para colaborar:
-1. Realiza un fork del repositorio.
-2. Crea una nueva rama (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza los cambios y haz commit (`git commit -am 'Descripción del cambio'`).
-4. Empuja tus cambios (`git push origin feature/nueva-funcionalidad`).
-5. Abre un Pull Request.
+<table>
+    <tr>
+        <td align="center">
+            <a href="https://joseleelportfolio.vercel.app/">
+                <img src="https://github.com/Joseleelsuper.png" width="100px;" alt="José Gallardo"/>
+                <br />
+                <sub><b>José Gallardo Caballero</b></sub>
+            </a>
+        </td>
+    </tr>
+</table>
 
-# Gracias a los contribuidores
-César Ignacio García Osorio, Álvar Arnaiz Gonzalez, José Francisco Díez Pastor, Carlos Lopez Nozal.
-Álvaro López Cantero, Roberto Izquierdo Amo, David Miguel Lozano, Daniel Puente Ramírez.
+### Tutores
 
+<table>
+    <tr>
+        <td align="center">
+            <a href="https://github.com/JoseManuelAroca">
+                <img src="https://github.com/JoseManuelAroca.png" width="100px;" alt="José Manuel Aroca Fernández"/>
+                <br />
+                <sub><b>José Manuel Aroca Fernández</b></sub>
+            </a>
+        </td>
+        <td align="center">
+            <a href="https://github.com/RodrigoPascual">
+                <img src="https://github.com/RodrigoPascual.png" width="100px;" alt="Rodrigo Pascual García"/>
+                <br />
+                <sub><b>Rodrigo Pascual García</b></sub>
+            </a>
+        </td>
+    </tr>
+</table>
 
+---
+
+> Volver al [índice](#índice)

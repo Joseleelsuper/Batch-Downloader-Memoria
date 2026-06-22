@@ -1,0 +1,57 @@
+sequenceDiagram
+    actor U as Usuario registrado
+    actor V as Visitante
+    participant F as Frontend Vite
+    participant A as API Spring Boot
+    participant DB as MySQL
+    participant Q as RabbitMQ
+    participant W as Worker de descarga
+
+    U->>F: Seleccionar aplicaciones
+    U->>F: Crear bundle
+    F->>A: Nombre, descripción y aplicaciones
+    A->>A: Validar propietario y composición
+    A->>DB: Guardar bundle privado
+    DB-->>A: Identificador y slug
+    A-->>F: Bundle creado
+
+    opt Publicar bundle
+        U->>F: Cambiar visibilidad a pública
+        F->>A: Publicar bundle
+        A->>DB: Guardar visibilidad y enlace
+        DB-->>A: Bundle público
+        A-->>F: Enlace compartible
+    end
+
+    V->>F: Abrir bundle público
+    F->>A: Consultar bundle
+    A->>DB: Leer composición vigente
+    DB-->>A: Aplicaciones del bundle
+    A-->>F: Mostrar bundle
+
+    opt Personalización temporal
+        V->>F: Añadir o retirar aplicaciones
+        Note over V,F: El bundle original no cambia
+    end
+
+    V->>F: Generar ZIP
+    F->>A: Enviar composición temporal
+    A->>A: Validar aplicaciones y cuotas
+    A->>DB: Crear trabajo
+    A->>Q: Publicar trabajo
+    A-->>F: Trabajo aceptado
+
+    Q->>W: Procesar descarga
+    W->>DB: Actualizar progreso y resultado
+    F->>A: Consultar progreso
+    A->>DB: Leer estado
+    DB-->>A: ZIP listo
+    A-->>F: Descarga disponible
+
+    opt Asignar estrella
+        U->>F: Activar estrella
+        F->>A: Crear valoración
+        A->>DB: Insertar relación única y actualizar contador
+        DB-->>A: Nuevo total
+        A-->>F: Estrella registrada
+    end

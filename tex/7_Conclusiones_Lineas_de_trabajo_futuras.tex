@@ -1,4 +1,55 @@
-\capitulo{7}{Conclusiones y Líneas de trabajo futuras}
+\capitulo{7}{Conclusiones y líneas de trabajo futuras}
 
-Todo proyecto debe incluir las conclusiones que se derivan de su desarrollo. Éstas pueden ser de diferente índole, dependiendo de la tipología del proyecto, pero normalmente van a estar presentes un conjunto de conclusiones relacionadas con los resultados del proyecto y un conjunto de conclusiones técnicas. 
-Además, resulta muy útil realizar un informe crítico indicando cómo se puede mejorar el proyecto, o cómo se puede continuar trabajando en la línea del proyecto realizado. 
+\section{Conclusiones de la fase de análisis y diseño}
+
+La fase documentada permite concretar Batch Downloader como algo más que una página con enlaces. La generación conjunta de instaladores exige resolver fuentes cambiantes, validar destinos, procesar archivos grandes de forma asíncrona, comunicar progreso y eliminar temporales. Estos requisitos justifican la separación entre API, workers, resolvers y almacenamiento temporal.
+
+La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacenará conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtendrá en el contexto de un trabajo. Esta política reduce duplicación y favorece la actualización, aunque obliga a asumir que las páginas externas pueden cambiar y que será necesario mantener resolvers y registros.
+
+Los bundles aportan reutilización sin perder control sobre la versión publicada. La personalización temporal permite adaptar una colección a una descarga concreta y la restricción de edición permanente protege la autoría del bundle. La estrella binaria ofrece un mecanismo sencillo de popularidad sin convertir el proyecto en una plataforma de reseñas.
+
+La búsqueda semántica resulta útil para consultas por intención, pero solo si permanece subordinada al catálogo y a las reglas deterministas. El modelo de lenguaje se ha delimitado como herramienta explicativa y de propuesta. No tendrá capacidad para aprobar enlaces, descargar archivos ni modificar configuraciones críticas.
+
+La arquitectura propuesta es amplia y deberá implementarse por etapas. La prioridad será validar un núcleo seguro y observable antes de introducir el LLM. Esta conclusión evita que componentes llamativos oculten los riesgos esenciales del tratamiento de URL y ejecutables externos.
+
+\section{Limitaciones actuales}
+
+TODO: El documento no incluye mediciones reales, porque todavía no existe una implementación. Tampoco se ha comprobado la estabilidad de los resolvers frente a proveedores concretos, el consumo de disco durante descargas concurrentes ni la calidad de los embeddings sobre un catálogo real.
+
+TODO: La compatibilidad con Windows, Linux y macOS dependerá de la disponibilidad y condiciones de las fuentes oficiales. Algunos proveedores pueden exigir autenticación, aceptación manual de condiciones, elección regional o uso de tiendas propietarias. Esos casos deberán marcarse como no automatizables o requerir una estrategia específica.
+
+TODO: La elección de Java 26 y de versiones concretas de las herramientas deberá revisarse al iniciar el desarrollo. La arquitectura no depende de una versión puntual, pero las combinaciones de Spring Boot, controladores y bibliotecas sí requieren una matriz compatible.
+
+\section{Líneas de trabajo futuras}
+
+\subsection{Primera versión funcional}
+
+La primera línea de trabajo será construir un producto mínimo con catálogo, búsqueda por nombre, autenticación, URL directas, Playwright como respaldo, RabbitMQ, generación de ZIP, bundles, estrellas y registros básicos. Las pruebas de SSRF y limpieza temporal serán criterios de aceptación, no mejoras opcionales.
+
+\subsection{Resolvers y salud del catálogo}
+
+Se podrán desarrollar resolvers específicos para proveedores frecuentes, comprobaciones programadas y un panel que priorice aplicaciones rotas. El historial permitirá detectar cambios repetidos y decidir qué entradas necesitan mantenimiento manual.
+
+\subsection{Rendimiento y streaming}
+
+Tras medir el uso de disco y memoria se estudiará añadir archivos al ZIP mediante streaming. Esta técnica reduciría almacenamiento temporal, pero requiere resolver cuidadosamente los fallos parciales, la cancelación y la imposibilidad de conocer el tamaño final.
+
+\subsection{Búsqueda semántica}
+
+Será necesario evaluar modelos de embeddings, umbrales y métricas sobre consultas representativas. La utilidad se medirá comparando resultados semánticos con búsquedas convencionales y verificando que los filtros de compatibilidad nunca se omiten.
+
+\subsection{Modelo local y privacidad}
+
+La interfaz desacoplada permitirá probar un modelo ejecutado localmente. Deberán compararse calidad, latencia, consumo energético, coste y privacidad frente al proveedor remoto. Los registros enviados al modelo se minimizarán y anonimizarán cuando sea posible.
+
+\subsection{Despliegue y escalado}
+
+Docker Compose cubrirá el entorno inicial. Un despliegue distribuido deberá incluir gestión de secretos, límites de recursos, copias de seguridad y observabilidad.
+
+\subsection{Accesibilidad e internacionalización}
+
+La interfaz podrá ampliarse con varios idiomas, navegación completa por teclado, mensajes compatibles con lectores de pantalla y pruebas sobre criterios WCAG. La accesibilidad deberá validarse desde las primeras pantallas y no añadirse únicamente al final.
+
+\section{Cierre}
+
+Batch Downloader propone reunir en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles y búsqueda semántica. El diseño establece límites claros para cada componente y proporciona una base verificable para comenzar la implementación sin presentar como terminadas funcionalidades que todavía deben construirse y probarse.

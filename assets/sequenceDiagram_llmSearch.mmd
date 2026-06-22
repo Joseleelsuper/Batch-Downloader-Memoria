@@ -1,0 +1,39 @@
+sequenceDiagram
+    actor U as Usuario
+    participant F as Frontend Vite
+    participant A as API Spring Boot
+    participant E as Servicio de embeddings
+    participant V as PostgreSQL y pgvector
+    participant DB as MySQL
+    participant L as LLM Groq o local
+    participant J as Validador de esquema
+
+    U->>F: Escribir consulta en lenguaje natural
+    Note over U,F: Ejemplo: aplicaciones para programar en Java
+    F->>A: Consulta y filtros
+    A->>A: Validar longitud, permisos y cuota
+
+    A->>E: Generar embedding de la consulta
+    E-->>A: Vector y modelo utilizado
+    A->>V: Buscar candidatos próximos
+    V-->>A: Identificadores y distancias
+
+    A->>DB: Obtener catálogo vigente
+    DB-->>A: Metadatos, estado y compatibilidad
+    A->>A: Aplicar filtros deterministas
+
+    opt Explicación o propuesta de bundle
+        A->>L: Enviar consulta y candidatos filtrados
+        L-->>A: Respuesta estructurada
+        A->>J: Validar esquema y referencias
+        alt Respuesta válida
+            J-->>A: Explicación aceptada
+        else Respuesta inválida
+            J-->>A: Descartar salida generativa
+        end
+    end
+
+    A-->>F: Resultados válidos y explicación opcional
+    F-->>U: Mostrar aplicaciones y permitir selección
+
+    Note over A,L: El LLM no resuelve URL, no descarga y no cambia dominios

@@ -2,11 +2,231 @@
 
 \section{Introducción}
 
+Este anexo traduce los requisitos a una arquitectura implementable. Los nombres exactos de clases y tablas podrán adaptarse a las convenciones del código, pero deberán conservarse las responsabilidades, relaciones y restricciones descritas.
+
 \section{Diseño de datos}
+
+\subsection{MySQL como fuente transaccional}
+
+\begin{longtable}{p{0.29\textwidth}p{0.61\textwidth}}
+\caption{Entidades transaccionales principales.}\label{tabla:entidades-mysql}\\
+\toprule
+\textbf{Entidad} & \textbf{Contenido y restricciones}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Entidad} & \textbf{Contenido y restricciones}\\
+\midrule
+\endhead
+\emph{users} & Identidad, correo normalizado y verificado, nombre, rol, estado y marcas temporales. El correo será único.\\
+\emph{software\_apps} & Nombre, slug único, descripción, página oficial, icono, estado, creador y marcas temporales.\\
+\emph{tags} y \emph{software\_app\_tags} & Etiquetas únicas y relación muchos a muchos con aplicaciones.\\
+\emph{download\_sources} & Aplicación, sistema operativo, arquitectura, región, país, URL de partida, tipo y configuración de resolver, dominios permitidos y estado.\\
+\emph{resolved\_sources} & Resultado temporal de resolución: URL protegida, dominio final, nombre, tipo, tamaño, fecha de comprobación y expiración.\\
+\emph{bundles} & Propietario opcional para oficiales, nombre, slug, descripción, visibilidad, marca oficial, estado, contador de estrellas y marcas temporales.\\
+\emph{bundle\_items} & Relación única entre bundle y aplicación, con preferencias opcionales de sistema y arquitectura.\\
+\emph{bundle\_stars} & Relación única usuario-bundle que representa una estrella activa.\\
+\emph{download\_jobs} & Usuario o sesión anónima, estado, contexto, tamaños, progreso, referencia temporal al ZIP, errores y expiración.\\
+\emph{download\_job\_items} & Aplicación, fuente resuelta, nombre, tamaños, estado, error, reintentos y progreso individual.\\
+\emph{software\_requests} & Solicitante, nombre, URL oficial propuesta, estado, respuesta administrativa y fechas.\\
+\emph{resolver\_logs} & Fuente, fase, estado, mensaje, metadatos seguros y fecha.\\
+\emph{admin\_action\_logs} & Administrador, acción, tipo e identificador del objetivo, resumen del cambio y fecha.\\
+\emph{api\_keys} & Usuario, prefijo visible, hash del secreto, estado, última utilización y fecha de revocación.\\
+\bottomrule
+\end{longtable}
+
+Los datos de configuración que puedan contener secretos no se almacenarán directamente en las tablas. Se utilizarán referencias a secretos externos. Las URL temporales podrán cifrarse o limitarse al almacenamiento del trabajo y nunca se enviarán a registros generales.
+
+\subsection{Estados}
+
+Las aplicaciones utilizarán los estados \emph{active}, \emph{pending review}, \emph{broken}, \emph{disabled}, \emph{deprecated} y \emph{requires manual review}. Solo \emph{active} aparecerá como descargable.
+
+Los trabajos utilizarán \emph{queued}, \emph{resolving}, \emph{checking sizes}, \emph{downloading}, \emph{compressing}, \emph{ready}, \emph{failed}, \emph{cancelled} y \emph{expired}. Las transiciones válidas se comprobarán en un servicio de dominio; no se admitirán saltos arbitrarios desde controladores o workers.
+
+\subsection{Restricciones e índices}
+
+\begin{itemize}
+	\item Índices únicos para slugs, correos, etiqueta normalizada, estrella usuario-bundle y elemento bundle-aplicación.
+	\item Índices compuestos para fuentes por aplicación, sistema, arquitectura, región y estado.
+	\item Índices para trabajos por propietario, estado, creación y expiración.
+	\item Índices para bundles públicos por estrellas, fecha y slug.
+	\item Integridad referencial con eliminación restringida cuando una aplicación participe en trabajos o registros históricos.
+	\item Borrado lógico para aplicaciones y bundles cuando sea necesario conservar auditoría.
+\end{itemize}
+
+\subsection{PostgreSQL y pgvector}
+
+PostgreSQL contendrá una tabla derivada similar a:
+
+\begin{verbatim}
+software_embeddings
+- software_app_id
+- content_version
+- model_id
+- embedding
+- generated_at
+\end{verbatim}
+
+La clave lógica combinará aplicación, versión del contenido y modelo. Cuando cambien los metadatos relevantes se publicará un trabajo de regeneración. Los resultados semánticos devolverán identificadores; la API consultará MySQL para obtener los datos vigentes y aplicar permisos y filtros.
 
 \section{Diseño arquitectónico}
 
+\subsection{Capas del backend}
+
+\begin{description}
+	\item[API:] controladores REST, autenticación, validación de DTO y documentación OpenAPI.
+	\item[Aplicación:] casos de uso, transacciones, autorización por propietario y coordinación.
+	\item[Dominio:] entidades, reglas, estados, políticas de bundles y objetos de valor.
+	\item[Infraestructura:] JPA, RabbitMQ, MinIO, Playwright, correo, embeddings y LLM.
+\end{description}
+
+Las dependencias apuntarán hacia las capas interiores. Los adaptadores externos implementarán interfaces definidas por la aplicación o el dominio, especialmente para resolución, almacenamiento temporal, colas y proveedores de IA.
+
+\subsection{Servicios desplegables}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}p{0.30\textwidth}X}
+\toprule
+\textbf{Componente} & \textbf{Responsabilidad} & \textbf{Escalado}\\
+\midrule
+Frontend & Interfaz estática y consumo de API & Réplicas o CDN\\
+API Spring & Usuarios, catálogo, bundles, trabajos y administración & Por tráfico HTTP\\
+Worker de resolución & Playwright y validación de fuentes & Por cola de resolución\\
+Worker de descarga & Transferencia, progreso y reintentos & Por red y cola\\
+Worker de ZIP & Compresión, manifiesto y publicación temporal & Por CPU, disco y cola\\
+Servicio semántico & Embeddings, pgvector y coordinación del LLM & Por latencia y cuota\\
+Scheduler & Comprobaciones y limpieza periódica & Una instancia con elección de líder\\
+\bottomrule
+\end{tabularx}
+\caption{Componentes lógicos y criterio de escalado.}
+\label{tabla:componentes-arquitectura}
+\end{table}
+
+La primera implementación podrá combinar los workers en un único proceso. Los mensajes y puertos se diseñarán de forma que su separación posterior no cambie la API pública.
+
+\subsection{TODO: Contratos HTTP principales}
+
+\small
+\begin{longtable}{p{0.23\textwidth}p{0.34\textwidth}p{0.33\textwidth}}
+\caption{Operaciones principales de la API.}\label{tabla:api-principal}\\
+\toprule
+\textbf{Método} & \textbf{Ruta conceptual} & \textbf{Finalidad}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Método} & \textbf{Ruta conceptual} & \textbf{Finalidad}\\
+\midrule
+\endhead
+GET & \emph{/api/apps} & Buscar y filtrar el catálogo.\\
+GET & \emph{/api/apps/\{slug\}} & Consultar detalle y fuentes visibles.\\
+POST & \emph{/api/download-jobs} & Validar selección y crear trabajo.\\
+GET & \emph{/api/download-jobs/\{id\}} & Consultar estado y progreso.\\
+DELETE & \emph{/api/download-jobs/\{id\}} & Cancelar un trabajo.\\
+GET & \emph{/api/download-jobs/\{id\}/file} & Descargar un ZIP listo.\\
+GET/POST & \emph{/api/bundles} & Buscar o crear bundles.\\
+GET/PATCH/DELETE & \emph{/api/bundles/\{slug\}} & Consultar o mantener un bundle propio.\\
+POST & \emph{/api/bundles/\{id\}/star} & Asignar estrella.\\
+DELETE & \emph{/api/bundles/\{id\}/star} & Retirar estrella.\\
+POST & \emph{/api/software-requests} & Solicitar una aplicación.\\
+POST & \emph{/api/semantic-search} & Buscar por intención.\\
+POST & \emph{/api/bundle-suggestions} & Crear un borrador de bundle.\\
+POST & \emph{/api/admin/sources/\{id\}/test} & Probar una fuente y su resolver.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+Los cuerpos y respuestas se definirán en OpenAPI. Los errores compartirán un esquema con código estable, mensaje público, identificador de incidencia y detalles de validación permitidos.
+
 \section{Diseño procedimental}
 
+\subsection{Creación de un trabajo}
 
+\begin{enumerate}
+	\item Autenticar o identificar la sesión anónima.
+	\item Validar lista, sistema, arquitectura, región y formato.
+	\item Eliminar duplicados y comprobar que las aplicaciones están activas.
+	\item Aplicar cuotas y límites conocidos.
+	\item Crear \ruta{download\_jobs} y sus elementos en una transacción.
+	\item Publicar el identificador en RabbitMQ mediante patrón de salida transaccional o mecanismo equivalente.
+	\item Responder con código de aceptación e identificador del trabajo.
+\end{enumerate}
 
+\subsection{Resolución segura}
+
+\begin{enumerate}
+	\item Seleccionar la fuente compatible más específica.
+	\item Comprobar si existe una resolución no expirada.
+	\item Ejecutar resolver dedicado o Playwright.
+	\item Validar HTTPS, hostname, DNS, IP y puerto.
+	\item Seguir un número limitado de redirecciones repitiendo la validación.
+	\item Comprobar dominio final, tipo de contenido, nombre y tamaño.
+	\item Persistir resultado y metadatos sin exponer secretos.
+	\item Marcar para revisión manual cuando el fallo sea permanente.
+\end{enumerate}
+
+\subsection{Descarga y reintentos}
+
+Cada elemento se descargará con un máximo configurable de intentos. Los fallos temporales utilizarán espera incremental. Si la fuente acepta rangos, una implementación posterior podrá reanudar; en la primera versión se reiniciará el archivo para simplificar la validación.
+
+Durante la transferencia se controlará el número real de bytes. Al terminar se comparará con el tamaño anunciado cuando exista, se verificará el tipo y se rechazará cualquier archivo que exceda límites o cambie a un dominio no autorizado.
+
+\subsection{Compresión y finalización}
+
+\begin{enumerate}
+	\item Reunir elementos válidos y errores finales.
+	\item Sanitizar y resolver nombres duplicados.
+	\item Generar \ruta{manifest.json} y \ruta{README.txt}.
+	\item Construir el ZIP en el espacio temporal.
+	\item Publicarlo en MinIO con expiración.
+	\item Marcar el trabajo como listo o fallido.
+	\item Eliminar instaladores intermedios.
+	\item Enviar aviso si fue solicitado.
+\end{enumerate}
+
+\subsection{Cancelación y limpieza}
+
+La cancelación fijará una marca persistente y publicará una señal para los workers. Cada fase comprobará esa marca entre operaciones y cerrará recursos. El proceso eliminará objetos parciales y finalizará como \emph{cancelled}. El scheduler buscará trabajos expirados o bloqueados y ejecutará una limpieza idempotente.
+
+\subsection{Búsqueda semántica}
+
+\begin{enumerate}
+	\item Validar longitud y filtros de la consulta.
+	\item Generar embedding mediante el proveedor configurado.
+	\item Recuperar los vecinos más próximos en pgvector.
+	\item Consultar las aplicaciones actuales en MySQL.
+	\item Aplicar estado, compatibilidad, seguridad y permisos.
+	\item Devolver resultados vectoriales.
+	\item Si se solicita explicación, enviar solo esos resultados al LLM.
+	\item Validar el esquema y descartar referencias no presentes.
+\end{enumerate}
+
+\subsection{Actualización del contador de estrellas}
+
+La estrella se insertará con una restricción única. El contador del bundle se actualizará en la misma transacción o mediante un evento idempotente. Una tarea administrativa podrá recalcularlo desde \ruta{bundle\_stars} para reparar discrepancias.
+
+\section{Diseño de seguridad}
+
+Los secretos se proporcionarán mediante el entorno o un gestor de secretos. Los contenedores se ejecutarán sin privilegios, con sistemas de archivos de solo lectura cuando sea posible y límites de CPU, memoria y almacenamiento efímero.
+
+Los logs utilizarán campos estructurados y excluirán contraseñas, claves, cabeceras de autorización, URL firmadas y contenido de instaladores. La auditoría registrará cambios de seguridad sin copiar secretos.
+
+La salida del LLM se considerará entrada no confiable: no se renderizará como HTML sin sanitización, no se ejecutará como código y no se convertirá directamente en comandos o cambios de configuración.
+
+\section{Diseño de despliegue}
+
+El entorno local utilizará Docker Compose. El despliegue escalable utilizará Docker con:
+
+\begin{itemize}
+	\item \emph{Deployments} separados para API y workers;
+	\item \emph{Services} internos para componentes sin exposición pública;
+	\item \emph{Ingress} únicamente para frontend y API;
+	\item comprobaciones de vida y disponibilidad;
+	\item límites y solicitudes de recursos;
+	\item volúmenes o almacenamiento de objetos para temporales controlados;
+	\item secretos fuera de las imágenes;
+	\item políticas de red que restrinjan el acceso entre componentes.
+\end{itemize}
+
+El escalado automático de workers se basará preferentemente en la longitud de las colas y en métricas de recursos. No se escalará Playwright sin límites, porque cada navegador consume memoria y conexiones externas.

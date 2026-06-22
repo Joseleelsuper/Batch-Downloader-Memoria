@@ -1,83 +1,106 @@
 \capitulo{3}{Conceptos teóricos}
 
-En aquellos proyectos que necesiten para su comprensión y desarrollo de unos conceptos teóricos de una determinada materia o de un determinado dominio de conocimiento, debe existir un apartado que sintetice dichos conceptos.
+\section{Catálogo centralizado y fuentes oficiales}
 
-Algunos conceptos teóricos de \LaTeX{} \footnote{Créditos a los proyectos de Álvaro López Cantero: Configurador de Presupuestos y Roberto Izquierdo Amo: PLQuiz}.
+Una plataforma de descarga puede almacenar los binarios o limitarse a mantener información para encontrarlos. Batch Downloader seguirá el segundo enfoque: conservará metadatos y reglas de resolución, mientras que los instaladores se obtendrán bajo demanda. Esta separación reduce la duplicación de ejecutables y evita que el catálogo se convierta en una fuente desactualizada respecto al editor original.
 
-\section{Secciones}
+El concepto de \emph{fuente oficial} no se limita a la URL visible de una página. Una descarga puede atravesar redirecciones o terminar en una red de distribución de contenidos. Por ello, cada aplicación tendrá una lista de dominios permitidos y la URL final se comprobará antes de aceptar el archivo. La interfaz mostrará tanto la página oficial como el estado y la fecha de la última comprobación disponible.
 
-Las secciones se incluyen con el comando section.
+\section{Bundles y personalización temporal}
 
-\subsection{Subsecciones}
-
-Además de secciones tenemos subsecciones.
-
-\subsubsection{Subsubsecciones}
-
-Y subsecciones. 
-
-
-\section{Referencias}
-
-Las referencias se incluyen en el texto usando cite~\cite{wiki:latex}. Para citar webs, artículos o libros~\cite{koza92}, si se desean citar más de uno en el mismo lugar~\cite{bortolot2005, koza92}.
-
-
-\section{Imágenes}
-
-Se pueden incluir imágenes con los comandos standard de \LaTeX, pero esta plantilla dispone de comandos propios como por ejemplo el siguiente:
-
-\imagen{escudoInfor}{Autómata para una expresión vacía}{.5}
-
-
-
-\section{Listas de items}
-
-Existen tres posibilidades:
-
-\begin{itemize}
-	\item primer item.
-	\item segundo item.
-\end{itemize}
-
-\begin{enumerate}
-	\item primer item.
-	\item segundo item.
-\end{enumerate}
+Un bundle es una colección identificable de aplicaciones. Puede representar una necesidad concreta, por ejemplo ``herramientas para desarrollo web'', o ser simplemente una selección personal. El modelo distingue:
 
 \begin{description}
-	\item[Primer item] más información sobre el primer item.
-	\item[Segundo item] más información sobre el segundo item.
+	\item[Bundle oficial:] creado y mantenido por un administrador.
+	\item[Bundle público:] creado por un usuario registrado y visible mediante un enlace compartible.
+	\item[Bundle privado:] accesible únicamente para su propietario.
+	\item[Bundle temporal:] selección no persistente utilizada para una descarga concreta.
 \end{description}
-	
+
+La personalización temporal evita confundir la composición publicada con las preferencias de quien la descarga. Al abrir un bundle público, cualquier usuario podrá añadir o retirar aplicaciones antes de generar su ZIP. Esos cambios vivirán solamente en la solicitud actual. La edición persistente seguirá reservada al propietario o, en el caso de bundles oficiales, a un administrador.
+
+\section{Resolución de enlaces y scraping}
+
+Las URL de descarga cambian por versiones, regiones, sistemas operativos o decisiones del proveedor. Un \emph{resolver} es el componente que transforma la información de una aplicación y el contexto solicitado en una URL descargable validada.
+
+La estrategia prevista será progresiva:
+
+\begin{enumerate}
+	\item utilizar una URL directa configurada y todavía válida;
+	\item utilizar un resolver específico para el proveedor;
+	\item navegar por la página oficial mediante Playwright, inspeccionando enlaces, botones, redirecciones y tráfico de red;
+	\item marcar la fuente para revisión manual si no se obtiene un resultado seguro.
+\end{enumerate}
+
+Playwright permite controlar navegadores modernos desde Java y ejecutarlos en modo sin interfaz~\cite{playwright}. Su uso será apropiado para páginas que generan los enlaces mediante JavaScript o requieren interacción. La navegación automatizada no elimina las comprobaciones posteriores: el resultado deberá seguir utilizando HTTPS, pertenecer a un dominio permitido y cumplir los límites establecidos.
+
+\section{Procesamiento asíncrono}
+
+Resolver varias páginas, descargar archivos grandes y comprimirlos puede superar el tiempo razonable de una petición HTTP. El procesamiento asíncrono separa la creación de la solicitud de su ejecución.
+
+El backend validará la selección y publicará un mensaje en RabbitMQ. Un worker consumirá ese mensaje y actualizará el estado del trabajo a medida que avance. Spring AMQP proporciona abstracciones para enviar y recibir mensajes y para implementar consumidores dirigidos por mensajes~\cite{springamqp}. El usuario consultará el progreso mediante la API y descargará el ZIP cuando el estado sea \emph{ready}.
+
+Los estados previstos para un trabajo son:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Estado} & \textbf{Significado}\\
+\midrule
+\emph{queued} & Espera de un worker disponible.\\
+\emph{resolving} & Resolución y validación de fuentes.\\
+\emph{downloading} & Descarga temporal de instaladores.\\
+\emph{compressing} & Construcción del ZIP y del manifiesto.\\
+\emph{ready} & Archivo preparado para su entrega.\\
+\emph{failed} & No se ha podido producir un resultado válido.\\
+\emph{cancelled} & Trabajo cancelado por el usuario o el sistema.\\
+\emph{expired} & Resultado eliminado al superar su tiempo de vida.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Generación temporal del ZIP}
+
+Cada trabajo utilizará un espacio aislado identificado por su código. Los instaladores no se incorporarán a un almacenamiento permanente del catálogo. MinIO podrá emplearse como almacenamiento de objetos temporal para compartir artefactos entre workers, aplicar tiempos de expiración y evitar que el servidor web mantenga archivos grandes en su sistema local.
+
+El ZIP incluirá una carpeta con los instaladores disponibles, un fichero \ruta{manifest.json} y un documento de lectura. El manifiesto registrará la aplicación, la fuente oficial, el sistema operativo, la arquitectura, el nombre del archivo y el resultado de la validación. Si alguna descarga falla, se añadirá una explicación y el ZIP podrá completarse con los archivos restantes.
+
+\section{Embeddings y búsqueda vectorial}
+
+Un embedding es una representación numérica de un elemento en un espacio vectorial. Textos con significado relacionado tienden a ocupar posiciones próximas según una medida de distancia. Para cada aplicación se generará un vector a partir de su nombre, descripción, categorías, sistemas soportados, arquitectura y otros metadatos relevantes.
+
+PostgreSQL con pgvector permite almacenar estos vectores junto con los datos de referencia y realizar búsquedas de vecinos cercanos mediante distancia euclídea, producto interno o similitud coseno~\cite{pgvector}. Ante una consulta, el sistema generará su embedding y recuperará los candidatos más próximos. Después aplicará reglas deterministas: compatibilidad de sistema y arquitectura, estado activo, restricciones de seguridad y disponibilidad.
+
+La búsqueda semántica complementará, pero no sustituirá, la búsqueda por nombre. Las consultas exactas o parciales seguirán resolviéndose de forma convencional porque son más predecibles y económicas. La búsqueda vectorial se utilizará cuando la consulta exprese una intención, cuando no existan coincidencias suficientes o cuando el usuario active explícitamente el modo semántico.
+
+\section{Modelo de lenguaje y generación aumentada con recuperación}
+
+El modelo de lenguaje recibirá únicamente contexto recuperado desde el catálogo, los estados de los trabajos o registros internos autorizados. Este patrón, conocido como generación aumentada con recuperación, reduce la necesidad de confiar en conocimiento no verificable del modelo.
+
+Durante el desarrollo se prevé utilizar Groq como proveedor de inferencia, cuya API ofrece compatibilidad con clientes del ecosistema OpenAI~\cite{groq}. La integración se encapsulará detrás de una interfaz propia para poder cambiar de proveedor o ejecutar un modelo local sin modificar el resto de la aplicación.
+
+Las respuestas se validarán contra esquemas estructurados antes de mostrarse o transformarse en acciones. Las responsabilidades del modelo quedarán limitadas a:
+
 \begin{itemize}
-\item 
+	\item explicar por qué unas aplicaciones se ajustan a una consulta;
+	\item sugerir una selección inicial para un bundle;
+	\item resumir errores técnicos en un lenguaje comprensible;
+	\item ayudar al administrador a clasificar incidencias o detectar entradas similares.
 \end{itemize}
 
-\section{Tablas}
+El modelo no podrá aprobar dominios, resolver una URL por sí solo, ejecutar descargas, cambiar reglas de scraping, generar un ZIP ni modificar el catálogo sin una operación autorizada y validada por los servicios correspondientes.
 
-Igualmente se pueden usar los comandos específicos de \LaTeX o bien usar alguno de los comandos de la plantilla.
+\section{Seguridad en la descarga de recursos externos}
 
-\tablaSmall{Herramientas y tecnologías utilizadas en cada parte del proyecto}{l c c c c}{herramientasportipodeuso}
-{ \multicolumn{1}{l}{Herramientas} & App AngularJS & API REST & BD & Memoria \\}{ 
-HTML5 & X & & &\\
-CSS3 & X & & &\\
-BOOTSTRAP & X & & &\\
-JavaScript & X & & &\\
-AngularJS & X & & &\\
-Bower & X & & &\\
-PHP & & X & &\\
-Karma + Jasmine & X & & &\\
-Slim framework & & X & &\\
-Idiorm & & X & &\\
-Composer & & X & &\\
-JSON & X & X & &\\
-PhpStorm & X & X & &\\
-MySQL & & & X &\\
-PhpMyAdmin & & & X &\\
-Git + BitBucket & X & X & X & X\\
-Mik\TeX{} & & & & X\\
-\TeX{}Maker & & & & X\\
-Astah & & & & X\\
-Balsamiq Mockups & X & & &\\
-VersionOne & X & X & X & X\\
-} 
+El backend recibirá y seguirá URL externas, lo que introduce riesgo de falsificación de peticiones del lado del servidor o SSRF. Un atacante podría intentar acceder a servicios internos, metadatos de infraestructura o redes privadas. La mitigación prevista incluye:
+
+\begin{itemize}
+	\item admitir exclusivamente HTTPS;
+	\item resolver DNS y rechazar direcciones locales, privadas, de enlace local o reservadas;
+	\item repetir la validación después de cada redirección;
+	\item aceptar solo dominios incluidos en la configuración de la aplicación;
+	\item limitar redirecciones, tiempo, tamaño y concurrencia;
+	\item no ejecutar ningún archivo y sanitizar su nombre antes de incorporarlo al ZIP.
+\end{itemize}
+
+También se aplicarán controles de autenticación, autorización, limitación de frecuencia, cuotas y auditoría. Estas medidas evitan que la plataforma se utilice como proxy de descargas masivas y proporcionan evidencias para investigar incidencias.

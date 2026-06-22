@@ -1,0 +1,61 @@
+sequenceDiagram
+    actor U as Usuario
+    participant F as Frontend Vite
+    participant A as API Spring Boot
+    participant DB as MySQL
+    participant Q as RabbitMQ
+    participant W as Worker
+    participant R as Resolver Playwright
+    participant O as Fuente oficial
+    participant M as MinIO temporal
+    participant Z as Generador ZIP
+
+    U->>F: Busca y selecciona aplicaciones
+    F->>A: Consultar catálogo y filtros
+    A->>DB: Leer aplicaciones activas
+    DB-->>A: Aplicaciones compatibles
+    A-->>F: Resultados y metadatos
+
+    U->>F: Confirmar selección
+    F->>A: Crear trabajo con SO y arquitectura
+    A->>A: Validar selección, permisos y cuotas
+    A->>DB: Crear trabajo y elementos
+    A->>Q: Publicar identificador del trabajo
+    A-->>F: Trabajo aceptado
+
+    Q->>W: Consumir trabajo
+    W->>DB: Marcar estado resolving
+    loop Por cada aplicación
+        W->>R: Resolver instalador oficial
+        R->>O: Navegar por la fuente oficial
+        O-->>R: Redirecciones y respuesta
+        R->>R: Validar HTTPS, dominio, IP y archivo
+        R-->>W: URL validada o error
+        alt Fuente válida
+            W->>O: Descargar instalador
+            O-->>W: Flujo de bytes
+            W->>M: Guardar artefacto temporal
+        else Fuente no válida
+            W->>DB: Registrar error del elemento
+        end
+    end
+
+    W->>Z: Crear ZIP, manifiesto e informe
+    Z->>M: Publicar ZIP con expiración
+    Z-->>W: Referencia temporal
+    W->>DB: Marcar estado ready o failed
+
+    F->>A: Consultar progreso
+    A->>DB: Leer trabajo y elementos
+    DB-->>A: Estado y progreso
+    A-->>F: ZIP listo o errores
+
+    U->>F: Descargar ZIP
+    F->>A: Solicitar archivo
+    A->>M: Obtener ZIP temporal
+    M-->>A: Flujo del archivo
+    A-->>F: Entregar ZIP
+    F-->>U: Descarga final
+
+    W->>M: Eliminar instaladores temporales
+    Note over M,DB: El ZIP también se elimina al descargarse o expirar

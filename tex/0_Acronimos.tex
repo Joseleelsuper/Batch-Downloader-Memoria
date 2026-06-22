@@ -1,0 +1,132 @@
+\chapter*{Lista de siglas, acrónimos y abreviaturas}
+\addcontentsline{toc}{chapter}{Lista de siglas, acrónimos y abreviaturas}
+\markboth{Lista de siglas, acrónimos y abreviaturas}{Lista de siglas, acrónimos y abreviaturas}
+
+Esta lista reúne las abreviaturas utilizadas en la memoria y en la documentación
+técnica. Además de desarrollar su significado, indica qué representa cada
+concepto y cuál es su aportación concreta a \emph{Batch Downloader}.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{p{0.15\textwidth}p{0.25\textwidth}p{0.49\textwidth}}
+\toprule
+\textbf{Sigla} & \textbf{Significado completo} & \textbf{Descripción y utilidad en el proyecto}\\
+\midrule
+\endfirsthead
+
+\multicolumn{3}{l}{\small Lista de siglas, acrónimos y abreviaturas (continuación)}\\
+\toprule
+\textbf{Sigla} & \textbf{Significado completo} & \textbf{Descripción y utilidad en el proyecto}\\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{3}{r}{\small Continúa en la página siguiente}\\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+AMQP &
+\emph{Advanced Message Queuing Protocol} (protocolo avanzado de colas de mensajes) &
+Protocolo abierto de mensajería que permite intercambiar trabajos entre servicios. RabbitMQ y Spring AMQP lo utilizarán para desacoplar la API de los workers que resuelven enlaces, descargan instaladores y generan los archivos ZIP.\\
+
+API &
+\emph{Application Programming Interface} (interfaz de programación de aplicaciones) &
+Contrato mediante el que el frontend y otras integraciones se comunican con el backend. Permitirá consultar el catálogo, gestionar bundles, crear trabajos de descarga y conocer su progreso de forma controlada.\\
+
+CAPTCHA &
+\emph{Completely Automated Public Turing test to tell Computers and Humans Apart} &
+Prueba automática destinada a diferenciar personas de programas automatizados. Se activará ante patrones de abuso para reducir descargas masivas o automatizadas sin imponerla en el uso normal.\\
+
+CDN &
+\emph{Content Delivery Network} (red de distribución de contenidos) &
+Red de servidores que entrega archivos desde ubicaciones próximas al usuario. Algunas fuentes oficiales pueden redirigir sus instaladores a una CDN, por lo que el proyecto deberá validar también el dominio final de estas redirecciones.\\
+
+CRUE &
+CRUE Universidades Españolas; originalmente, Conferencia de Rectores de las Universidades Españolas &
+Asociación que agrupa a las universidades españolas. Sus directrices sirven como referencia para analizar la sostenibilidad curricular y los efectos ambientales, sociales y éticos del proyecto.\\
+
+CSS &
+\emph{Cascading Style Sheets} (hojas de estilo en cascada) &
+Lenguaje que define la presentación visual de documentos web. Se empleará para construir una interfaz clara, adaptable y accesible para el catálogo, los bundles y el seguimiento de descargas.\\
+
+CU &
+Caso de uso &
+Descripción estructurada de una interacción entre un actor y el sistema. Los identificadores CU-01, CU-02, etc., concretan los flujos principales y ayudan a derivar pruebas funcionales.\\
+
+DNS &
+\emph{Domain Name System} (sistema de nombres de dominio) &
+Sistema que traduce nombres de dominio a direcciones de red. Batch Downloader comprobará sus resoluciones antes y después de las redirecciones para bloquear destinos privados, locales o reservados y reducir ataques SSRF.\\
+
+DTO &
+\emph{Data Transfer Object} (objeto de transferencia de datos) &
+Objeto destinado a transportar datos entre capas o a través de la API sin exponer directamente las entidades internas. Facilitará la validación de entradas y mantendrá estable el contrato del backend.\\
+
+E2E &
+\emph{End to End} (extremo a extremo) &
+Tipo de prueba que recorre un flujo completo desde la interfaz hasta los servicios y datos implicados. Permitirá verificar escenarios reales como seleccionar aplicaciones, generar un ZIP y descargar el resultado.\\
+
+ES &
+\emph{ECMAScript} &
+Estándar en el que se basa JavaScript. Los módulos ES permiten organizar el código del frontend y son utilizados por Vite durante el desarrollo y la construcción de la aplicación web.\\
+
+HTML &
+\emph{HyperText Markup Language} (lenguaje de marcado de hipertexto) &
+Lenguaje que estructura el contenido de las páginas web. Definirá de forma semántica los formularios, listados, estados y controles del cliente para favorecer la accesibilidad y el mantenimiento.\\
+
+HTTPS &
+\emph{HyperText Transfer Protocol Secure} &
+Versión cifrada y autenticada de HTTP. Será obligatoria para las fuentes de descarga, reduciendo la manipulación del tráfico y ayudando a comprobar que los instaladores proceden de destinos autorizados.\\
+
+IA &
+\emph{Inteligencia artificial} &
+Conjunto de técnicas que permiten realizar tareas como interpretar lenguaje o generar recomendaciones. En el proyecto se limitará a la búsqueda semántica y a explicaciones basadas en datos controlados, sin autoridad sobre descargas o configuraciones.\\
+
+ID &
+\emph{Identifier} (identificador) &
+Valor que distingue de forma única una entidad o un trabajo. Se utilizará para relacionar aplicaciones, bundles, solicitudes y trabajos de descarga sin depender de sus nombres visibles.\\
+
+IP &
+\emph{Internet Protocol} (protocolo de Internet) &
+Protocolo de direccionamiento y encaminamiento de redes. Sus direcciones se validarán para impedir conexiones a la infraestructura interna y también podrán emplearse, con minimización y plazos de conservación, para aplicar cuotas.\\
+
+JPA &
+\emph{Jakarta Persistence API} &
+Especificación de Java para relacionar objetos con datos persistentes. Spring Data JPA ayudará a implementar repositorios y operaciones transaccionales sobre usuarios, aplicaciones, bundles y trabajos.\\
+
+LLM &
+\emph{Large Language Model} (modelo de lenguaje de gran tamaño) &
+Modelo entrenado para procesar y generar lenguaje natural. Ayudará a explicar resultados, proponer bundles y resumir incidencias, siempre con contexto recuperado del catálogo y salidas validadas.\\
+
+ODS &
+\emph{Objetivos de Desarrollo Sostenible} &
+Conjunto de objetivos de Naciones Unidas para abordar retos sociales, económicos y ambientales. Proporcionan un marco para evaluar privacidad, accesibilidad, consumo de recursos y responsabilidad del proyecto.\\
+
+REST &
+\emph{Representational State Transfer} (transferencia de estado representacional) &
+Estilo arquitectónico para diseñar servicios web orientados a recursos. Guiará una API HTTP predecible para aplicaciones, bundles y trabajos, facilitando clientes, pruebas y documentación.\\
+
+{\footnotesize SOS1--SOS4} &
+Competencias de sostenibilidad 1 a 4 &
+Identificadores de las cuatro competencias tratadas en el anexo de sostenibilización curricular: contextualización crítica, uso sostenible de recursos, participación y aplicación de principios éticos. Ayudan a revisar el impacto del proyecto más allá de su funcionamiento técnico.\\
+
+SSRF &
+\emph{Server-Side Request Forgery} (falsificación de peticiones del lado del servidor) &
+Vulnerabilidad que induce a un servidor a realizar peticiones hacia destinos no autorizados. Es un riesgo central porque la plataforma sigue URL externas; se mitigará mediante HTTPS, dominios permitidos y validación de DNS, IP y redirecciones.\\
+
+URL &
+\emph{Uniform Resource Locator} (localizador uniforme de recursos) &
+Dirección que identifica un recurso accesible en red. El sistema almacenará páginas oficiales y resolverá URL temporales de descarga, validando cada destino antes de transferir un archivo.\\
+
+VPS &
+\emph{Virtual Private Server} (servidor privado virtual) &
+Servidor virtual con recursos asignados que puede alojar los componentes del sistema. Se contempla en la estimación de costes como una opción inicial de despliegue y pruebas.\\
+
+WCAG &
+\emph{Web Content Accessibility Guidelines} (pautas de accesibilidad para el contenido web) &
+Recomendaciones internacionales para hacer interfaces web perceptibles, operables, comprensibles y robustas. Servirán para definir y comprobar la accesibilidad del frontend.\\
+
+\end{longtable}
+\endgroup

@@ -2,12 +2,123 @@
 
 \section{Introducción}
 
+TODO: Este anexo establece una planificación provisional para transformar el diseño de Batch Downloader en una aplicación verificable. Las semanas son relativas al inicio de la implementación, por lo que pueden adaptarse al calendario académico sin alterar las dependencias entre fases.
+
+El trabajo seguirá un enfoque iterativo. Cada fase terminará con una demostración, pruebas automatizadas y actualización de la documentación. Las funcionalidades de inteligencia artificial y despliegue distribuido se abordarán después de validar el núcleo de descarga.
+
+\section{Metodología}
+
+Se utilizará un tablero de tareas con una lista priorizada y ciclos semanales. Cada elemento deberá incluir descripción, criterios de aceptación, riesgos y pruebas. Una tarea se considerará terminada cuando:
+
+\begin{itemize}
+	\item el código esté integrado en la rama principal del proyecto;
+	\item las pruebas relacionadas sean reproducibles;
+	\item no exponga secretos ni datos personales;
+	\item la documentación afectada esté actualizada;
+	\item el flujo pueda demostrarse en el entorno de desarrollo.
+\end{itemize}
+
+Las revisiones con los tutores se utilizarán para confirmar alcance, arquitectura y presentación de resultados. Los cambios relevantes se registrarán como decisiones de arquitectura para evitar que la memoria y la implementación evolucionen de forma contradictoria.
+
 \section{Planificación temporal}
+
+\begin{longtable}{p{0.14\textwidth}p{0.25\textwidth}p{0.51\textwidth}}
+\caption{Planificación provisional por fases.}\label{tabla:planificacion}\\
+\toprule
+\textbf{Semanas} & \textbf{Fase} & \textbf{Resultados esperados}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Semanas} & \textbf{Fase} & \textbf{Resultados esperados}\\
+\midrule
+\endhead
+1--2 & Preparación & Repositorios, convenciones, entornos Docker, integración continua, modelos iniciales y contrato OpenAPI.\\
+3--4 & Catálogo y seguridad base & Usuarios, roles, aplicaciones, fuentes, etiquetas, validación de entradas y panel administrativo mínimo.\\
+5--7 & Resolución y descargas & Playwright, dominios permitidos, protección SSRF, RabbitMQ, workers y estados de trabajos.\\
+8--9 & ZIP y temporales & Descarga controlada, manifiesto, resultado parcial, MinIO temporal, cancelación y limpieza automática.\\
+10--11 & Bundles y estrellas & Bundles públicos, privados y oficiales, personalización temporal, enlaces, clonación y estrella binaria.\\
+12 & Solicitudes y avisos & Peticiones de nuevo software, revisión administrativa y notificaciones configurables.\\
+13--14 & Búsqueda semántica & Embeddings, PostgreSQL con pgvector, consultas por intención y filtros de negocio.\\
+15 & Asistencia con LLM & Recomendaciones explicables, borradores de bundles, validación de esquemas y resumen de errores.\\
+16--17 & Pruebas y rendimiento & Integración, extremo a extremo, seguridad, carga, concurrencia y consumo de almacenamiento.\\
+18 & Despliegue y cierre & Imágenes definitivas, demostración, documentación, manuales y preparación de defensa.\\
+\bottomrule
+\end{longtable}
+
+\section{Hitos}
+
+\begin{description}
+	\item[H1 - Catálogo utilizable:] un administrador puede registrar aplicaciones y un usuario puede buscarlas.
+	\item[H2 - Descarga segura:] una selección genera un ZIP desde dominios autorizados y elimina los temporales.
+	\item[H3 - Comunidad:] los usuarios pueden crear, publicar, personalizar y valorar bundles.
+	\item[H4 - Búsqueda semántica:] una consulta por intención devuelve aplicaciones válidas del catálogo.
+	\item[H5 - Entrega:] el sistema se despliega, se prueba y los manuales reflejan el comportamiento real.
+\end{description}
+
+\section{Gestión de riesgos}
+
+\begin{longtable}{p{0.27\textwidth}p{0.13\textwidth}p{0.13\textwidth}p{0.37\textwidth}}
+\caption{Riesgos principales y mitigaciones.}\label{tabla:riesgos}\\
+\toprule
+\textbf{Riesgo} & \textbf{Prob.} & \textbf{Impacto} & \textbf{Mitigación}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Riesgo} & \textbf{Prob.} & \textbf{Impacto} & \textbf{Mitigación}\\
+\midrule
+\endhead
+Cambios frecuentes en páginas oficiales & Alta & Alta & Resolver genérico, resolvers específicos, pruebas programadas y revisión manual.\\
+Uso del servidor como proxy de descargas & Media & Alta & Cuotas, rate limiting, límites por IP y usuario, CAPTCHA opcional y auditoría.\\
+Ataques SSRF & Media & Crítico & Allowlist, validación DNS e IP tras cada redirección, HTTPS y bloqueo de redes internas.\\
+Consumo excesivo de disco o red & Media & Alta & Límites, streaming futuro, expiración, limpieza periódica y métricas.\\
+Incompatibilidad entre Java y dependencias & Baja & Media & Prototipo inicial y posibilidad de adoptar una versión LTS compatible.\\
+Respuestas incorrectas del LLM & Alta & Media & Recuperación cerrada, esquemas, filtros deterministas y degradación sin LLM.\\
+Alcance excesivo & Alta & Alta & Priorizar el núcleo, resolvers avanzados y modelo local después del producto mínimo.\\
+Falta de tiempo para manuales & Media & Media & Mantener esqueletos y completarlos durante las pruebas de aceptación.\\
+\bottomrule
+\end{longtable}
 
 \section{Estudio de viabilidad}
 
+\subsection{Viabilidad técnica}
+
+Las tecnologías seleccionadas disponen de documentación, bibliotecas para Java y ejecución mediante contenedores. El principal riesgo técnico no es la disponibilidad de herramientas, sino la variabilidad de las fuentes externas y el tratamiento seguro de descargas. Por este motivo se requiere un prototipo temprano con varias páginas de distinta complejidad.
+
+La arquitectura puede simplificarse para el desarrollo local: un frontend, una aplicación Spring modular, un worker y servicios Docker.
+
 \subsection{Viabilidad económica}
+
+La siguiente estimación representa el coste equivalente del trabajo y de la infraestructura de desarrollo. No corresponde a gastos ya realizados.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{Xrrr}
+\toprule
+\textbf{Concepto} & \textbf{Cantidad} & \textbf{Precio estimado} & \textbf{Subtotal}\\
+\midrule
+Trabajo de análisis, desarrollo y documentación & 480 h & 15,00 €/h & 7200,00 €\\
+Infraestructura VPS & 5 meses & 15,00 €/mes & 75,00 €\\
+Dominio & 1 & 15,00 € & 15,00 €\\
+\midrule
+\multicolumn{3}{r}{\textbf{Total estimado}} & \textbf{7290,00 €}\\
+\bottomrule
+\end{tabularx}
+\caption{Estimación económica orientativa.}
+\label{tabla:viabilidad-economica}
+\end{table}
+
+TODO: Para la fase académica podrán utilizarse herramientas de código abierto y niveles gratuitos. El proveedor LLM deberá configurarse con límites de gasto. Un despliegue público real necesitaría revisar costes de transferencia, almacenamiento temporal, observabilidad y soporte.
 
 \subsection{Viabilidad legal}
 
+La plataforma tratará cuentas, direcciones IP, registros y solicitudes, por lo que deberá cumplir el Reglamento General de Protección de Datos~\cite{rgpd} y la Ley Orgánica 3/2018~\cite{lopdgdd}. Se aplicarán minimización, limitación de finalidad, plazos de conservación, información al usuario y mecanismos para ejercer derechos.
 
+Si se presta como servicio web, deberán publicarse la identificación del responsable, condiciones de uso, política de privacidad y política de cookies conforme a la Ley 34/2002~\cite{lssi}. Los correos solo se enviarán para finalidades solicitadas y con mecanismos para evitar abuso.
+
+Los instaladores pertenecen a sus respectivos titulares. Batch Downloader no alterará ni redistribuirá copias permanentes; los procesará temporalmente desde fuentes oficiales para atender una solicitud. Aun así, antes de incorporar cada aplicación deberán revisarse sus condiciones de uso y las limitaciones de automatización. La Ley de Propiedad Intelectual constituye el marco general español aplicable~\cite{propiedadIntelectual}.
+
+TODO: El código propio se publicará bajo una licencia permisiva, previsiblemente GPL 3.0, tras confirmar que todas las dependencias y recursos son compatibles. La memoria conservará su licencia documental actual. Los nombres y logotipos de terceros se utilizarán únicamente con finalidad identificativa y deberán respetar sus marcas.
+
+\section{Criterios de seguimiento}
+
+El avance se medirá por hitos demostrables y cobertura de riesgos, no únicamente por número de funcionalidades. En cada revisión se registrarán tareas completadas, incidencias abiertas, pruebas fallidas, decisiones pendientes y desviación respecto a la planificación. Si el calendario se reduce, se protegerán primero la seguridad, la descarga temporal y la trazabilidad; las capacidades semánticas y el despliegue avanzado se pospondrán antes que degradar esas garantías.

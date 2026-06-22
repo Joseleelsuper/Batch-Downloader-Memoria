@@ -1,3 +1,69 @@
 \capitulo{6}{Trabajos relacionados}
 
-Este apartado sería parecido a un estado del arte de una tesis o tesina. En un trabajo final grado no parece obligada su presencia, aunque se puede dejar a juicio del tutor el incluir un pequeño resumen comentado de los trabajos y proyectos ya realizados en el campo del proyecto en curso. 
+\section{Ninite}
+
+Ninite es la referencia más cercana a la idea central del proyecto. Su página permite marcar aplicaciones y obtener un instalador personalizado que automatiza el proceso. El servicio declara que descarga las aplicaciones desde el sitio de cada editor, selecciona versiones adecuadas, omite programas ya actualizados y verifica firmas digitales o resúmenes antes de ejecutar~\cite{ninite}.
+
+Su propuesta destaca por la sencillez: el usuario elige programas, descarga un ejecutable y lo inicia. También dispone de una oferta profesional orientada a la administración y actualización de equipos.
+
+\section{Patch My PC Home Updater}
+
+Patch My PC Home Updater es una aplicación gratuita para Windows orientada a instalar, actualizar y desinstalar software de uso habitual. La herramienta mantiene un catálogo de más de 500 aplicaciones y permite ejecutar instalaciones y actualizaciones silenciosas, programar comprobaciones automáticas y excluir aquellos programas que el usuario no desee actualizar. También ofrece una versión portable y una función de desinstalación múltiple~\cite{patchmypc-home-updater}.
+
+Su propuesta está especialmente centrada en el mantenimiento continuo del equipo. Las actualizaciones se prueban para comprobar su detección e instalación y, según el proveedor, los archivos se verifican mediante VirusTotal. Además, la aplicación evita incluir software adicional no solicitado y puede impedir reinicios durante el proceso de actualización~\cite{patchmypc-home-updater}.
+
+La principal diferencia respecto a Batch Downloader es la necesidad de ejecutar un agente local. Patch My PC administra directamente el software instalado en el equipo y automatiza operaciones que pueden requerir el cierre de aplicaciones o permisos de instalación. Batch Downloader, por el contrario, se limita a localizar y agrupar instaladores oficiales en un archivo ZIP, sin instalar, actualizar ni desinstalar programas.
+
+\section{UBULabs}
+
+UBULabs es un servicio de la Universidad de Burgos que proporciona a la comunidad universitaria acceso a las aplicaciones necesarias para prácticas docentes y laboratorios. El usuario accede al portal mediante sus credenciales institucionales y el catálogo disponible depende de su cuenta, del sistema operativo y de la red desde la que se conecta~\cite{ubulabs}. Algunas aplicaciones solo están disponibles desde la red de la Universidad debido a las condiciones de sus licencias.
+
+La plataforma utiliza dos mecanismos de entrega. Mediante el \emph{streaming} de aplicaciones se despliegan programas preconfigurados desde los servidores de la Universidad para que se ejecuten en el equipo del usuario. Cuando una licencia está restringida a la red universitaria o el acceso se realiza desde el exterior, se recurre a la virtualización: la aplicación se ejecuta en un servidor y el usuario interactúa con ella mediante un cliente remoto~\cite{ubulabs}.
+
+UBULabs comparte con Batch Downloader la idea de ofrecer un punto de acceso centralizado a un catálogo de software, pero responde a un contexto institucional. Su catálogo y sus permisos están condicionados por acuerdos de licencia, asignaturas y pertenencia a la Universidad. Batch Downloader plantea, en cambio, un catálogo público de instaladores obtenidos desde los sitios oficiales, bundles compartibles y descargas temporales, sin proporcionar licencias ni ejecutar las aplicaciones en infraestructura propia.
+
+\section{Comparación funcional}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}XXX}
+\toprule
+\textbf{Característica} & \textbf{Ninite / Patch My PC} & \textbf{UBULabs} & \textbf{Batch Downloader}\\
+\midrule
+Finalidad principal & Instalación y mantenimiento automatizados & Acceso académico a software con licencia & Descarga conjunta de instaladores oficiales\\
+Selección múltiple & Sí & Catálogo asignado al usuario & Sí\\
+Forma de entrega & Instalador o agente local & \emph{Streaming}, descarga o escritorio virtual & ZIP temporal con instaladores y manifiesto\\
+Ejecución automática & Sí & Sí, local o remota según la aplicación & No; el usuario decide qué ejecutar\\
+Control de acceso & Servicio general, con oferta profesional & Credenciales, permisos y condiciones de red & Catálogo público y funciones asociadas a cuentas\\
+Persistencia de binarios & Gestionada por cada servicio & Aplicaciones alojadas o desplegadas por la Universidad & Prohibida por diseño para instaladores\\
+Colecciones compartibles & Selección de aplicaciones & No es su objetivo & Bundles oficiales, públicos y privados\\
+Participación comunitaria & Sugerencia de aplicaciones & Solicitud institucional de aplicaciones & Publicación, clonación y estrellas\\
+Sistemas operativos & Principalmente Windows & Depende de la aplicación y del método de acceso & TODO: Windows, Linux y macOS como alcance planificado\\
+Búsqueda semántica & No indicada & No indicada & Embeddings y asistencia con LLM\\
+Modelo de despliegue & Servicio propietario y agente local & Infraestructura institucional & Arquitectura contenerizada del TFG\\
+\bottomrule
+\end{tabularx}
+\caption{Comparación conceptual de las soluciones relacionadas con Batch Downloader.}
+\label{tabla:comparacion-trabajos-relacionados}
+\end{table}
+
+\section{Diferencias de enfoque}
+
+Ninite y Patch My PC buscan que la instalación o actualización sea automática y silenciosa. Batch Downloader se centrará en reunir archivos y conservar trazabilidad, sin ejecutar software en el equipo del usuario. Esta decisión reduce el alcance y evita desarrollar un agente local con privilegios de instalación, aunque traslada al usuario la ejecución posterior.
+
+UBULabs resuelve un problema diferente: garantizar que una comunidad concreta pueda utilizar software sujeto a licencias institucionales. Su combinación de despliegue y virtualización permite ejecutar aplicaciones incluso cuando no pueden instalarse libremente en el equipo del usuario. Batch Downloader no cubrirá este escenario, ya que solo incluirá software cuyos instaladores puedan obtenerse legítimamente desde fuentes oficiales y no gestionará licencias de uso.
+
+Los bundles introducen una capa social y organizativa. Un enlace podrá representar una selección recomendada, y cada receptor podrá adaptarla sin alterar el original. Las estrellas permitirán destacar colecciones útiles, mientras que los administradores mantendrán bundles oficiales para casos comunes.
+
+La búsqueda semántica también amplía el modelo de catálogo. En lugar de exigir que el usuario conozca nombres concretos, permitirá expresar objetivos. El resultado seguirá dependiendo de aplicaciones registradas y validadas, por lo que no se convertirá en una búsqueda abierta de ejecutables en Internet.
+
+\section{Lecciones aplicadas al diseño}
+
+La simplicidad de Ninite y Patch My PC demuestra la importancia de reducir pasos y explicar claramente qué ocurrirá. Batch Downloader deberá evitar que la complejidad interna de colas, workers y resolvers se traslade a la interfaz. El flujo principal seguirá siendo seleccionar, revisar y generar.
+
+También resulta relevante la confianza. Ninite destaca el origen oficial y la verificación de los archivos~\cite{ninite}, mientras que Patch My PC añade pruebas previas de las actualizaciones~\cite{patchmypc-home-updater}. En Batch Downloader estas garantías deberán materializarse mediante dominios permitidos, validación de redirecciones, manifiesto, fechas de comprobación y mensajes explícitos.
+
+UBULabs muestra, además, que la disponibilidad de una aplicación puede depender del usuario, la plataforma, la ubicación de red y la licencia. Aunque Batch Downloader no gestionará licencias institucionales, su catálogo deberá representar con claridad los sistemas operativos compatibles y cualquier restricción relevante antes de iniciar una descarga.
+
+Por último, la comparación ayuda a delimitar el proyecto. Batch Downloader no pretende sustituir un gestor de paquetes del sistema operativo ni automatizar instalaciones con privilegios. Su aportación se sitúa en la preparación de una descarga conjunta, la gestión de bundles y la recuperación semántica dentro de un catálogo controlado.

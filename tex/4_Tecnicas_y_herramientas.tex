@@ -1,6 +1,121 @@
 \capitulo{4}{Técnicas y herramientas}
 
-Esta parte de la memoria tiene como objetivo presentar las técnicas metodológicas y las herramientas de desarrollo que se han utilizado para llevar a cabo el proyecto. Si se han estudiado diferentes alternativas de metodologías, herramientas, bibliotecas se puede hacer un resumen de los aspectos más destacados de cada alternativa, incluyendo comparativas entre las distintas opciones y una justificación de las elecciones realizadas. 
-No se pretende que este apartado se convierta en un capítulo de un libro dedicado a cada una de las alternativas, sino comentar los aspectos más destacados de cada opción, con un repaso somero a los fundamentos esenciales y referencias bibliográficas para que el lector pueda ampliar su conocimiento sobre el tema.
+\section{Criterios de selección}
 
+TODO: Las tecnologías se han seleccionado buscando tipado estático, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. Dado que esta memoria describe una arquitectura planificada, las elecciones deberán confirmarse con prototipos durante la implementación.
 
+\section{Frontend}
+
+\subsection{Vite}
+
+Vite se utilizará como herramienta de desarrollo y construcción del cliente. Proporciona un servidor de desarrollo basado en módulos ES y un proceso de construcción optimizado para producción~\cite{vite}. La propuesta evita introducir un framework de interfaz completo desde el inicio y mantiene el frontend próximo a las tecnologías web estándar.
+
+\subsection{HTML, CSS y TypeScript}
+
+HTML definirá una estructura semántica y accesible; CSS permitirá una interfaz compacta capaz de mostrar muchas aplicaciones; y TypeScript aportará tipos a modelos, respuestas de la API, estados de trabajos y formularios. El tipado compartido reducirá errores al evolucionar el contrato entre el frontend y el backend.
+
+\section{Backend}
+
+\subsection{Java 26}
+
+TODO: Java será el lenguaje principal del servidor por su sistema de tipos, madurez, bibliotecas y experiencia previa del autor. Se plantea utilizar Java 26, versión de la plataforma Java SE publicada en marzo de 2026~\cite{java26}. Antes de comenzar la implementación se verificará la compatibilidad de Spring Boot y de las dependencias elegidas; si fuera necesario se adoptará una versión LTS compatible sin cambiar el diseño.
+
+\subsection{Spring Boot}
+
+Spring Boot facilita la creación de aplicaciones autónomas con configuración inicial reducida y características de producción como métricas y comprobaciones de salud~\cite{springboot}. Se prevén los siguientes módulos:
+
+\begin{description}
+	\item[Spring Web:] API REST, validación del protocolo HTTP y entrega de resultados.
+	\item[Spring Security:] autenticación, sesiones o tokens, roles y protección de rutas.
+	\item[Spring Data JPA:] persistencia transaccional y repositorios.
+	\item[Spring Validation:] validación declarativa de entradas y configuraciones.
+	\item[Spring Actuator:] salud, métricas y observabilidad de servicios.
+	\item[Spring AMQP:] publicación y consumo de trabajos mediante RabbitMQ.
+\end{description}
+
+\subsection{OpenAPI}
+
+OpenAPI se empleará para describir el contrato de la API HTTP. La especificación permite que personas y herramientas comprendan las operaciones de un servicio sin inspeccionar su código~\cite{openapi}. La descripción servirá para generar documentación, validar compatibilidad y facilitar clientes de prueba. No se utilizará para realizar scraping.
+
+\section{Resolución de fuentes}
+
+\subsection{TODO: Playwright para Java}
+
+Playwright controlará un navegador en modo \emph{headless} para páginas que requieran JavaScript, interacción o inspección de red. Su API para Java se distribuye mediante módulos Maven y permite manejar Chromium, Firefox y WebKit~\cite{playwright}. Para cada proveedor se intentará limitar la automatización a pasos conocidos y selectores revisables.
+
+La navegación generalista se mantendrá como mecanismo de respaldo. Los proveedores con procesos complejos podrán disponer de resolvers específicos, de forma que los cambios en una página no afecten al resto del catálogo.
+
+\subsection{TODO: Watcher en Python}
+
+Un watcher que cada cierto tiempo se ejecuta sobre las URLs para poder obtener información de las fuentes y comprobar si hay cambios.
+
+\section{Persistencia}
+
+\subsection{MySQL}
+
+MySQL almacenará los datos transaccionales: usuarios, aplicaciones, fuentes, bundles, estrellas, solicitudes, trabajos, estados y registros de auditoría. La elección mantiene un modelo relacional apropiado para restricciones de integridad, relaciones entre entidades y operaciones administrativas.
+
+\subsection{PostgreSQL y pgvector}
+
+La búsqueda semántica se aislará en PostgreSQL con pgvector. Esta extensión añade tipos y operadores para búsqueda exacta y aproximada de vectores~\cite{pgvector}. Separar este almacenamiento permite evolucionar la parte semántica sin condicionar el modelo transaccional principal.
+
+La duplicación de información se limitará a los identificadores y metadatos necesarios para generar embeddings. MySQL seguirá siendo la fuente de verdad del catálogo y cualquier vector incluirá la versión o fecha del contenido del que procede.
+
+\section{Mensajería y almacenamiento temporal}
+
+\subsection{RabbitMQ}
+
+RabbitMQ desacoplará la API de los workers encargados de resolver, descargar y comprimir. Spring AMQP ofrece una abstracción de alto nivel para soluciones basadas en AMQP y consumidores asíncronos~\cite{springamqp}. Se definirán colas o claves de enrutamiento para generación de ZIP, comprobación periódica de fuentes y notificaciones.
+
+Los mensajes contendrán identificadores, no datos sensibles ni archivos. El estado persistente del trabajo permitirá reintentos controlados y evitará depender exclusivamente de la cola.
+
+\subsection{MinIO}
+
+MinIO se reservará para objetos temporales como ZIP preparados, manifiestos o archivos intermedios que deban compartirse entre instancias. Las políticas de expiración eliminarán resultados no descargados. No se utilizará como repositorio permanente de instaladores ni como base de conocimiento para el modelo.
+
+\section{Búsqueda semántica y LLM}
+
+\subsection{Embeddings}
+
+Un servicio de embeddings convertirá las consultas y descripciones del catálogo en vectores compatibles. La interfaz del servicio incluirá el identificador del modelo y la dimensión para poder regenerar los datos cuando cambie la representación.
+
+\subsection{Groq y desacoplamiento del proveedor}
+
+TODO: Groq se propone como proveedor durante el desarrollo por su rapidez de inferencia y su API compatible con clientes OpenAI~\cite{groq}. El backend no expondrá directamente el SDK al resto de módulos: utilizará puertos propios para generación de embeddings y respuestas. Esto permitirá sustituir el servicio por un modelo local, otra nube o una implementación de prueba.
+TODO: Hacerlo compatible también con openrouter, aunque utilizando el patrón strategy para poder cambiar de proveedor sin modificar el resto de la aplicación.
+
+\section{Contenedores y despliegue}
+
+\subsection{Docker}
+
+Cada componente se empaquetará en una imagen Docker. Los contenedores aíslan aplicaciones y dependencias y permiten ejecutar la misma unidad en diferentes entornos~\cite{docker}. Para desarrollo se preparará una composición con frontend, API, workers, bases de datos, RabbitMQ y MinIO.
+
+\section{Herramientas de desarrollo y documentación}
+
+Git se utilizará para control de versiones; Maven gestionará dependencias y construcción del backend; npm gestionará el frontend; y \LaTeX{} se utilizará para mantener la memoria y la documentación técnica. Mermaid será la fuente editable de los diagramas de secuencia, que se exportarán a un formato vectorial antes de incorporarlos al documento.
+
+\section{Resumen de correspondencia}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
+\toprule
+\textbf{Necesidad} & \textbf{Tecnología propuesta}\\
+\midrule
+Cliente web & Vite, HTML, CSS y TypeScript\\
+API y lógica de negocio & Java 26 y Spring Boot\\
+Contrato HTTP & OpenAPI\\
+Datos transaccionales & MySQL\\
+Búsqueda vectorial & PostgreSQL y pgvector\\
+Trabajos asíncronos & RabbitMQ y Spring AMQP\\
+Scraping dinámico & Playwright para Java\\
+Objetos temporales & MinIO con expiración\\
+Asistencia semántica & Embeddings y Groq mediante una interfaz desacoplada\\
+Portabilidad y escalado & Docker \\
+Documentación & \LaTeX{} y Mermaid\\
+\bottomrule
+\end{tabularx}
+\caption{Tecnologías propuestas por responsabilidad.}
+\label{tabla:tecnologias-responsabilidad}
+\end{table}

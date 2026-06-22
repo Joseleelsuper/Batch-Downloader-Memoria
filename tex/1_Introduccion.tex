@@ -1,3 +1,44 @@
 \capitulo{1}{Introducción}
 
-Descripción del contenido del trabajo y del estructura de la memoria y del resto de materiales entregados.
+\section{Contexto y problema}
+
+La preparación de un ordenador nuevo, la reinstalación del sistema operativo o la configuración de un puesto de trabajo suelen exigir la descarga de numerosas aplicaciones. Aunque cada fabricante publica sus instaladores en páginas oficiales, el usuario debe localizar dichas páginas, identificar la versión adecuada para su sistema y repetir el proceso para cada programa. Esta tarea es mecánica, consume tiempo y aumenta la posibilidad de utilizar enlaces obsoletos o sitios no oficiales.
+
+\emph{Batch Downloader} se plantea como una plataforma web capaz de centralizar el descubrimiento y la descarga de software sin convertirse en un repositorio permanente de ejecutables. El catálogo mantendrá información descriptiva, metadatos y reglas para localizar los instaladores, pero los binarios se obtendrán desde las fuentes oficiales cuando el usuario solicite una descarga. El servidor reunirá temporalmente los archivos seleccionados, construirá un ZIP y eliminará los artefactos al finalizar.
+
+El proyecto comparte con servicios como Ninite la idea de reducir las acciones necesarias para preparar un equipo. Ninite permite seleccionar varias aplicaciones y generar un instalador personalizado, descarga cada programa desde el sitio de su editor y verifica firmas o resúmenes antes de ejecutarlo~\cite{ninite}. Batch Downloader se diferencia por proponer bundles compartibles y editables de forma temporal, un catálogo administrable, compatibilidad planificada con distintos sistemas y arquitecturas, generación de ZIP en servidor y una capa de búsqueda semántica.
+
+\section{Motivación}
+
+La motivación principal es simplificar un proceso frecuente sin renunciar a la trazabilidad. El usuario debe conocer qué aplicaciones ha elegido, desde qué dominio se obtiene cada instalador y por qué un archivo no ha podido incluirse. Esta transparencia es especialmente importante porque la plataforma procesará ejecutables de terceros y dependerá de páginas externas que pueden cambiar sin previo aviso.
+
+El sistema también aborda un problema de organización. Una selección habitual, como un entorno de desarrollo, un conjunto de utilidades multimedia o las aplicaciones básicas para un equipo nuevo, puede expresarse como un \emph{bundle}. Los usuarios registrados podrán conservar sus bundles, publicarlos y marcar con una estrella los que les resulten útiles. Un bundle público podrá personalizarse para una descarga concreta sin modificar la versión almacenada; solamente su propietario podrá alterar de manera permanente la composición original.
+
+Por último, las búsquedas exactas por nombre son insuficientes cuando el usuario no conoce una aplicación concreta. Una consulta como ``programas para desarrollar en Java en Windows'' expresa una necesidad, no un nombre. La búsqueda semántica permitirá recuperar aplicaciones relacionadas con esa intención y el modelo de lenguaje podrá explicar la recomendación. Esta capacidad se diseña como una ayuda subordinada a los datos y reglas de la plataforma, no como un componente con autoridad sobre las descargas.
+
+\section{Alcance de esta memoria}
+
+TODO: En el momento de redactar este documento el software aún no está implementado. La memoria recoge la fase de análisis y diseño: objetivos, conceptos, decisiones tecnológicas, arquitectura, requisitos, riesgos, planificación y criterios de validación. Los comportamientos se redactan, por tanto, como especificaciones previstas.
+
+El alcance funcional incluye:
+
+\begin{itemize}
+	\item consulta y filtrado de un catálogo de aplicaciones.
+	\item selección individual o múltiple y generación de un ZIP en servidor.
+	\item usuarios anónimos, registrados y administradores.
+	\item bundles oficiales, públicos y privados.
+	\item valoración binaria de bundles mediante estrellas.
+	\item solicitud de nuevas aplicaciones y envío opcional de avisos por correo.
+	\item resolución periódica de enlaces oficiales y revisión administrativa.
+	\item búsqueda semántica, recomendaciones y asistencia para explicar errores.
+	\item límites de uso, auditoría y medidas frente a descargas abusivas.
+\end{itemize}
+
+
+TODO: Quedan fuera de esta fase la implementación, las métricas reales de rendimiento y los manuales definitivos de programación y de usuario. Esos documentos se completarán cuando exista una versión ejecutable y puedan validarse los procedimientos contra el producto real.
+
+\section{Estructura del documento}
+
+El capítulo 2 define los objetivos. El capítulo 3 presenta los conceptos necesarios para comprender la solución. El capítulo 4 justifica las tecnologías y técnicas seleccionadas. El capítulo 5 describe la arquitectura y los aspectos más relevantes del diseño. El capítulo 6 compara la propuesta con Ninite. El capítulo 7 resume las conclusiones alcanzadas durante el análisis y plantea líneas de trabajo futuras.
+
+La documentación técnica se entrega por separado. Sus anexos contienen el plan de proyecto, la especificación de requisitos, el diseño de datos y procedimientos, los esqueletos de los manuales y la reflexión de sostenibilidad.
