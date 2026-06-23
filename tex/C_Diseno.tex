@@ -19,16 +19,16 @@ Este anexo traduce los requisitos a una arquitectura implementable. Los nombres 
 \midrule
 \endhead
 \emph{users} & Identidad, correo normalizado y verificado, nombre, rol, estado y marcas temporales. El correo será único.\\
-\emph{software\_apps} & Nombre, slug único, descripción, página oficial, icono, estado, creador y marcas temporales.\\
+\emph{software\_apps} & Nombre, slug único, descripción redactada manualmente por un usuario con permisos de administración, página oficial, icono, estado, creador y marcas temporales.\\
 \emph{tags} y \emph{software\_app\_tags} & Etiquetas únicas y relación muchos a muchos con aplicaciones.\\
 \emph{download\_sources} & Aplicación, sistema operativo, arquitectura, región, país, URL de partida, tipo y configuración de resolver, dominios permitidos y estado.\\
 \emph{resolved\_sources} & Resultado temporal de resolución: URL protegida, dominio final, nombre, tipo, tamaño, fecha de comprobación y expiración.\\
-\emph{bundles} & Propietario opcional para oficiales, nombre, slug, descripción, visibilidad, marca oficial, estado, contador de estrellas y marcas temporales.\\
+\emph{bundles} & Propietario opcional para oficiales, nombre, slug, descripción redactada manualmente por su autor o por un administrador, visibilidad, marca oficial, estado, contador de estrellas y marcas temporales.\\
 \emph{bundle\_items} & Relación única entre bundle y aplicación, con preferencias opcionales de sistema y arquitectura.\\
 \emph{bundle\_stars} & Relación única usuario-bundle que representa una estrella activa.\\
 \emph{download\_jobs} & Usuario o sesión anónima, estado, contexto, tamaños, progreso, referencia temporal al ZIP, errores y expiración.\\
 \emph{download\_job\_items} & Aplicación, fuente resuelta, nombre, tamaños, estado, error, reintentos y progreso individual.\\
-\emph{software\_requests} & Solicitante, nombre, URL oficial propuesta, estado, respuesta administrativa y fechas.\\
+\emph{software\_requests} & Solicitante, nombre, descripción propuesta manualmente por el usuario registrado, URL oficial propuesta, estado, respuesta administrativa y fechas.\\
 \emph{resolver\_logs} & Fuente, fase, estado, mensaje, metadatos seguros y fecha.\\
 \emph{admin\_action\_logs} & Administrador, acción, tipo e identificador del objetivo, resumen del cambio y fecha.\\
 \emph{api\_keys} & Usuario, prefijo visible, hash del secreto, estado, última utilización y fecha de revocación.\\

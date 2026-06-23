@@ -56,7 +56,7 @@ RF-16 & Personalizar temporalmente cualquier bundle descargable sin modificar el
 RF-17 & Clonar un bundle público como nuevo bundle del usuario. & Media & Registrado\\
 RF-18 & Asignar o retirar una estrella de un bundle público ajeno, con un máximo de una por usuario. & Media & Registrado\\
 RF-19 & Ordenar bundles por estrellas, fecha, nombre o etiquetas. & Media & Todos\\
-RF-20 & Solicitar la incorporación de software indicando nombre y página oficial. & Media & Registrado\\
+RF-20 & Solicitar la incorporación de software indicando nombre, descripción y página oficial. & Media & Registrado\\
 RF-21 & Añadir, editar, desactivar y reactivar aplicaciones, fuentes y etiquetas. & Alta & Administrador\\
 RF-22 & Configurar dominios permitidos y estrategia de resolución por fuente. & Alta & Administrador\\
 RF-23 & Probar un resolver y consultar sus redirecciones, metadatos y errores. & Alta & Administrador\\
@@ -112,6 +112,7 @@ RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tam
 	\item Solo el propietario podrá editar o eliminar permanentemente su bundle; un administrador podrá moderarlo según las condiciones de uso.
 	\item Un bundle oficial solo podrá ser creado o marcado como tal por un administrador.
 	\item Un bundle privado no será accesible mediante su antiguo enlace público.
+	\item La descripción de una aplicación o de un bundle será un texto redactado manualmente por un usuario; el sistema no la generará ni la completará automáticamente.
 	\item La fuente de verdad del catálogo será MySQL; pgvector mantendrá una representación derivada.
 	\item Una sugerencia del LLM nunca evitará la validación normal de aplicaciones y descargas.
 	\item El trabajo parcial será válido cuando incluya al menos un instalador y describa todos los fallos.
@@ -153,7 +154,7 @@ RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tam
 \textbf{Actor} & Usuario registrado\\
 \textbf{Requisitos} & RF-14, RF-15 y RF-30\\
 \textbf{Precondición} & El usuario ha iniciado sesión y existe una selección válida.\\
-\textbf{Flujo principal} & 1. Introduce nombre y descripción.\newline
+\textbf{Flujo principal} & 1. Introduce nombre y una descripció.\newline
 2. Revisa las aplicaciones.\newline
 3. Guarda el bundle como privado.\newline
 4. Opcionalmente cambia la visibilidad a pública.\newline
@@ -223,6 +224,26 @@ RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tam
 \end{tabularx}
 \caption{CU-05 Mantener una fuente.}
 \label{tabla:cu-mantener-fuente}
+\end{table}
+
+\subsection{CU-05b Solicitar una aplicación}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Usuario registrado\\
+\textbf{Requisitos} & RF-20\\
+\textbf{Precondición} & El usuario ha iniciado sesión.\\
+\textbf{Flujo principal} & 1. Introduce nombre, descripción redactada manualmente y página oficial de la aplicación propuesta.\newline
+2. Envía la solicitud.\newline
+3. El sistema la registra con estado pendiente de revisión.\\
+\textbf{Excepciones} & Datos obligatorios ausentes, URL inválida o solicitud duplicada para la misma aplicación.\\
+\textbf{Postcondición} & La propuesta queda disponible para revisión administrativa sin incorporarse todavía al catálogo público.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-05b Solicitar una aplicación.}
+\label{tabla:cu-solicitar-aplicacion}
 \end{table}
 
 \subsection{CU-06 Buscar mediante lenguaje natural}
