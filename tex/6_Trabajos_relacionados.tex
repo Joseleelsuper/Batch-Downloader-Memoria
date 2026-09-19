@@ -37,10 +37,11 @@ Forma de entrega & Instalador o agente local & \emph{Streaming}, descarga o escr
 Ejecución automática & Sí & Sí, local o remota según la aplicación & No; el usuario decide qué ejecutar\\
 Control de acceso & Servicio general, con oferta profesional & Credenciales, permisos y condiciones de red & Catálogo público y funciones asociadas a cuentas\\
 Persistencia de binarios & Gestionada por cada servicio & Aplicaciones alojadas o desplegadas por la Universidad & Prohibida por diseño para instaladores\\
-Colecciones compartibles & Selección de aplicaciones & No es su objetivo & Bundles oficiales, públicos y privados\\
-Participación comunitaria & Sugerencia de aplicaciones & Solicitud institucional de aplicaciones & Publicación, clonación y estrellas\\
-Sistemas operativos & Principalmente Windows & Depende de la aplicación y del método de acceso & TODO: Windows, Linux y macOS como alcance planificado\\
-Búsqueda semántica & No & No & Embeddings y asistencia con LLM\\
+Colecciones compartibles & Selección de aplicaciones & No es su objetivo & Bundles oficiales y públicos consultables y descargables\\
+Participación comunitaria & Sugerencia de aplicaciones & Solicitud institucional de aplicaciones & Solicitudes de software; mantenimiento de bundles por administración\\
+Sistemas operativos & Principalmente Windows & Depende de la aplicación y del método de acceso & Windows, Linux y macOS cuando exista instalador validado\\
+Búsqueda semántica & No & No & Sí; modo híbrido local con fallback literal\\
+Uso de LLM & No es central & No & Solo enriquecimiento de descripciones; el ranking usa embeddings locales\\
 \bottomrule
 \end{tabularx}
 \caption{Comparación conceptual de las soluciones relacionadas con Batch Downloader.}
@@ -49,20 +50,20 @@ Búsqueda semántica & No & No & Embeddings y asistencia con LLM\\
 
 \section{Diferencias de enfoque}
 
-Ninite y Patch My PC buscan que la instalación o actualización sea automática y silenciosa. Batch Downloader se centrará en reunir archivos y conservar trazabilidad, sin ejecutar software en el equipo del usuario. Esta decisión reduce el alcance y evita desarrollar un agente local con privilegios de instalación, aunque traslada al usuario la ejecución posterior.
+Ninite y Patch My PC buscan que la instalación o actualización sea automática y silenciosa. Batch Downloader reúne archivos y conserva trazabilidad, sin ejecutar software en el equipo del usuario. Esta decisión reduce el alcance y evita desarrollar un agente local con privilegios de instalación, aunque traslada al usuario la ejecución posterior.
 
-UBULabs resuelve un problema diferente: garantizar que una comunidad concreta pueda utilizar software sujeto a licencias institucionales. Su combinación de despliegue y virtualización permite ejecutar aplicaciones incluso cuando no pueden instalarse libremente en el equipo del usuario. Batch Downloader no cubrirá este escenario, ya que solo incluirá software cuyos instaladores puedan obtenerse legítimamente desde fuentes oficiales y no gestionará licencias de uso.
+UBULabs resuelve un problema diferente: garantizar que una comunidad concreta pueda utilizar software sujeto a licencias institucionales. Su combinación de despliegue y virtualización permite ejecutar aplicaciones incluso cuando no pueden instalarse libremente en el equipo del usuario. Batch Downloader no cubre este escenario: incorpora software cuyos instaladores pueden obtenerse desde fuentes oficiales y no gestiona licencias de uso.
 
-Los bundles introducen una capa social y organizativa. Un enlace podrá representar una selección recomendada, y cada receptor podrá adaptarla sin alterar el original. Las estrellas permitirán destacar colecciones útiles, mientras que los administradores mantendrán bundles oficiales para casos comunes.
+Los bundles introducen una capa organizativa. Las rutas públicas permiten listar, consultar y descargar colecciones oficiales o públicas; su creación, modificación y borrado pertenecen a la administración. La entrega no ofrece clonación, estrellas ni personalización comunitaria, aunque el esquema conserve campos heredados que podrían apoyar una ampliación futura.
 
-La búsqueda semántica también amplía el modelo de catálogo. En lugar de exigir que el usuario conozca nombres concretos, permitirá expresar objetivos. El resultado seguirá dependiendo de aplicaciones registradas y validadas, por lo que no se convertirá en una búsqueda abierta de ejecutables en Internet.
+La búsqueda híbrida forma parte del recorrido funcional sin desplazar a MySQL. PostgreSQL, pgvector y \ruta{semantic-service} amplían la recuperación por intención, mientras que Core conserva filtros, facetas, clasificación y paginación deterministas. Groq y DeepSeek solo redactan descripciones largas; el ranking utiliza embeddings locales y no genera recomendaciones ni bundles.
 
 \section{Lecciones aplicadas al diseño}
 
-La simplicidad de Ninite y Patch My PC demuestra la importancia de reducir pasos y explicar claramente qué ocurrirá. Batch Downloader deberá evitar que la complejidad interna de colas, workers y resolvers se traslade a la interfaz. El flujo principal seguirá siendo seleccionar, revisar y generar.
+La simplicidad de Ninite y Patch My PC demuestra la importancia de reducir pasos y explicar claramente qué ocurrirá. Batch Downloader evita que la complejidad interna de colas, workers y resolvers se traslade a la interfaz. El flujo principal es seleccionar, revisar y generar.
 
-También resulta relevante la confianza. Ninite destaca el origen oficial y la verificación de los archivos~\cite{ninite}, mientras que Patch My PC añade pruebas previas de las actualizaciones~\cite{patchmypc-home-updater}. En Batch Downloader estas garantías deberán materializarse mediante dominios permitidos, validación de redirecciones, manifiesto, fechas de comprobación y mensajes explícitos.
+También resulta relevante la confianza. Ninite destaca el origen oficial y la verificación de los archivos~\cite{ninite}, mientras que Patch My PC añade pruebas previas de las actualizaciones~\cite{patchmypc-home-updater}. En Batch Downloader estas garantías se materializan mediante validación HTTPS y de red pública tras las redirecciones, manifiesto, fechas de comprobación y mensajes explícitos.
 
-UBULabs muestra, además, que la disponibilidad de una aplicación puede depender del usuario, la plataforma, la ubicación de red y la licencia. Aunque Batch Downloader no gestionará licencias institucionales, su catálogo deberá representar con claridad los sistemas operativos compatibles y cualquier restricción relevante antes de iniciar una descarga.
+UBULabs muestra, además, que la disponibilidad de una aplicación puede depender del usuario, la plataforma, la ubicación de red y la licencia. Aunque Batch Downloader no gestiona licencias institucionales, su catálogo representa los sistemas compatibles y distingue de forma exhaustiva \emph{Disponible}, \emph{Revisión} y \emph{Sin instalador}. La antigüedad de una resolución no cambia por sí sola esa categoría: la revalidación se realiza justo antes de descargar.
 
-Por último, la comparación ayuda a delimitar el proyecto. Batch Downloader no pretende sustituir un gestor de paquetes del sistema operativo ni automatizar instalaciones con privilegios. Su aportación se sitúa en la preparación de una descarga conjunta, la gestión de bundles y la recuperación semántica dentro de un catálogo controlado.
+Por último, la comparación ayuda a delimitar el proyecto. Batch Downloader no pretende sustituir un gestor de paquetes del sistema operativo ni automatizar instalaciones con privilegios. Su aportación se sitúa en la preparación de una descarga conjunta, los bundles administrados y un catálogo controlado con clasificación transaccional y recuperación semántica degradable.

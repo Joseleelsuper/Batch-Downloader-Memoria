@@ -1,50 +1,78 @@
 \capitulo{7}{Conclusiones y líneas de trabajo futuras}
 
-\section{Conclusiones de la fase de análisis y diseño}
+\section{Conclusiones de la implementación}
 
-La fase documentada permite concretar Batch Downloader como algo más que una página con enlaces. La generación conjunta de instaladores exige resolver fuentes cambiantes, validar destinos, procesar archivos grandes de forma asíncrona, comunicar progreso y eliminar temporales. Estos requisitos justifican la separación entre API, workers, resolvers y almacenamiento temporal.
+La implementación documentada confirma que Batch Downloader es más que una página con enlaces. La generación conjunta de instaladores exige resolver fuentes cambiantes, validar destinos, procesar archivos grandes de forma asíncrona, comunicar progreso y eliminar temporales. Estos requisitos justifican la separación entre API, workers, resolvers y almacenamiento temporal.
 
-La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacenará conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtendrá en el contexto de un trabajo. Esta política reduce duplicación y favorece la actualización, aunque obliga a asumir que las páginas externas pueden cambiar y que será necesario mantener resolvers y registros.
+La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacena conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtiene en el contexto de un trabajo. Esta política reduce duplicación y favorece la actualización, aunque obliga a asumir que las páginas externas pueden cambiar y que es necesario mantener resolvers y registros.
 
-Los bundles aportan reutilización sin perder control sobre la versión publicada. La personalización temporal permite adaptar una colección a una descarga concreta y la restricción de edición permanente protege la autoría del bundle. La estrella binaria ofrece un mecanismo sencillo de popularidad sin convertir el proyecto en una plataforma de reseñas.
+Los bundles aportan reutilización sin perder control sobre su composición. Las rutas públicas permiten listarlos, consultar su detalle y crear un trabajo; las rutas administrativas concentran su mantenimiento. La clonación, las estrellas y la personalización comunitaria no están implementadas y no se presentan como resultado de esta entrega.
 
-La búsqueda semántica resulta útil para consultas por intención, pero solo si permanece subordinada al catálogo y a las reglas deterministas. El modelo de lenguaje se ha delimitado como herramienta explicativa y de propuesta. No tendrá capacidad para aprobar enlaces, descargar archivos ni modificar configuraciones críticas.
+La búsqueda semántica se incorpora sin convertir el modelo en autoridad del catálogo. El feed canónico, el indexador, pgvector, la búsqueda exacta y la fusión RRF forman una ruta funcional con fallback literal íntegro. Los pesos se ejecutan localmente; Groq y DeepSeek se emplean exclusivamente para redactar descripciones largas y no intervienen en el ranking, no aprueban enlaces, no recomiendan aplicaciones y no modifican configuraciones críticas.
 
-La arquitectura propuesta es amplia y deberá implementarse por etapas. La prioridad será validar un núcleo seguro y observable antes de introducir el LLM. Esta conclusión evita que componentes llamativos oculten los riesgos esenciales del tratamiento de URL y ejecutables externos.
+La arquitectura se ha incorporado por etapas. La prioridad fue validar un núcleo seguro y observable antes de introducir el LLM en el enriquecimiento de texto. La proyección incremental del catálogo completa ese núcleo: los triggers de MySQL propagan cambios de candidato, fuente y aplicación hasta una fila singleton, manteniendo \emph{Disponible}, \emph{Revisión} y \emph{Sin instalador} como partición exhaustiva de las aplicaciones activas.
 
 \section{Limitaciones actuales}
 
-TODO: El documento no incluye mediciones reales, porque todavía no existe una implementación. Tampoco se ha comprobado la estabilidad de los resolvers frente a proveedores concretos, el consumo de disco durante descargas concurrentes ni la calidad de los embeddings sobre un catálogo real.
+La tabla~\ref{tabla:resultados-verificacion-semantica} recoge la ejecución local del 23 de julio de 2026 sobre el árbol de trabajo. Estas cifras describen pruebas funcionales, no una campaña de carga ni una evaluación de calidad de los modelos sobre un conjunto humano definitivo.
 
-TODO: La compatibilidad con Windows, Linux y macOS dependerá de la disponibilidad y condiciones de las fuentes oficiales. Algunos proveedores pueden exigir autenticación, aceptación manual de condiciones, elección regional o uso de tiendas propietarias. Esos casos deberán marcarse como no automatizables o requerir una estrategia específica.
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.20\textwidth}X}
+\toprule
+\textbf{Ámbito} & \textbf{Resultado} & \textbf{Cobertura relevante}\\
+\midrule
+Core API & 41 pruebas superadas & Contrato híbrido, fallback, RRF, filtros y consultas de catálogo\\
+Frontend & 51 pruebas y build & Selector, precedencia URL/\ruta{localStorage}, aviso y tipos\\
+Scraper & 156 pruebas superadas & Feed canónico, hash, MySQL~8.4, proyección y driver aiomysql\\
+Servicio semántico & 10 pruebas superadas & Migraciones pgvector, dimensiones, sincronización, promoción, variantes de entrenamiento y HNSW exacto\\
+Compose & Stack construido y operativo & Healthchecks, migraciones, 13.667 embeddings E5 y fallback íntegro a través de Nginx\\
+Entrenamiento acotado & 3 modelos y 25 variantes & Snapshot de 512 aplicaciones, artefactos LoRA recargables e informes JSON, CSV y Markdown\\
+CPython 3.14/3.14t & 5 repeticiones por configuración & Checksums equivalentes; aceleración a 8 hilos de \(3{,}100\times\) en HTML y \(3{,}380\times\) en HTTP controlado\\
+\bottomrule
+\end{tabularx}
+\caption{Resultados funcionales obtenidos durante la verificación integral local del stack.}
+\label{tabla:resultados-verificacion-semantica}
+\end{table}
 
-TODO: La elección de Java 26 y de versiones concretas de las herramientas deberá revisarse al iniciar el desarrollo. La arquitectura no depende de una versión puntual, pero las combinaciones de Spring Boot, controladores y bibliotecas sí requieren una matriz compatible.
+El perfil \ruta{--smoke} creó el snapshot \ruta{06e6b8dda8bc}, con 512 aplicaciones y 2.830 consultas generadas, y acotó la evaluación efectiva a 256 documentos y ocho consultas de validación. En ese alcance de integración, BGE-M3 \emph{zero-shot} obtuvo nDCG@10 y MRR@10 iguales a \(1{,}0000\), mientras el literal obtuvo \(0{,}9126\) y \(0{,}8889\), respectivamente. Estas cifras no constituyen una comparación de calidad concluyente: el conjunto es pequeño y sintético, y todas las variantes se marcaron expresamente como no elegibles. Por ello no se consultó test ni se promocionó un modelo; E5-base \emph{zero-shot} continuó activo.
+
+La comparación del runtime utilizó 200 tareas por configuración, HTML almacenado, un servidor HTTP controlado, 1/2/4/8 hilos y cinco repeticiones. A un hilo, 3.14t asumió una sobrecarga en la carga puramente CPU (\(0{,}916\times\)); a ocho hilos alcanzó \(699{,}15\) tareas/s frente a \(225{,}56\) en el control estándar. En la carga HTTP controlada obtuvo \(642{,}49\) frente a \(190{,}11\) tareas/s. Los checksums fueron idénticos en todas las configuraciones.
+
+La selección automática de producción sigue exigiendo ejecutar el perfil completo: el ajuste debe superar a su variante \emph{zero-shot} y no reducir MRR@1 respecto al literal. Solo entonces se confirma una vez sobre test y se activa con cobertura completa; si no existe un ganador elegible, se conserva E5-base \emph{zero-shot}.
+
+La compatibilidad con Windows, Linux y macOS depende de la disponibilidad y condiciones de las fuentes oficiales. La interfaz muestra únicamente sistemas con una fuente seleccionable. \ruta{checked\_at} y \ruta{expires\_at} no retiran por sí solos un candidato estructuralmente válido: si ha caducado, se revalida bajo bloqueo justo antes de descargar. Un fallo terminal invalida el candidato y activa la reclasificación por triggers; uno transitorio conserva la categoría y permite reintentar.
+
+La proyección incluye un comando de auditoría y otro de reparación para restauraciones manuales. Su corrección transaccional debe seguir comprobándose con MySQL 8.4 real, escenarios multifuente, movimientos, borrados, rollback y concurrencia; una prueba basada solo en fragmentos SQL no cubre esas propiedades.
+
+Los servicios se ejecutan con JDK 26, pero el proceso Maven fija la generación de bytecode Java 25 para mantener compatibilidad de herramientas. La matriz de dependencias sigue siendo una responsabilidad de mantenimiento: cada actualización de Spring Boot, SonarJava o la plataforma Java debe validarse en integración continua antes de su adopción.
 
 \section{Líneas de trabajo futuras}
 
-\subsection{Primera versión funcional}
+\subsection{Rendimiento y pruebas de extremo a extremo}
 
-La primera línea de trabajo será construir un producto mínimo con catálogo, búsqueda por nombre, autenticación, URL directas, Playwright como respaldo, RabbitMQ, generación de ZIP, bundles, estrellas y registros básicos. Las pruebas de SSRF y limpieza temporal serán criterios de aceptación, no mejoras opcionales.
+La siguiente línea de trabajo es ejecutar una campaña reproducible con MySQL, RabbitMQ, MinIO, Mailpit y un servidor HTTP controlado. Debe cubrir el flujo visitante--bundle--job--ZIP, revalidación JIT, cancelación, resultados parciales, recuperación tras caída y los límites de 100 aplicaciones y 20 GiB. Las pruebas de SSRF y limpieza temporal seguirán siendo criterios de aceptación, no mejoras opcionales.
 
 \subsection{Resolvers y salud del catálogo}
 
-Se podrán desarrollar resolvers específicos para proveedores frecuentes, comprobaciones programadas y un panel que priorice aplicaciones rotas. El historial permitirá detectar cambios repetidos y decidir qué entradas necesitan mantenimiento manual.
+Se podrán desarrollar resolvers específicos para proveedores frecuentes y mejorar el panel que prioriza aplicaciones rotas. El historial permitirá detectar cambios repetidos y decidir qué entradas necesitan mantenimiento manual. El estado público continuará dependiendo de invalidaciones explícitas, no del paso del tiempo.
 
 \subsection{Rendimiento y streaming}
 
 Tras medir el uso de disco y memoria se estudiará añadir archivos al ZIP mediante streaming. Esta técnica reduciría almacenamiento temporal, pero requiere resolver cuidadosamente los fallos parciales, la cancelación y la imposibilidad de conocer el tamaño final.
 
-\subsection{Búsqueda semántica}
+\subsection{Evaluación semántica continua}
 
-Será necesario evaluar modelos de embeddings, umbrales y métricas sobre consultas representativas. La utilidad se medirá comparando resultados semánticos con búsquedas convencionales y verificando que los filtros de compatibilidad nunca se omiten.
+La ruta funcional queda preparada para repetir snapshots y benchmarks sin cambiar la API. Como continuación se deberá ampliar el conjunto de consultas humanas en español, errores tipográficos, sinónimos e intención cruzada entre idiomas; vigilar deriva del catálogo; y revisar periódicamente umbral, peso RRF y recall HNSW. La promoción seguirá requiriendo cobertura completa y conservará la versión anterior para rollback.
 
-\subsection{Modelo local y privacidad}
+\subsection{Modelos locales, eficiencia y privacidad}
 
-La interfaz desacoplada permitirá probar un modelo ejecutado localmente. Deberán compararse calidad, latencia, consumo energético, coste y privacidad frente al proveedor remoto. Los registros enviados al modelo se minimizarán y anonimizarán cuando sea posible.
+Los tres modelos de embeddings ya se ejecutan localmente. Como trabajo posterior se estudiarán cuantización, aceleradores, batching adaptativo y modelos más pequeños, comparando calidad, latencia y consumo energético. Las consultas y descripciones continuarán fuera de servicios de inferencia externos y los informes no incluirán secretos ni datos de contacto.
 
 \subsection{Despliegue y escalado}
 
-Docker Compose cubrirá el entorno inicial. Un despliegue distribuido deberá incluir gestión de secretos, límites de recursos, copias de seguridad y observabilidad.
+Docker Compose cubre el entorno inicial con MySQL compartido, H2 local en los consumidores, RabbitMQ, MinIO y Mailpit. Un despliegue distribuido deberá añadir gestión de secretos, límites de recursos, copias de seguridad, políticas de red y una solución de métricas; Prometheus y Kubernetes no forman parte de esta entrega.
 
 \subsection{Accesibilidad e internacionalización}
 
@@ -52,4 +80,4 @@ La interfaz podrá ampliarse con varios idiomas, navegación completa por teclad
 
 \section{Cierre}
 
-Batch Downloader propone reunir en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles y búsqueda semántica. El diseño establece límites claros para cada componente y proporciona una base verificable para comenzar la implementación sin presentar como terminadas funcionalidades que todavía deben construirse y probarse.
+Batch Downloader reúne en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles administrados, enriquecimiento de descripciones y búsqueda híbrida. La implementación establece límites claros para cada componente y proporciona una base verificable para continuar el trabajo sin presentar como terminadas las funciones comunitarias, una campaña de carga de producción o el despliegue público.
