@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    participant B as Navegador
+    participant C as Core API
+    participant Q as RabbitMQ
+    participant W as Download worker
+    participant S as Scraper API
+    participant M as MinIO
+
+    B->>C: POST /api/v1/download-jobs
+    Note over C: Job, ítems y outbox en una transacción
+    C-->>B: 202, jobId y contadores
+    C->>Q: DownloadJobRequested con sourceRef
+    Q->>W: Comando idempotente
+    W->>S: Obtener resolución con token interno
+    alt resolución caducada
+        S->>S: Bloquear y revalidar JIT
+        alt fallo terminal
+            S->>S: Invalidar candidato; triggers reclasifican
+        else fallo transitorio
+            S-->>W: Error reintentable sin reclasificar
+        end
+    end
+    S-->>W: URL validada solo por canal interno
+    W->>M: ZIP temporal: instaladores + manifest.json
+    W->>Q: Progreso y READY / PARTIAL / FAILED
+    Q->>C: Evento de estado con failureCode
+    B->>C: GET /api/v1/download-jobs/{id}/events
+    C-->>B: SSE o sondeo
+    B->>C: GET /api/v1/download-jobs/{id}/file
+    C-->>B: 303 si READY o PARTIAL

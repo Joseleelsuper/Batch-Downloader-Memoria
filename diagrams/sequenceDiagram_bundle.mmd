@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    participant B as Navegador
+    participant C as Core API
+    participant D as MySQL compartido
+    participant Q as RabbitMQ
+    participant W as Download worker
+
+    B->>C: GET /api/v1/bundles/{id}
+    C->>D: Leer bundle público u oficial
+    C-->>B: Detalle y disponibilidad actual
+    B->>C: POST /api/v1/download-jobs con bundleId
+    C->>D: Resolver composición en servidor
+    C->>D: Validar máximo y crear job, ítems y outbox
+    C-->>B: 202 con solicitadas, aceptadas y omitidas
+    C->>Q: Publicar comando por outbox
+    Q->>W: Procesar sourceRef idempotentes
+    W->>Q: READY, PARTIAL, FAILED o CANCELLED
+    B->>C: Consultar progreso, cancelar o recuperar ZIP
+
+    Note over B,C: La creación, edición y borrado de bundles usan /api/admin/bundles
+    Note over B,C: No hay estrellas, clonación ni personalización pública

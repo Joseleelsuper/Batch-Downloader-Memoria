@@ -1,0 +1,26 @@
+flowchart TB
+    MYSQL[("MySQL 8.4 compartido")]
+    C["Core API\nmigraciones Flyway"] --> CORE["identidad, sesiones, bundles,\njobs, outbox y proyecciones Core"]
+    S["Scraper API y scheduler\nmigraciones Alembic"] --> CAT["apps, fuentes, resoluciones,\npipeline y catalog_counters"]
+    CORE --> MYSQL
+    CAT --> MYSQL
+
+    W["Download worker"] --> H2W[("H2: inbox idempotente")]
+    W --> M[("MinIO: ZIP y\nmanifest temporal")]
+    N["Notification service"] --> H2N[("H2: inbox idempotente")]
+    N --> MAIL["Mailpit / SMTP"]
+    T["Translation service"] --> L["Locales JSON versionados"]
+
+    C -. "IDs y correlación" .-> R{{"RabbitMQ"}}
+    R -. "comandos" .-> W
+    W -. "progreso y resultado" .-> R
+    R -. "avisos" .-> N
+
+    SEM["semantic-service"] -. "scaffold sin ruta funcional" .-> PG[("PostgreSQL + pgvector")]
+
+    classDef owner fill:#e6f6f8,stroke:#007f86,color:#123;
+    classDef data fill:#fff4d6,stroke:#b7791f,color:#423;
+    classDef future fill:#f4f4f4,stroke:#777,color:#555,stroke-dasharray: 5 5;
+    class C,S,W,N,T owner;
+    class MYSQL,CORE,CAT,H2W,H2N,M,L,MAIL data;
+    class SEM,PG future;

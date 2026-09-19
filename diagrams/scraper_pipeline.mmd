@@ -1,0 +1,21 @@
+flowchart LR
+    P["CatalogProvider\nWinstall"] --> SW["SearcherWorker"]
+    SW --> Q1[("searcher_filter")]
+    Q1 --> FW["FilterWorker"]
+    FW --> Q2[("filter_scraper")]
+    Q2 --> PW["PlatformScraperWorker\nmetadatos, resolvers e icono"]
+    PW --> Q3[("scraper_so_filter")]
+    Q3 --> OW["SOFilterWorker\nplataformas y candidatos seguros"]
+    OW --> Q4[("so_filter_descriptor")]
+    Q4 --> DW["Descriptor supervisor\nGroq / DeepSeek"]
+    DW --> C[("MySQL compartido\ncatálogo y proyección")]
+
+    BP["Leases, reintentos,\nbackpressure y pausa cooperativa"] -.-> Q1
+    BP -.-> Q2
+    BP -.-> Q3
+    BP -.-> Q4
+
+    classDef queue fill:#fff4d6,stroke:#b7791f,color:#423;
+    classDef worker fill:#e6f6f8,stroke:#007f86,color:#123;
+    class Q1,Q2,Q3,Q4,C queue;
+    class P,SW,FW,PW,OW,DW worker;
