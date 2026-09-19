@@ -2,7 +2,7 @@
 
 \section{Introducción}
 
-Este anexo traduce los requisitos a una arquitectura implementable. Los nombres exactos de clases y tablas podrán adaptarse a las convenciones del código, pero deberán conservarse las responsabilidades, relaciones y restricciones descritas.
+Este anexo describe la arquitectura implementada y los contratos vigentes. Los nombres de clases y tablas siguen las convenciones del código; las responsabilidades, relaciones y restricciones se contrastan con migraciones, contratos y pruebas.
 
 \section{Diseño de datos}
 
@@ -18,69 +18,75 @@ Este anexo traduce los requisitos a una arquitectura implementable. Los nombres 
 \textbf{Entidad} & \textbf{Contenido y restricciones}\\
 \midrule
 \endhead
-\emph{users} & Identidad, correo normalizado y verificado, nombre, rol, estado y marcas temporales. El correo será único.\\
-\emph{software\_apps} & Nombre, slug único, descripción redactada manualmente por un usuario con permisos de administración, página oficial, icono, estado, creador y marcas temporales.\\
+\emph{core\_users}, \emph{identity\_tokens} y \emph{SPRING\_SESSION*} & Identidad, correo normalizado y verificado, rol, tokens almacenados como hash y sesiones JDBC.\\
+\emph{software\_apps} & Nombre, slug, descripción, página oficial, icono, estado operativo, versión y proyecciones \ruta{catalog\_available\_source\_count}, \ruta{catalog\_review\_source\_count} y \ruta{catalog\_status}.\\
 \emph{tags} y \emph{software\_app\_tags} & Etiquetas únicas y relación muchos a muchos con aplicaciones.\\
-\emph{download\_sources} & Aplicación, sistema operativo, arquitectura, región, país, URL de partida, tipo y configuración de resolver, dominios permitidos y estado.\\
-\emph{resolved\_sources} & Resultado temporal de resolución: URL protegida, dominio final, nombre, tipo, tamaño, fecha de comprobación y expiración.\\
-\emph{bundles} & Propietario opcional para oficiales, nombre, slug, descripción redactada manualmente por su autor o por un administrador, visibilidad, marca oficial, estado, contador de estrellas y marcas temporales.\\
-\emph{bundle\_items} & Relación única entre bundle y aplicación, con preferencias opcionales de sistema y arquitectura.\\
-\emph{bundle\_stars} & Relación única usuario-bundle que representa una estrella activa.\\
-\emph{download\_jobs} & Usuario o sesión anónima, estado, contexto, tamaños, progreso, referencia temporal al ZIP, errores y expiración.\\
+\emph{download\_sources} & Aplicación, plataforma, arquitectura, URL de origen, estado de resolución y validación, configuración del resolver, contador de candidatos y columna generada \ruta{catalog\_available}.\\
+\emph{resolved\_sources} & Candidato de resolución: URL protegida, dominio final, nombre, MIME, tamaño, comprobación, expiración y marca \ruta{catalog\_downloadable}. Su antigüedad no cambia automáticamente la clasificación.\\
+\emph{catalog\_counters} & Fila singleton de clave 1 con \ruta{total\_count}, \ruta{available\_count}, \ruta{review\_count}, \ruta{missing\_count}, versión y fecha. Una restricción exige que las tres categorías sumen el total.\\
+\emph{bundles}, \emph{bundle\_items} y \emph{bundle\_tags} & Bundles públicos u oficiales consultables y descargables, con mantenimiento por rutas administrativas. Algunas columnas heredadas de comunidad no implican una función pública de estrellas, clonación o personalización.\\
+\emph{download\_jobs} & Propietario autenticado o HMAC de propietario anónimo, estado, contadores solicitados/aceptados/omitidos, progreso, referencia temporal al ZIP, errores y expiración.\\
 \emph{download\_job\_items} & Aplicación, fuente resuelta, nombre, tamaños, estado, error, reintentos y progreso individual.\\
+\emph{core\_outbox\_events} y \emph{core\_inbox\_messages} & Mensajes de Core pendientes de publicación y deduplicación de eventos, con identificadores de correlación y payload versionado.\\
 \emph{software\_requests} & Solicitante, nombre, descripción propuesta manualmente por el usuario registrado, URL oficial propuesta, estado, respuesta administrativa y fechas.\\
-\emph{resolver\_logs} & Fuente, fase, estado, mensaje, metadatos seguros y fecha.\\
-\emph{admin\_action\_logs} & Administrador, acción, tipo e identificador del objetivo, resumen del cambio y fecha.\\
-\emph{api\_keys} & Usuario, prefijo visible, hash del secreto, estado, última utilización y fecha de revocación.\\
+\emph{scrape\_runs}, tablas de cola y snapshots & Estado observable del pipeline del scraper, leases, reintentos, backpressure y capturas HTML seguras.\\
+\emph{admin\_audit\_logs} & Administrador, acción, tipo e identificador del objetivo, metadatos seguros y fecha.\\
 \bottomrule
 \end{longtable}
 
-Los datos de configuración que puedan contener secretos no se almacenarán directamente en las tablas. Se utilizarán referencias a secretos externos. Las URL temporales podrán cifrarse o limitarse al almacenamiento del trabajo y nunca se enviarán a registros generales.
+Los secretos de configuración proceden del entorno y no se copian a las tablas. Las URL de resolución se protegen en el almacenamiento del scraper, se entregan solo por el canal interno y no se envían a registros generales, navegador, outbox ni RabbitMQ.
 
 \subsection{Estados}
 
-Las aplicaciones utilizarán los estados \emph{active}, \emph{pending review}, \emph{broken}, \emph{disabled}, \emph{deprecated} y \emph{requires manual review}. Solo \emph{active} aparecerá como descargable.
+El estado operativo de una aplicación determina si es visible; una aplicación activa recibe una única clasificación pública generada: \emph{available} cuando existe una fuente directa o \emph{fallback} válida con un candidato descargable, \emph{review} cuando no existe fuente disponible y queda alguna fuente \emph{requires\_manual\_review}, y \emph{missing} en el resto de casos. Las aplicaciones no activas obtienen \ruta{catalog\_status=NULL}. \emph{Pending} se conserva en colas o solicitudes internas, pero no es un estado del catálogo.
 
-Los trabajos utilizarán \emph{queued}, \emph{resolving}, \emph{checking sizes}, \emph{downloading}, \emph{compressing}, \emph{ready}, \emph{failed}, \emph{cancelled} y \emph{expired}. Las transiciones válidas se comprobarán en un servicio de dominio; no se admitirán saltos arbitrarios desde controladores o workers.
+Los trabajos utilizan \emph{QUEUED}, \emph{RESOLVING}, \emph{DOWNLOADING}, \emph{PACKAGING}, \emph{READY}, \emph{PARTIAL}, \emph{FAILED}, \emph{CANCELLED} y \emph{EXPIRED}. Las transiciones válidas se comprueban en el dominio; no se admiten saltos arbitrarios desde controladores o workers.
 
 \subsection{Restricciones e índices}
 
 \begin{itemize}
-	\item Índices únicos para slugs, correos, etiqueta normalizada, estrella usuario-bundle y elemento bundle-aplicación.
+	\item Índices únicos para slugs, correos, etiqueta normalizada y elemento bundle-aplicación.
 	\item Índices compuestos para fuentes por aplicación, sistema, arquitectura, región y estado.
 	\item Índices para trabajos por propietario, estado, creación y expiración.
-	\item Índices para bundles públicos por estrellas, fecha y slug.
+	\item Índices para bundles visibles por tipo, fecha y slug.
+	\item Índice compuesto de catálogo por \ruta{catalog\_status}, actualización, nombre normalizado e identificador.
 	\item Integridad referencial con eliminación restringida cuando una aplicación participe en trabajos o registros históricos.
 	\item Borrado lógico para aplicaciones y bundles cuando sea necesario conservar auditoría.
 \end{itemize}
 
 \subsection{PostgreSQL y pgvector}
 
-PostgreSQL contendrá una tabla derivada similar a:
+PostgreSQL contiene una proyección reconstruible y separada de MySQL. Sus tablas son:
 
 \begin{verbatim}
-software_embeddings
-- software_app_id
-- content_version
-- model_id
-- embedding
-- generated_at
+semantic_documents(app_id, content_hash, content, metadata, active, seen_at)
+embedding_models(model_version, repository, revision, dimensions,
+                 prefixes, artifact_path, dataset_hash, rrf_weight, state)
+software_embeddings(app_id, model_version, content_hash, embedding)
+embedding_jobs(app_id, model_version, content_hash, status, lease)
+semantic_index_state(model_version, index_version, snapshot_hash,
+                     expected_documents, indexed_documents, complete)
+benchmark_runs(dataset_hash, seed, configuration, metrics, report_paths)
 \end{verbatim}
 
-La clave lógica combinará aplicación, versión del contenido y modelo. Cuando cambien los metadatos relevantes se publicará un trabajo de regeneración. Los resultados semánticos devolverán identificadores; la API consultará MySQL para obtener los datos vigentes y aplicar permisos y filtros.
+La clave lógica del vector combina aplicación y versión inmutable de modelo; el \ruta{contentHash} debe coincidir con el documento vigente. Un trigger consulta la dimensión registrada y rechaza vectores incompatibles. Los índices HNSW usan un cast de dimensión y una condición parcial por \ruta{modelVersion}. El estado del índice guarda cobertura y hash del snapshot para que la promoción o el rollback sean atómicos.
+
+PostgreSQL participa únicamente en la recuperación de candidatos. Una caída o reconstrucción no modifica el catálogo, la selección ni las descargas; Core vuelve al modo literal. Groq y DeepSeek se usan solamente para descripciones.
+
+\imagen{data_ownership.pdf}{Propiedad de datos y comunicación entre servicios.}
 
 \section{Diseño arquitectónico}
 
-\subsection{Capas del backend}
+\subsection{Capas y puertos del backend}
 
 \begin{description}
-	\item[API:] controladores REST, autenticación, validación de DTO y documentación OpenAPI.
-	\item[Aplicación:] casos de uso, transacciones, autorización por propietario y coordinación.
-	\item[Dominio:] entidades, reglas, estados, políticas de bundles y objetos de valor.
-	\item[Infraestructura:] JPA, RabbitMQ, MinIO, Playwright, correo, embeddings y LLM.
+	\item[Adaptadores:] controladores REST, clientes internos, Spring Data/JDBC, RabbitMQ, MinIO, SMTP y HTTP externo.
+	\item[Aplicación:] casos de uso, transacciones, autorización por propietario, límites y coordinación de outbox.
+	\item[Dominio:] agregados de identidad y descarga, reglas, estados, políticas de bundles y objetos de valor.
+	\item[Puertos:] contratos para persistencia, publicación, limpieza de artefactos, resolución y notificación.
 \end{description}
 
-Las dependencias apuntarán hacia las capas interiores. Los adaptadores externos implementarán interfaces definidas por la aplicación o el dominio, especialmente para resolución, almacenamiento temporal, colas y proveedores de IA.
+Las dependencias apuntan hacia las capas interiores. Los adaptadores externos implementan interfaces definidas por la aplicación o el dominio, especialmente para resolución, almacenamiento temporal, colas y proveedores de IA. ArchUnit está declarado como dependencia, pero la entrega no contiene todavía reglas arquitectónicas ejecutables; incorporarlas para impedir accesos directos desde controladores a persistencia es una mejora pendiente.
 
 \subsection{Servicios desplegables}
 
@@ -91,25 +97,33 @@ Las dependencias apuntarán hacia las capas interiores. Los adaptadores externos
 \toprule
 \textbf{Componente} & \textbf{Responsabilidad} & \textbf{Escalado}\\
 \midrule
-Frontend & Interfaz estática y consumo de API & Réplicas o CDN\\
-API Spring & Usuarios, catálogo, bundles, trabajos y administración & Por tráfico HTTP\\
-Worker de resolución & Playwright y validación de fuentes & Por cola de resolución\\
-Worker de descarga & Transferencia, progreso y reintentos & Por red y cola\\
-Worker de ZIP & Compresión, manifiesto y publicación temporal & Por CPU, disco y cola\\
-Servicio semántico & Embeddings, pgvector y coordinación del LLM & Por latencia y cuota\\
-Scheduler & Comprobaciones y limpieza periódica & Una instancia con elección de líder\\
+Webapp & Nginx que sirve el build React/Vite y actúa como entrada web & Réplicas o CDN\\
+Core API & Identidad, sesiones, catálogo de lectura, bundles, jobs y outbox & Por tráfico HTTP\\
+Scraper API y scheduler & Proveedores, resoluciones, runs, colas y enriquecimiento & Scheduler único con lock persistente\\
+Download worker & Transferencia, validación, ZIP con \ruta{manifest.json}, progreso e inbox H2 & Por red, cola y límite de concurrencia\\
+Notification service & Inbox H2, plantillas españolas y SMTP; Mailpit en local & Por cola y tasa del proveedor\\
+Translation service & Locales versionados, ETag y caché HTTP & Réplicas o CDN\\
+Semantic service e indexer & Documentos, embeddings, búsqueda exacta, versiones y benchmark & Servicio de lectura replicable; indexador único por lease\\
 \bottomrule
 \end{tabularx}
 \caption{Componentes lógicos y criterio de escalado.}
 \label{tabla:componentes-arquitectura}
 \end{table}
 
-La primera implementación podrá combinar los workers en un único proceso. Los mensajes y puertos se diseñarán de forma que su separación posterior no cambie la API pública.
+Los servicios se despliegan por separado en Compose. Core y scraper comparten MySQL 8.4, con propiedad de tablas separada entre Flyway y Alembic; worker y notificaciones persisten sus inbox en H2 local. MinIO conserva únicamente objetos temporales~\cite{minio}; RabbitMQ intercambia identificadores y metadatos de correlación~\cite{rabbitmq}. La composición incorpora Mailpit para SMTP de desarrollo y no despliega Prometheus.
 
-\subsection{TODO: Contratos HTTP principales}
+\imagen{architecture_containers.pdf}{Contenedores y dependencias de la composición actual.}
+
+\subsection{Pipeline del scraper}
+
+El scraper es propietario de Winstall, fuentes, resoluciones, runs y sus colas SQL. El pipeline persistente enlaza \ruta{searcher\_filter}, \ruta{filter\_scraper}, \ruta{scraper\_so\_filter} y \ruta{so\_filter\_descriptor}; sus workers aplican leases, reintentos, backpressure y pausa cooperativa. \ruta{PlatformScraperWorker} obtiene metadatos, candidatos e iconos dentro de su etapa. No existe una cola \ruta{icon\_enrichment}. La etapa final de descripciones usa Groq y, opcionalmente, DeepSeek sin participar en la clasificación.
+
+\imagen{scraper_pipeline.pdf}{Pipeline y enriquecimientos persistentes del scraper.}
+
+\subsection{Contratos HTTP principales}
 
 \small
-\begin{longtable}{p{0.23\textwidth}p{0.34\textwidth}p{0.33\textwidth}}
+\begin{longtable}{p{0.18\textwidth}p{0.34\textwidth}p{0.34\textwidth}}
 \caption{Operaciones principales de la API.}\label{tabla:api-principal}\\
 \toprule
 \textbf{Método} & \textbf{Ruta conceptual} & \textbf{Finalidad}\\
@@ -119,25 +133,37 @@ La primera implementación podrá combinar los workers en un único proceso. Los
 \textbf{Método} & \textbf{Ruta conceptual} & \textbf{Finalidad}\\
 \midrule
 \endhead
-GET & \emph{/api/apps} & Buscar y filtrar el catálogo.\\
-GET & \emph{/api/apps/\{slug\}} & Consultar detalle y fuentes visibles.\\
-POST & \emph{/api/download-jobs} & Validar selección y crear trabajo.\\
-GET & \emph{/api/download-jobs/\{id\}} & Consultar estado y progreso.\\
-DELETE & \emph{/api/download-jobs/\{id\}} & Cancelar un trabajo.\\
-GET & \emph{/api/download-jobs/\{id\}/file} & Descargar un ZIP listo.\\
-GET/POST & \emph{/api/bundles} & Buscar o crear bundles.\\
-GET/PATCH/DELETE & \emph{/api/bundles/\{slug\}} & Consultar o mantener un bundle propio.\\
-POST & \emph{/api/bundles/\{id\}/star} & Asignar estrella.\\
-DELETE & \emph{/api/bundles/\{id\}/star} & Retirar estrella.\\
-POST & \emph{/api/software-requests} & Solicitar una aplicación.\\
-POST & \emph{/api/semantic-search} & Buscar por intención.\\
-POST & \emph{/api/bundle-suggestions} & Crear un borrador de bundle.\\
-POST & \emph{/api/admin/sources/\{id\}/test} & Probar una fuente y su resolver.\\
+GET & \url{/api/v1/apps} & Buscar y filtrar por \ruta{catalog\_status}, texto, plataformas, etiquetas y editor.\\
+GET & \url{/api/v1/apps/stats} & Leer los cuatro contadores globales desde la fila \ruta{catalog\_counters} de clave 1.\\
+GET & \url{/api/v1/apps/facets} & Calcular facetas del conjunto filtrado.\\
+GET & \url{/api/v1/apps/<id>} & Consultar detalle, \ruta{downloadable}, actualización y fuentes visibles.\\
+POST & \url{/api/v1/download-jobs} & Crear trabajo desde \ruta{appIds} o \ruta{bundleId}.\\
+GET & \url{/api/v1/download-jobs/<id>} & Consultar estado, elementos y contadores.\\
+GET & \url{/api/v1/download-jobs/<id>/events} & Recibir progreso SSE.\\
+DELETE & \url{/api/v1/download-jobs/<id>} & Cancelar un trabajo de forma idempotente.\\
+GET & \url{/api/v1/download-jobs/<id>/file} & Redirigir al ZIP temporal firmado.\\
+GET & \url{/api/v1/bundles} & Listar bundles públicos u oficiales.\\
+GET & \url{/api/v1/bundles/<id>} & Consultar el detalle de un bundle visible.\\
+GET, POST & \url{/api/admin/bundles} & Listar para administración o crear un bundle.\\
+PATCH, DELETE & \url{/api/admin/bundles/<id>} & Actualizar o eliminar un bundle administrado.\\
+POST & \url{/api/admin/scraper/descriptions/enqueue-missing} & Encolar descripciones faltantes.\\
+GET & \url{/internal/v1/semantic/documents} & Recorrer documentos canónicos mediante \ruta{afterAppId} y \ruta{limit}.\\
+POST & \url{/internal/v1/semantic/search} & Enumerar candidatos exactos con versiones, peso RRF y truncamiento.\\
 \bottomrule
 \end{longtable}
 \normalsize
 
-Los cuerpos y respuestas se definirán en OpenAPI. Los errores compartirán un esquema con código estable, mensaje público, identificador de incidencia y detalles de validación permitidos.
+Los cuerpos y respuestas se definen en OpenAPI. Los errores comparten un esquema con código estable, mensaje público, identificador de incidencia y detalles de validación permitidos. Los parámetros \ruta{os=windows\&os=linux} aplican una unión de plataformas y, cuando están ausentes, equivalen a las tres activas. El parámetro \ruta{status} solo admite \ruta{all}, \ruta{available}, \ruta{review} y \ruta{missing}; cualquier otro valor devuelve 400 con \ruta{invalid\_catalog\_status}. \ruta{searchMode} admite \ruta{lexical} o \ruta{hybrid}; omitirlo conserva el comportamiento literal de clientes anteriores. Las respuestas añaden \ruta{requestedMode}, \ruta{appliedMode}, versiones y un motivo opcional de degradación.
+
+\subsection{Propiedad anónima y sesiones}
+
+Cada \ruta{download\_job} tiene exactamente un propietario: un usuario autenticado o el HMAC de una cookie anónima. La cookie \url{BATCH_DOWNLOAD_OWNER} es aleatoria, \emph{HttpOnly}, \emph{SameSite=Lax}, segura en producción y válida durante veinticuatro horas. Una sesión iniciada después de crear un trabajo no elimina el acceso por cookie. CSRF permanece activo también para peticiones anónimas y las notificaciones están desactivadas para estos trabajos. Las sesiones persistentes usan Spring Session JDBC~\cite{springsession}.
+
+\subsection{Eventos y mensajería}
+
+Los exchanges versionados utilizan un sobre con \ruta{eventId}, tipo, \ruta{schemaVersion}, fecha, \ruta{correlationId}, \ruta{causationId} y payload. Los comandos de descarga contienen únicamente \ruta{jobId}, \ruta{itemId}, \ruta{appId} y \ruta{sourceRef}; el worker pide la resolución por un endpoint interno autenticado del scraper. El patrón outbox/inbox, los reintentos exponenciales y la cola DLQ proporcionan entrega al menos una vez sin transportar URL firmadas, cookies ni secretos. El servicio de notificaciones entrega los avisos mediante SMTP~\cite{smtp}.
+
+\imagen{identity_notifications.pdf}{Verificación de identidad y notificaciones desacopladas.}
 
 \section{Diseño procedimental}
 
@@ -153,80 +179,98 @@ Los cuerpos y respuestas se definirán en OpenAPI. Los errores compartirán un e
 	\item Responder con código de aceptación e identificador del trabajo.
 \end{enumerate}
 
-\subsection{Resolución segura}
+\subsection{Resolución segura y revalidación JIT}
 
 \begin{enumerate}
-	\item Seleccionar la fuente compatible más específica.
-	\item Comprobar si existe una resolución no expirada.
-	\item Ejecutar resolver dedicado o Playwright.
+	\item Seleccionar una fuente \ruta{catalog\_available} compatible y mantener únicamente su \ruta{sourceRef} en navegador, outbox y RabbitMQ.
+	\item Recuperar el candidato estructuralmente válido por el endpoint interno autenticado.
+	\item Si su resolución ha caducado, adquirir el bloqueo y revalidarla justo antes de entregarla al worker.
 	\item Validar HTTPS, hostname, DNS, IP y puerto.
 	\item Seguir un número limitado de redirecciones repitiendo la validación.
-	\item Comprobar dominio final, tipo de contenido, nombre y tamaño.
+	\item Comprobar destino público final, tipo de contenido, nombre y tamaño.
 	\item Persistir resultado y metadatos sin exponer secretos.
-	\item Marcar para revisión manual cuando el fallo sea permanente.
+	\item Ante éxito, renovar URL y metadatos sin cambiar \ruta{available}; ante fallo transitorio, devolver un error reintentable sin reclasificar; ante fallo terminal, invalidar el candidato.
+	\item Dejar que los triggers recalculen fuente, aplicación y contadores; si existe otra alternativa válida, la aplicación permanece disponible.
 \end{enumerate}
 
 \subsection{Descarga y reintentos}
 
-Cada elemento se descargará con un máximo configurable de intentos. Los fallos temporales utilizarán espera incremental. Si la fuente acepta rangos, una implementación posterior podrá reanudar; en la primera versión se reiniciará el archivo para simplificar la validación.
+Cada elemento se descarga con un máximo configurable de intentos y los fallos temporales utilizan espera incremental. La entrega reinicia el archivo cuando reintenta; una reanudación mediante rangos queda como ampliación posterior.
 
-Durante la transferencia se controlará el número real de bytes. Al terminar se comparará con el tamaño anunciado cuando exista, se verificará el tipo y se rechazará cualquier archivo que exceda límites o cambie a un dominio no autorizado.
+Durante la transferencia se controla el número real de bytes. Al terminar se compara con el tamaño anunciado cuando existe, se verifica el tipo y se rechaza cualquier archivo que exceda límites, cambie a HTTP o apunte a una red no pública.
 
 \subsection{Compresión y finalización}
 
 \begin{enumerate}
 	\item Reunir elementos válidos y errores finales.
 	\item Sanitizar y resolver nombres duplicados.
-	\item Generar \ruta{manifest.json} y \ruta{README.txt}.
+	\item Generar \ruta{manifest.json}; los instaladores se guardan en la raíz y no se crean \ruta{README.txt} ni directorios de errores.
 	\item Construir el ZIP en el espacio temporal.
 	\item Publicarlo en MinIO con expiración.
-	\item Marcar el trabajo como listo o fallido.
+	\item Marcar el trabajo como \ruta{READY}, \ruta{PARTIAL} si queda al menos un instalador o \ruta{FAILED} si fallan todos.
 	\item Eliminar instaladores intermedios.
 	\item Enviar aviso si fue solicitado.
 \end{enumerate}
 
 \subsection{Cancelación y limpieza}
 
-La cancelación fijará una marca persistente y publicará una señal para los workers. Cada fase comprobará esa marca entre operaciones y cerrará recursos. El proceso eliminará objetos parciales y finalizará como \emph{cancelled}. El scheduler buscará trabajos expirados o bloqueados y ejecutará una limpieza idempotente.
+La cancelación fija una marca persistente y publica una señal para los workers. Cada fase comprueba esa marca entre operaciones y cierra recursos. El proceso elimina objetos parciales y finaliza como \emph{CANCELLED}. El limpiador busca trabajos expirados y ejecuta una eliminación idempotente.
 
-\subsection{Búsqueda semántica}
+\subsection{Proyección incremental del catálogo}
 
 \begin{enumerate}
-	\item Validar longitud y filtros de la consulta.
-	\item Generar embedding mediante el proveedor configurado.
-	\item Recuperar los vecinos más próximos en pgvector.
-	\item Consultar las aplicaciones actuales en MySQL.
-	\item Aplicar estado, compatibilidad, seguridad y permisos.
-	\item Devolver resultados vectoriales.
-	\item Si se solicita explicación, enviar solo esos resultados al LLM.
-	\item Validar el esquema y descartar referencias no presentes.
+	\item Un cambio de \ruta{resolved\_sources.catalog\_downloadable} suma o resta un candidato en su \ruta{download\_source}.
+	\item La columna generada \ruta{download\_sources.catalog\_available} combina estado directo o \emph{fallback}, validación y número de candidatos.
+	\item Los triggers de fuente ajustan las contribuciones disponible y revisión de la aplicación; un movimiento resta en el origen y suma en el destino.
+	\item \ruta{software\_apps.catalog\_status} aplica la precedencia disponible, revisión y sin instalador, o \ruta{NULL} si la aplicación no está activa.
+	\item Los triggers de aplicación aplican incrementos y decrementos atómicos a la fila singleton y aumentan su versión.
 \end{enumerate}
 
-\subsection{Actualización del contador de estrellas}
+La identidad \ruta{total\_count = available\_count + review\_count + missing\_count} está protegida por una restricción. El endpoint de estadísticas ejecuta una lectura por clave primaria, mientras que las consultas combinadas calculan su total sobre el conjunto filtrado. Los comandos \ruta{catalog-projection-check} y \ruta{catalog-projection-repair} auditan o reconstruyen la proyección fuera de las peticiones web.
 
-La estrella se insertará con una restricción única. El contador del bundle se actualizará en la misma transacción o mediante un evento idempotente. Una tarea administrativa podrá recalcularlo desde \ruta{bundle\_stars} para reparar discrepancias.
+Los triggers de fuente actualizan también \ruta{software\_apps.version} y \ruta{updated\_at} aunque la categoría no cambie. Así, una transición interna como \ruta{direct} a \ruta{fallback} invalida el token de cambios y refresca la interfaz sin alterar los cuatro contadores.
+
+\imagen{catalog_projection.pdf}{Propagación incremental de la clasificación y sus contadores.}
+
+\subsection{Enriquecimiento y proyección semántica}
+
+El supervisor final del scraper genera descripciones con Groq y DeepSeek, valida el texto y lo persiste. No genera embeddings, recomendaciones ni bundles. El flujo semántico posterior es:
+
+\begin{enumerate}
+	\item construir el documento canónico con una allowlist de metadatos y calcular SHA-256;
+	\item recorrer el feed autenticado en páginas estables de hasta 500 aplicaciones;
+	\item realizar upsert por hash, encolar cambios e inactivar documentos no vistos al cerrar el barrido;
+	\item reclamar trabajos mediante lease y generar embeddings con la revisión inmutable seleccionada;
+	\item comprobar dimensión, persistir vector y recalcular cobertura;
+	\item construir el índice parcial y activar la versión solo cuando \(expected=indexed>0\);
+	\item atender consultas exactas; Core degrada íntegramente si aparece el candidato centinela 2.001 o falla cualquier precondición;
+	\item para entrenamiento, versionar el snapshot, minar negativos difíciles, ajustar los tres modelos con LoRA y producir informes JSON, CSV y Markdown.
+\end{enumerate}
+
+La activación conserva la versión anterior. El comando administrativo interno puede restaurarla únicamente si sus embeddings siguen cubriendo todos los hashes actuales.
 
 \section{Diseño de seguridad}
 
-Los secretos se proporcionarán mediante el entorno o un gestor de secretos. Los contenedores se ejecutarán sin privilegios, con sistemas de archivos de solo lectura cuando sea posible y límites de CPU, memoria y almacenamiento efímero.
+Los secretos se proporcionan mediante el entorno o un gestor de secretos. Los contenedores se ejecutan sin privilegios, con sistemas de archivos de solo lectura cuando es posible y límites de CPU, memoria y almacenamiento efímero.
 
 Los logs utilizarán campos estructurados y excluirán contraseñas, claves, cabeceras de autorización, URL firmadas y contenido de instaladores. La auditoría registrará cambios de seguridad sin copiar secretos.
 
-La salida del LLM se considerará entrada no confiable: no se renderizará como HTML sin sanitización, no se ejecutará como código y no se convertirá directamente en comandos o cambios de configuración.
+La salida del LLM se considera entrada no confiable: se limita a descripciones, no se renderiza como HTML sin sanitización, no se ejecuta como código y no se convierte en comandos, estados de catálogo o cambios de configuración.
 
 \section{Diseño de despliegue}
 
-El entorno local utilizará Docker Compose. El despliegue escalable utilizará Docker con:
+El entorno local utiliza Docker Compose. La composición actual aplica redes internas para las dependencias y permite escalar servicios que no requieren exclusividad mediante \ruta{docker compose --scale}. Incluye:
 
 \begin{itemize}
-	\item \emph{Deployments} separados para API y workers;
-	\item \emph{Services} internos para componentes sin exposición pública;
-	\item \emph{Ingress} únicamente para frontend y API;
+	\item servicios separados para Core API, scraper, worker, notificaciones, traducciones, búsqueda semántica e indexación;
+	\item MySQL compartido por Core y scraper, PostgreSQL/pgvector para la proyección semántica, H2 local para los inbox de worker y notificaciones, RabbitMQ, MinIO y Mailpit;
+	\item healthchecks y readiness para ordenar dependencias; Core espera a \ruta{scraper-api} y \ruta{semantic-service}, y los dos motores aplican sus migraciones;
+	\item perfiles explícitos \ruta{training} y \ruta{benchmark}, con volúmenes para modelos e informes;
 	\item comprobaciones de vida y disponibilidad;
 	\item límites y solicitudes de recursos;
 	\item volúmenes o almacenamiento de objetos para temporales controlados;
 	\item secretos fuera de las imágenes;
-	\item políticas de red que restrinjan el acceso entre componentes.
+	\item políticas de red y variables de entorno que restrinjan el acceso entre componentes.
 \end{itemize}
 
-El escalado automático de workers se basará preferentemente en la longitud de las colas y en métricas de recursos. No se escalará Playwright sin límites, porque cada navegador consume memoria y conexiones externas.
+El scheduler mantiene exclusividad mediante lock persistente. El escalado automático de workers queda fuera de la composición inicial, pero puede basarse en longitud de cola y datos operativos. Playwright no se escala sin límites, porque cada navegador consume memoria y conexiones externas. Prometheus y Kubernetes quedan fuera de esta entrega.

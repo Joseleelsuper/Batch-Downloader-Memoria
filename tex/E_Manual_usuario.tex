@@ -1,33 +1,47 @@
-\apendice{TODO: Documentación de usuario}
+\apendice{Manual de usuario}
 
-\section{Introducción}
+\section{Acceso}
 
-El manual de usuario definitivo se redactará cuando la interfaz esté implementada y validada. Se mantiene este esqueleto para asegurar que la entrega incluya instrucciones coherentes con las pantallas reales.
+Batch Downloader es una aplicación web; no instala un programa en el equipo del usuario. Basta con abrir la dirección publicada por el administrador en un navegador actual. El catálogo y los bundles públicos pueden consultarse sin cuenta. El registro e inicio de sesión se utilizan para solicitar software, recibir notificaciones y acceder a funciones administrativas cuando el rol lo permite.
 
-\section{Requisitos de usuario}
+\section{Explorar el catálogo}
 
-Se indicarán los navegadores soportados, las condiciones de conexión, los límites de descarga y los requisitos para cuentas, correo y funciones administrativas.
+La página de catálogo muestra una tabla de aplicaciones con nombre, editor, versión, estado y la columna \emph{S.O.}. Los iconos de Windows, Linux y macOS solo aparecen cuando la aplicación tiene al menos un instalador validado para ese sistema; la ausencia de icono no significa que la aplicación no exista, sino que no hay una fuente seleccionable aceptada para esa plataforma.
 
-\section{Acceso e instalación}
+El panel lateral de filtros se abre y cierra con el marcapáginas situado en su borde. La preferencia se conserva en el navegador. En pantallas pequeñas el mismo control despliega el bloque de filtros antes de la tabla. Debajo del filtro de editor se encuentran los tres iconos de sistema operativo: se pueden desactivar para restringir resultados y se vuelven transparentes; el último icono activo no se puede desactivar. La dirección de la página conserva esa elección, por lo que puede compartirse una búsqueda de Windows y Linux mediante parámetros \ruta{os} repetidos.
 
-Al tratarse de una aplicación web, el usuario normal no necesitará instalar Batch Downloader. Esta sección explicará cómo acceder al servicio y, si se distribuye una versión local, cómo iniciarla mediante contenedores.
+La búsqueda por texto, las etiquetas, el editor y el estado se combinan con el filtro de sistemas. Las cuatro vistas del catálogo son \emph{Todas}, \emph{Disponibles}, \emph{Revisión} y \emph{Sin instalador}; \emph{Pendientes} no es una categoría pública. Una URL antigua con \ruta{status=pending} se normaliza a \emph{Todas}. Los tres estados son disjuntos: una aplicación disponible no puede aparecer simultáneamente en revisión o sin instalador.
 
-\section{Uso del catálogo}
+Junto al cuadro de búsqueda se puede elegir \emph{Literal} o \emph{Híbrida}. La dirección compartida tiene prioridad; si no especifica el modo se recupera la última elección del navegador y, en la primera visita, se utiliza \emph{Híbrida}. El modo literal busca coincidencias de texto. El híbrido también interpreta intención mediante embeddings locales, pero conserva exactamente los mismos filtros, estados y páginas.
 
-Se documentarán búsqueda, filtros, selección, tamaño estimado, revisión de fuentes, creación del trabajo, progreso, cancelación y descarga del ZIP.
+Si el índice semántico se está reconstruyendo, tarda demasiado o no puede enumerar todos los candidatos, la petición se ejecuta completa como literal y aparece un aviso breve. Esta degradación no cambia la elección guardada: una consulta posterior volverá a intentar el modo híbrido.
 
-\section{Bundles y estrellas}
+La antigüedad de la última comprobación no retira por sí sola una aplicación disponible. Si la resolución ha caducado, el sistema la revalida al preparar la descarga. Un fallo transitorio permite reintentar sin alterar la categoría; un fallo terminal invalida el candidato y la aplicación cambia de estado solo si no queda otra fuente válida.
 
-Se explicará la diferencia entre personalizar temporalmente, clonar y editar un bundle propio; la visibilidad pública o privada; el enlace compartible; la estrella binaria; y que la descripción de cada bundle la redacta manualmente su autor o un administrador.
+\section{Crear una descarga}
 
-\section{Búsqueda semántica}
+Marque las aplicaciones de la tabla y use la acción de descarga de la selección. También puede abrir un bundle desde la portada o desde su detalle y pulsar \emph{Descargar todas}. El botón de una tarjeta de bundle es independiente del enlace de detalle, por lo que se puede explorar su contenido sin iniciar ninguna descarga por accidente.
 
-Se incluirán ejemplos de consultas por intención, explicación de resultados y advertencias sobre el carácter asistido de las recomendaciones.
+El servidor valida el conjunto completo. Un bundle de más de cien aplicaciones no se puede descargar ni editar hasta reducirlo; nunca se trunca silenciosamente. Si algunas aplicaciones no tienen una fuente verificable, el trabajo indica cuántas se solicitaron, aceptaron y omitieron. Si ninguna es descargable, se informa del error sin crear un ZIP vacío.
 
-\section{Administración}
+Tras crear el trabajo aparece un panel con su estado, progreso y elementos. Puede cancelarlo mientras no sea terminal. Cuando se completa, el resultado puede ser total o parcial: un ZIP parcial contiene al menos un instalador válido y detalla los elementos omitidos. El botón de archivo obtiene una redirección temporal a MinIO; la dirección de descarga tiene una validez limitada y el ZIP se elimina al vencer la retención de veinticuatro horas.
 
-El manual describirá alta y edición de aplicaciones, configuración de fuentes; prueba de resolvers; revisión de solicitudes; logs; y estados del catálogo.
+\section{Uso sin cuenta y con cuenta}
 
-\section{Errores frecuentes y soporte}
+Un visitante puede crear trabajos desde una selección o un bundle público u oficial. El navegador recibe una cookie segura de propiedad para consultar, cancelar o descargar únicamente sus trabajos. No borre las cookies del sitio hasta recuperar el ZIP; si se eliminan, el trabajo anónimo deja de ser accesible desde ese navegador. Esta cookie no se muestra ni se añade a enlaces compartidos.
 
-Se añadirán mensajes reales, causas, pasos de recuperación y forma de comunicar una incidencia mediante su identificador. No se incorporarán capturas ni instrucciones hasta que las pantallas sean definitivas.
+Los usuarios autenticados conservan los mismos flujos y pueden solicitar nuevas aplicaciones y recibir notificaciones cuando su correo está verificado. La entrega actual no permite crear, clonar, personalizar ni valorar bundles desde una cuenta: el público puede consultar y descargar bundles visibles, mientras que su creación y mantenimiento se reservan al panel administrativo. Las notificaciones no se envían para solicitudes anónimas.
+
+\section{Administración del contenido}
+
+El panel de administración requiere el rol \emph{ADMIN}. En la vista del scraper se pueden pausar, continuar y observar las colas. El botón \emph{Encolar sin descripción} localiza aplicaciones activas sin descripción larga y devuelve el número de coincidentes, encoladas o ya activas. Si no hay candidatas, el panel comunica que no existen aplicaciones sin descripción larga.
+
+No existe un botón ni una cola \ruta{icon\_enrichment}. La obtención de iconos forma parte del raspado de plataforma y no constituye un flujo administrativo independiente. La cola de descripciones sí es asíncrona: encolar durante una pausa es válido, pero el supervisor espera hasta que se reanude.
+
+Tampoco existe una pantalla administrativa de modelos. La indexación, el entrenamiento, la promoción y el rollback se ejecutan mediante comandos de operación y dejan informes versionados.
+
+\section{Mensajes y ayuda}
+
+Los estados \emph{En cola}, \emph{Resolviendo}, \emph{Descargando}, \emph{Empaquetando}, \emph{Listo}, \emph{Parcial}, \emph{Fallido}, \emph{Cancelado} y \emph{Expirado} explican el ciclo de vida del trabajo. Ante un resultado parcial o fallido revise el código de fallo del trabajo y el detalle de cada aplicación. Un resultado \emph{Parcial} conserva su ZIP con los instaladores correctos y \ruta{manifest.json}; si fallan todos los elementos, el trabajo termina como \emph{Fallido} y no ofrece un archivo vacío. Si recibe un mensaje de seguridad, no intente modificar la URL ni reutilizar una redirección temporal; comunique al administrador el identificador de trabajo y la hora aproximada.
+
+La interfaz es navegable por teclado. Los controles de filtro indican su estado con \ruta{aria-pressed} y el marcapáginas informa si el panel está expandido. Si el servicio de traducciones no está disponible, el cliente conserva el catálogo español empaquetado para no bloquear el uso básico del catálogo.

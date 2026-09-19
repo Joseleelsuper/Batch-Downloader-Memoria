@@ -2,17 +2,24 @@
 
 \section{Introducción}
 
-Este documento define el comportamiento esperado de Batch Downloader antes de su implementación. Los requisitos se identifican para permitir trazabilidad con casos de uso, diseño y pruebas.
+Este documento recoge los requisitos implementados y las comprobaciones de trazabilidad de Batch Downloader. Los requisitos se mantienen identificados para relacionarlos con el diseño, los contratos y las pruebas focalizadas.
 
 \section{Actores}
 
 \begin{description}
 	\item[Usuario anónimo:] consulta el catálogo, crea selecciones temporales y descarga bundles públicos dentro de cuotas.
-	\item[Usuario registrado:] conserva bundles, los publica, asigna estrellas, solicita software y consulta sus trabajos.
-	\item[Administrador:] mantiene catálogo, fuentes, dominios, resolvers y estados; revisa solicitudes y registros.
+	\item[Usuario registrado:] solicita software, consulta sus trabajos y puede pedir notificaciones de finalización.
+	\item[Administrador:] mantiene catálogo, fuentes, resolvers, bundles públicos u oficiales y estados; revisa solicitudes, colas del scraper y registros.
 	\item[Sistema externo oficial:] página o servicio del editor desde el que se resuelve y descarga un instalador.
-	\item[Proveedor semántico:] servicio de embeddings o LLM utilizado detrás de una interfaz controlada.
+	\item[Proveedor LLM:] Groq o DeepSeek, utilizado exclusivamente para redactar descripciones largas.
+	\item[Servicio semántico:] componente interno que ejecuta modelos de embeddings locales y devuelve candidatos versionados; no decide filtros, permisos ni descargas.
 \end{description}
+
+\section{Límites y propiedad de trabajos}
+
+Un trabajo de descarga acepta exactamente una selección de \ruta{appIds} o un \ruta{bundleId}. El servidor resuelve el contenido real del bundle, aplica un máximo de cien aplicaciones y devuelve los contadores solicitadas, aceptadas y omitidas. Cuando no hay ninguna aplicación descargable responde con el error estable \ruta{no\_downloadable\_apps}.
+
+Los usuarios anónimos pueden descargar selecciones y bundles públicos u oficiales. El servidor entrega una cookie \ruta{BATCH\_DOWNLOAD\_OWNER} aleatoria, \emph{HttpOnly} y \emph{SameSite=Lax}; solo guarda su HMAC-SHA-256. El acceso al estado, SSE, cancelación y ZIP exige el usuario propietario o dicha cookie. Los límites iniciales son dos trabajos no terminales, diez creaciones por hora y navegador, treinta por hora y dirección IP anonimizada, cuatro GiB por archivo, veinte GiB por trabajo y ocho descargas paralelas por worker. Las notificaciones SMTP se reservan a usuarios autenticados.
 
 \section{Objetivos generales}
 
@@ -21,13 +28,14 @@ Este documento define el comportamiento esperado de Batch Downloader antes de su
 	\item Mantener el origen oficial y la trazabilidad de cada instalador.
 	\item Evitar almacenamiento permanente y eliminar artefactos temporales.
 	\item Permitir reutilizar selecciones mediante bundles.
-	\item Mejorar el descubrimiento mediante búsqueda semántica segura.
+	\item Facilitar el descubrimiento mediante búsqueda literal o híbrida, filtros y bundles mantenidos.
 	\item Proteger la infraestructura frente a URL maliciosas y uso abusivo.
 \end{itemize}
 
 \section{Catálogo de requisitos funcionales}
 
-\begin{longtable}{p{0.09\textwidth}p{0.56\textwidth}p{0.13\textwidth}p{0.12\textwidth}}
+{\small
+\begin{longtable}{p{0.08\textwidth}p{0.47\textwidth}p{0.14\textwidth}p{0.18\textwidth}}
 \caption{Requisitos funcionales.}\label{tabla:requisitos-funcionales}\\
 \toprule
 \textbf{ID} & \textbf{Descripción} & \textbf{Prioridad} & \textbf{Actor}\\
@@ -39,40 +47,49 @@ Este documento define el comportamiento esperado de Batch Downloader antes de su
 \endhead
 RF-01 & Mostrar las aplicaciones activas con nombre, descripción, sistemas, arquitecturas, etiquetas y estado. & Alta & Todos\\
 RF-02 & Buscar aplicaciones por coincidencia parcial de nombre. & Alta & Todos\\
-RF-03 & Filtrar por sistema operativo, arquitectura y etiquetas, exigiendo todas o un mínimo de etiquetas. & Alta & Todos\\
+RF-03 & Filtrar por Windows, Linux y macOS mediante parámetros repetidos \ruta{os}; la semántica es OR entre plataformas y AND con búsqueda, estado, etiquetas y editor. & Alta & Todos\\
 RF-04 & Añadir o retirar aplicaciones de una selección temporal. & Alta & Todos\\
 RF-05 & Mostrar tamaño estimado, fuentes y advertencias antes de generar el ZIP. & Media & Todos\\
-RF-06 & Crear un trabajo asíncrono para generar el ZIP y devolver su identificador. & Alta & Todos\\
+RF-06 & Crear un trabajo asíncrono con \ruta{appIds} o \ruta{bundleId}, devolver su identificador y los contadores de aceptación. & Alta & Todos\\
 RF-07 & Consultar el progreso global y el estado individual de cada aplicación. & Alta & Todos\\
 RF-08 & Permitir cancelar un trabajo que todavía no haya finalizado. & Media & Todos\\
 RF-09 & Descargar un ZIP listo antes de su expiración. & Alta & Todos\\
 RF-10 & Producir un ZIP parcial cuando alguna aplicación falle y exista al menos una descarga válida. & Alta & Sistema\\
-RF-11 & Incluir manifiesto, documento informativo y errores individuales en el ZIP. & Alta & Sistema\\
+RF-11 & Incluir los instaladores aceptados en la raíz del ZIP y un único \ruta{manifest.json} con el resultado y los errores individuales. & Alta & Sistema\\
 RF-12 & Registrar y eliminar los archivos temporales al finalizar, cancelar o expirar. & Alta & Sistema\\
 RF-13 & Registrar, iniciar y cerrar sesión con controles de seguridad. & Alta & Registrado\\
-RF-14 & Crear, editar y eliminar bundles propios. & Alta & Registrado\\
-RF-15 & Definir un bundle propio como privado o público y generar un enlace compartible si es público. & Alta & Registrado\\
-RF-16 & Personalizar temporalmente cualquier bundle descargable sin modificar el original. & Alta & Todos\\
-RF-17 & Clonar un bundle público como nuevo bundle del usuario. & Media & Registrado\\
-RF-18 & Asignar o retirar una estrella de un bundle público ajeno, con un máximo de una por usuario. & Media & Registrado\\
-RF-19 & Ordenar bundles por estrellas, fecha, nombre o etiquetas. & Media & Todos\\
+RF-14 & Consultar la lista y el detalle de bundles públicos u oficiales. & Alta & Todos\\
+RF-15 & Crear un trabajo a partir de un bundle, resolviendo su composición en el servidor. & Alta & Todos\\
+RF-16 & Crear, editar y eliminar bundles desde las rutas administrativas. & Alta & Administrador\\
+RF-17 & Mantener nombre, descripción, tipo, visibilidad, etiquetas y aplicaciones de un bundle. & Media & Administrador\\
+RF-18 & Ordenar y paginar los bundles visibles por los criterios admitidos por la API. & Media & Todos\\
 RF-20 & Solicitar la incorporación de software indicando nombre, descripción y página oficial. & Media & Registrado\\
 RF-21 & Añadir, editar, desactivar y reactivar aplicaciones, fuentes y etiquetas. & Alta & Administrador\\
-RF-22 & Configurar dominios permitidos y estrategia de resolución por fuente. & Alta & Administrador\\
+RF-22 & Configurar la estrategia de resolución por fuente y revisar evidencias de validación pública. & Alta & Administrador\\
 RF-23 & Probar un resolver y consultar sus redirecciones, metadatos y errores. & Alta & Administrador\\
 RF-24 & Revisar trabajos, fallos de resolución, solicitudes y acciones administrativas. & Alta & Administrador\\
-RF-25 & Ejecutar comprobaciones periódicas y marcar fuentes para revisión manual. & Media & Sistema\\
-RF-26 & Buscar aplicaciones mediante lenguaje natural y devolver candidatos del catálogo. & Media & Todos\\
-RF-27 & Proponer un bundle editable a partir de una consulta semántica. & Media & Todos\\
-RF-28 & Explicar recomendaciones y resumir errores sin ejecutar acciones críticas. & Media & Todos\\
-RF-29 & Enviar un aviso de finalización por correo cuando el usuario lo solicite y exista una dirección verificada. & Baja & Registrado\\
+RF-25 & Ejecutar el pipeline persistente del scraper y marcar fuentes para revisión manual cuando corresponda. & Media & Sistema\\
+RF-26 & Clasificar cada aplicación activa en exactamente uno de los estados \emph{available}, \emph{review} o \emph{missing}. & Alta & Sistema\\
+RF-27 & Mantener incrementalmente los cuatro contadores globales del catálogo mediante la proyección transaccional de MySQL. & Alta & Sistema\\
+RF-28 & Auditar o reparar la proyección mediante comandos internos fuera de las peticiones web. & Media & Administrador\\
+RF-29 & Enviar un aviso de finalización por correo cuando un usuario autenticado lo solicite y exista una dirección verificada. & Baja & Registrado\\
 RF-30 & Permitir a un administrador crear y mantener bundles oficiales. & Media & Administrador\\
+RF-31 & Encolar de forma idempotente aplicaciones activas sin descripción larga desde el panel de administración. & Media & Administrador\\
+RF-32 & Obtener iconos durante la etapa de raspado de plataforma, sin una cola pública o administrativa independiente. & Media & Sistema\\
+RF-33 & Permitir elegir \ruta{searchMode=lexical|hybrid} y conservar la elección del usuario sin sobrescribirla durante un fallback. & Alta & Todos\\
+RF-34 & Publicar un feed interno autenticado de documentos canónicos, paginado por aplicación y acompañado de \ruta{contentHash}. & Alta & Sistema\\
+RF-35 & Sincronizar documentos y embeddings de forma idempotente, inactivar huérfanos y activar una versión solo con cobertura completa. & Alta & Sistema\\
+RF-36 & Fusionar ranking literal y semántico mediante RRF antes de aplicar filtros, \emph{review-last}, desempates y paginación MySQL. & Alta & Todos\\
+RF-37 & Degradar toda la petición a literal ante timeout, 401, 5xx, índice incompleto o enumeración truncada. & Alta & Sistema\\
+RF-38 & Entrenar y comparar mediante CLI MiniLM, E5-base y BGE-M3, conservar informes y permitir promoción o rollback atómico. & Media & Administrador\\
 \bottomrule
 \end{longtable}
+}
 
 \section{Requisitos no funcionales}
 
-\begin{longtable}{p{0.09\textwidth}p{0.64\textwidth}p{0.17\textwidth}}
+{\small
+\begin{longtable}{p{0.08\textwidth}p{0.59\textwidth}p{0.20\textwidth}}
 \caption{Requisitos no funcionales.}\label{tabla:requisitos-no-funcionales}\\
 \toprule
 \textbf{ID} & \textbf{Descripción verificable} & \textbf{Categoría}\\
@@ -82,7 +99,7 @@ RF-30 & Permitir a un administrador crear y mantener bundles oficiales. & Media 
 \textbf{ID} & \textbf{Descripción verificable} & \textbf{Categoría}\\
 \midrule
 \endhead
-RNF-01 & Solo se aceptarán descargas HTTPS desde dominios permitidos; se bloquearán redes privadas, locales y reservadas antes y después de redirecciones. & Seguridad\\
+RNF-01 & Solo se aceptarán descargas HTTPS hacia redes públicas; se bloquearán redes privadas, locales, reservadas y de metadatos antes y después de redirecciones. & Seguridad\\
 RNF-02 & Ningún instalador se almacenará permanentemente. Los temporales y ZIP expirados se eliminarán mediante políticas automáticas verificables. & Privacidad\\
 RNF-03 & Los nombres incorporados al ZIP no podrán contener rutas, secuencias de escape, nombres reservados ni colisiones sin resolver. & Seguridad\\
 RNF-04 & Se aplicarán límites configurables de tamaño, aplicaciones, tiempo, redirecciones, reintentos y concurrencia. & Seguridad\\
@@ -100,23 +117,36 @@ RNF-15 & Las pruebas automatizadas cubrirán reglas críticas de URL, dominios, 
 RNF-16 & Los datos personales se conservarán durante plazos definidos y podrán ser exportados o eliminados conforme a la normativa. & Legal\\
 RNF-17 & Las páginas principales deberán adaptarse a escritorio y dispositivos móviles sin ocultar información esencial. & Usabilidad\\
 RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tamaño conocido o estimado y fecha de comprobación. & Transparencia\\
+RNF-19 & La propiedad anónima se representará mediante HMAC de una cookie; no habrá tokens de propiedad en URL, logs ni mensajes AMQP. & Seguridad\\
+RNF-20 & Los comandos y eventos AMQP se entregarán al menos una vez, con outbox, inbox/idempotencia, reintentos y cola de mensajes no procesables. & Fiabilidad\\
+RNF-21 & Los contadores globales se leerán por clave primaria; ninguna petición de estadísticas agregará las tablas operativas. & Rendimiento\\
+RNF-22 & \ruta{available}, \ruta{review} y \ruta{missing} serán disjuntos y su suma será igual al total de aplicaciones activas visibles. & Integridad\\
+RNF-23 & Las descripciones y consultas usadas por embeddings no se enviarán a Hugging Face ni a otro servicio de inferencia externo. & Privacidad\\
+RNF-24 & Los totales y facetas híbridos solo se publicarán cuando la enumeración semántica completa no supere 2.000 candidatos. & Integridad\\
+RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL deshabilitado tras todos los imports y sin compartir recursos async entre hilos. & Portabilidad\\
 \bottomrule
 \end{longtable}
+}
 
 \section{Reglas de negocio}
 
 \begin{enumerate}
-	\item Una selección de dos o más aplicaciones se tratará como bundle temporal, aunque no se guarde.
-	\item Un usuario solo podrá mantener una estrella activa por bundle.
-	\item La personalización de un bundle ajeno no alterará el original.
-	\item Solo el propietario podrá editar o eliminar permanentemente su bundle; un administrador podrá moderarlo según las condiciones de uso.
-	\item Un bundle oficial solo podrá ser creado o marcado como tal por un administrador.
-	\item Un bundle privado no será accesible mediante su antiguo enlace público.
-	\item La descripción de una aplicación o de un bundle será un texto redactado manualmente por un usuario; el sistema no la generará ni la completará automáticamente.
-	\item La fuente de verdad del catálogo será MySQL; pgvector mantendrá una representación derivada.
-	\item Una sugerencia del LLM nunca evitará la validación normal de aplicaciones y descargas.
+	\item Una selección directa y un bundle son dos entradas alternativas para crear un trabajo; la API exige exactamente una.
+	\item Los bundles visibles se consultan por rutas públicas y su mantenimiento se realiza exclusivamente por rutas administrativas.
+	\item Las estrellas, la clonación y la personalización comunitaria no están implementadas, aunque queden columnas o tablas de compatibilidad sin uso.
+	\item Un bundle oficial solo puede ser creado o marcado como tal por un administrador.
+	\item Una descripción larga ausente puede completarse mediante la cola de enriquecimiento; una descripción manual o personalizada no se sobrescribe automáticamente.
+	\item Alembic es el propietario de las tablas del catálogo en el MySQL compartido; Flyway mantiene identidad, bundles, trabajos, outbox y sus proyecciones de Core.
+	\item Una aplicación activa pertenece a una sola categoría pública: \ruta{available}, \ruta{review} o \ruta{missing}. No existe \ruta{pending} como estado del catálogo.
+	\item La antigüedad de \ruta{checked\_at} o \ruta{expires\_at} no cambia por sí sola la categoría; la fuente se revalida justo antes de descargar.
+	\item Los triggers son los únicos que modifican \ruta{catalog\_counters}; las escrituras de aplicación pasan por las tablas operativas cubiertas.
+	\item El LLM se utiliza para descripciones y nunca evita la validación normal de aplicaciones y descargas.
+	\item MySQL conserva la autoridad de estados, filtros, facetas y paginación; PostgreSQL/pgvector es una proyección reconstruible.
+	\item La preferencia de búsqueda se resuelve por URL, después \ruta{localStorage} y finalmente híbrida en la primera visita.
+	\item Un fallo semántico degrada la petición completa; no se publican listas, totales o facetas parcialmente semánticos.
+	\item La versión anterior del modelo y sus embeddings se conservan para rollback.
 	\item El trabajo parcial será válido cuando incluya al menos un instalador y describa todos los fallos.
-	\item Un trabajo listo dejará de estar disponible cuando se descargue, se elimine o venza su plazo.
+	\item Un trabajo listo permanece disponible durante la retención configurada y deja de estarlo al eliminarse o vencer el plazo.
 \end{enumerate}
 
 \section{Especificación de casos de uso}
@@ -145,63 +175,64 @@ RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tam
 \label{tabla:cu-generar-zip}
 \end{table}
 
-\subsection{CU-02 Crear y publicar bundle}
+\subsection{CU-02 Mantener un bundle}
 
 \begin{table}[H]
 \centering
 \begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
 \toprule
-\textbf{Actor} & Usuario registrado\\
-\textbf{Requisitos} & RF-14, RF-15 y RF-30\\
-\textbf{Precondición} & El usuario ha iniciado sesión y existe una selección válida.\\
-\textbf{Flujo principal} & 1. Introduce nombre y una descripció.\newline
-2. Revisa las aplicaciones.\newline
-3. Guarda el bundle como privado.\newline
-4. Opcionalmente cambia la visibilidad a pública.\newline
-5. El sistema genera un enlace compartible.\\
-\textbf{Excepciones} & Nombre inválido, aplicaciones eliminadas o intento de marcarlo como oficial sin permisos.\\
-\textbf{Postcondición} & El bundle queda asociado a su propietario y conserva una composición persistente.\\
+\textbf{Actor} & Administrador\\
+\textbf{Requisitos} & RF-16, RF-17 y RF-30\\
+\textbf{Precondición} & El administrador ha iniciado sesión y dispone de una selección válida.\\
+\textbf{Flujo principal} & 1. Introduce nombre, descripción, tipo y visibilidad.\newline
+2. Revisa aplicaciones y etiquetas.\newline
+3. Guarda el bundle por la ruta administrativa.\newline
+4. La API devuelve el detalle persistido.\newline
+5. Si es visible, la ruta pública permite consultarlo y descargarlo.\\
+\textbf{Excepciones} & Nombre inválido, aplicaciones eliminadas o intento sin rol administrativo.\\
+\textbf{Postcondición} & El bundle conserva una composición persistente administrada.\\
 \bottomrule
 \end{tabularx}
-\caption{CU-02 Crear y publicar bundle.}
+\caption{CU-02 Mantener un bundle.}
 \label{tabla:cu-crear-bundle}
 \end{table}
 
-\subsection{CU-03 Personalizar un bundle público}
+\subsection{CU-03 Descargar un bundle público}
 
 \begin{table}[H]
 \centering
 \begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
 \toprule
 \textbf{Actor} & Cualquier usuario\\
-\textbf{Requisitos} & RF-16 y RF-17\\
-\textbf{Precondición} & El bundle es público o pertenece al usuario.\\
-\textbf{Flujo principal} & 1. El usuario abre el bundle.\newline
-2. Añade o retira aplicaciones para esa descarga.\newline
-3. Genera el ZIP con la composición temporal.\\
-\textbf{Postcondición} & El bundle original no cambia. Un usuario registrado puede elegir clonar la composición como uno nuevo.\\
+\textbf{Requisitos} & RF-14 y RF-15\\
+\textbf{Precondición} & El bundle es público u oficial.\\
+\textbf{Flujo principal} & 1. El usuario abre el detalle.\newline
+2. La API resuelve su composición y la disponibilidad actual.\newline
+3. El usuario crea el trabajo con \ruta{bundleId}.\newline
+4. El sistema informa de aplicaciones solicitadas, aceptadas y omitidas.\\
+\textbf{Postcondición} & El bundle no cambia y el trabajo queda asociado al propietario autenticado o anónimo.\\
 \bottomrule
 \end{tabularx}
-\caption{CU-03 Personalizar un bundle público.}
-\label{tabla:cu-personalizar-bundle}
+\caption{CU-03 Descargar un bundle público.}
+\label{tabla:cu-descargar-bundle}
 \end{table}
 
-\subsection{CU-04 Asignar estrella}
+\subsection{CU-04 Auditar la proyección del catálogo}
 
 \begin{table}[H]
 \centering
 \begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
 \toprule
-\textbf{Actor} & Usuario registrado\\
-\textbf{Requisitos} & RF-18 y RF-19\\
-\textbf{Precondición} & El bundle es público y el usuario puede valorarlo.\\
-\textbf{Flujo principal} & El usuario activa o retira la estrella. El backend crea o elimina la relación única y actualiza el contador.\\
-\textbf{Excepciones} & Bundle privado, inexistente o restricción de valorar el propio bundle.\\
-\textbf{Postcondición} & El ranking refleja el nuevo número de estrellas.\\
+\textbf{Actor} & Administrador u operador\\
+\textbf{Requisitos} & RF-26 a RF-28; RNF-21 y RNF-22\\
+\textbf{Precondición} & Alembic ha aplicado la migración de proyección sobre MySQL.\\
+\textbf{Flujo principal} & Se ejecuta \ruta{catalog-projection-check}. El comando recalcula de forma independiente las contribuciones y compara aplicaciones, fuentes y la fila singleton. Si existe una discrepancia causada por una restauración manual, se ejecuta \ruta{catalog-projection-repair} y se repite la auditoría.\\
+\textbf{Excepciones} & El modo de reparación no se ejecuta dentro de una petición web y exige poder adquirir su bloqueo de mantenimiento.\\
+\textbf{Postcondición} & Los conjuntos son disjuntos, su unión coincide con las aplicaciones activas y la fila agregada satisface la suma.\\
 \bottomrule
 \end{tabularx}
-\caption{CU-04 Asignar estrella.}
-\label{tabla:cu-estrella}
+\caption{CU-04 Auditar la proyección del catálogo.}
+\label{tabla:cu-proyeccion-catalogo}
 \end{table}
 
 \subsection{CU-05 Mantener una fuente}
@@ -246,29 +277,51 @@ RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tam
 \label{tabla:cu-solicitar-aplicacion}
 \end{table}
 
-\subsection{CU-06 Buscar mediante lenguaje natural}
+\subsection{CU-06 Enriquecer una descripción}
 
 \begin{table}[H]
 \centering
 \begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
 \toprule
-\textbf{Actor} & Cualquier usuario\\
-\textbf{Requisitos} & RF-26 a RF-28; RNF-14\\
-\textbf{Precondición} & La búsqueda semántica está habilitada.\\
-\textbf{Flujo principal} & 1. El usuario escribe una necesidad.\newline
-2. El sistema genera un embedding y recupera candidatos.\newline
-3. Aplica filtros de estado y compatibilidad.\newline
-4. Opcionalmente solicita una explicación al LLM.\newline
-5. Valida y muestra los resultados.\\
-\textbf{Alternativas} & Si falla el LLM, se muestran los candidatos sin explicación. Si no hay candidatos, se informa sin inventar aplicaciones.\\
-\textbf{Postcondición} & El usuario puede añadir resultados a su selección o generar un borrador de bundle.\\
+\textbf{Actor} & Administrador o scheduler\\
+\textbf{Requisitos} & RF-31; RNF-14\\
+\textbf{Precondición} & Existe una aplicación activa sin descripción larga y un proveedor configurado.\\
+\textbf{Flujo principal} & 1. Se encola la aplicación de forma idempotente.\newline
+2. El supervisor adquiere un lease.\newline
+3. Solicita una descripción a Groq y, si procede, a un modelo alternativo o DeepSeek.\newline
+4. Valida el texto y lo persiste.\newline
+5. Completa el elemento de cola.\\
+\textbf{Alternativas} & Ante cuota o fallo transitorio se aplica espera y rotación de modelo; sin proveedor, el catálogo continúa funcionando sin descripción generada.\\
+\textbf{Postcondición} & Solo cambia el contenido descriptivo; el LLM no decide la categoría ni la URL de descarga.\\
 \bottomrule
 \end{tabularx}
-\caption{CU-06 Buscar mediante lenguaje natural.}
-\label{tabla:cu-busqueda-semantica}
+\caption{CU-06 Enriquecer una descripción.}
+\label{tabla:cu-enriquecer-descripcion}
 \end{table}
 
-\section{Trazabilidad inicial}
+\subsection{CU-07 Buscar en modo híbrido}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+\textbf{Actor} & Usuario anónimo o registrado\\
+\textbf{Requisitos} & RF-33 a RF-37; RNF-23 y RNF-24\\
+\textbf{Precondición} & Existe una consulta no vacía; el modo solicitado es híbrido.\\
+\textbf{Flujo principal} & 1. Core solicita una enumeración semántica exacta.\newline
+2. El servicio devuelve candidatos y versiones sin truncamiento.\newline
+3. Core materializa la colección mediante \ruta{JSON\_TABLE}.\newline
+4. MySQL fusiona ambos rankings, aplica filtros y pagina.\newline
+5. La respuesta indica modo solicitado y aplicado, modelo e índice.\\
+\textbf{Alternativas} & Ante error, timeout, falta de cobertura o más de 2.000 candidatos se ejecuta toda la petición como literal y se informa del motivo.\\
+\textbf{Postcondición} & La preferencia guardada no cambia por una degradación temporal.\\
+\bottomrule
+\end{tabularx}
+\caption{CU-07 Buscar en modo híbrido.}
+\label{tabla:cu-busqueda-hibrida}
+\end{table}
+
+\section{Trazabilidad final}
 
 \begin{table}[H]
 \centering
@@ -277,12 +330,13 @@ RNF-18 & La interfaz distinguirá claramente página oficial, dominio final, tam
 \toprule
 \textbf{Área} & \textbf{Requisitos} & \textbf{Pruebas previstas}\\
 \midrule
-Catálogo y selección & RF-01 a RF-05 & API, filtros, compatibilidad y pruebas E2E.\\
-Descarga y ZIP & RF-06 a RF-12 & Integración, descargas simuladas, ZIP parcial, cancelación y limpieza.\\
-Usuarios y bundles & RF-13 a RF-19, RF-30 & Autorización, propiedad, enlace, clonación y estrella única.\\
-Administración & RF-20 a RF-25 & Permisos, auditoría, resolver controlado y estados.\\
-Semántica & RF-26 a RF-28 & Recuperación, filtros, esquema inválido y caída del proveedor.\\
-Calidad transversal & RNF-01 a RNF-18 & Seguridad, carga, accesibilidad, observabilidad y privacidad.\\
+Catálogo y selección & RF-01 a RF-05 & Pruebas de filtro, columna de sistemas y componentes frontend.\\
+Descarga y ZIP & RF-06 a RF-12 & Pruebas de dominio, servicio, worker, ZIP parcial, cancelación y limpieza.\\
+Usuarios y bundles & RF-13 a RF-18, RF-30 & Pruebas de autorización, propiedad anónima, lectura pública y mantenimiento administrativo.\\
+Administración & RF-20 a RF-25, RF-31 y RF-32 & Permisos, auditoría, rutas internas y colas persistentes.\\
+Proyección de catálogo & RF-26 a RF-28 & Testcontainers con MySQL 8.4, triggers multifuente, rollback y \ruta{check/repair}.\\
+Búsqueda semántica & RF-33 a RF-38 & pgvector real, hashes, dimensiones, RRF, facetas, fallback, promoción y rollback.\\
+Calidad transversal & RNF-01 a RNF-25 & Validación de contratos, seguridad, observabilidad, integridad, privacidad y runtime 3.14t.\\
 \bottomrule
 \end{tabularx}
 \caption{Trazabilidad entre áreas y pruebas.}

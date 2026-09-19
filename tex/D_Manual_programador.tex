@@ -1,29 +1,159 @@
-\apendice{TODO: Documentación técnica de programación}
+\apendice{Manual de programación}
 
-\section{Introducción}
+\section{Propósito y alcance}
 
-Este manual se completará cuando exista una implementación estable. Documentarlo antes obligaría a describir comandos, módulos y dependencias que todavía pueden cambiar. El anexo conserva la estructura que deberá rellenarse durante la fase de entrega.
+Este manual describe la estructura actual de Batch Downloader y los procedimientos reproducibles para desarrollarlo. El repositorio principal contiene los servicios, los contratos, la composición Docker y las pruebas. La memoria \LaTeX{} se mantiene en un repositorio hermano para que los documentos puedan compilarse sin introducir herramientas de publicación en las imágenes de la aplicación.
 
 \section{Estructura de directorios}
 
-Pendiente de reflejar la estructura real de los repositorios del frontend, backend, workers, infraestructura, pruebas y documentación.
+\begin{description}
+	\item[\ruta{services/core-api}:] API Java de identidad, sesiones, catálogo de lectura, bundles, trabajos de descarga y outbox.
+	\item[\ruta{services/download-worker}:] consumidor Java que descarga, valida, empaqueta y publica objetos temporales.
+	\item[\ruta{services/notification-service}:] consumidor de eventos para plantillas españolas y SMTP.
+	\item[\ruta{services/translation-service}:] entrega de locales versionados y caché HTTP.
+	\item[\ruta{services/webapp}:] cliente React, TypeScript y Vite, ubicado bajo \ruta{src/main/resources/frontend}.
+	\item[\ruta{api/scraper}:] FastAPI, SQLAlchemy, Alembic, proveedores, resolvers, scheduler y colas de enriquecimiento.
+	\item[\ruta{services/semantic-service}:] migraciones PostgreSQL/pgvector, búsqueda, indexador, entrenamiento y benchmark.
+	\item[\ruta{shared/contracts}:] OpenAPI, AsyncAPI y JSON Schema de los mensajes.
+	\item[\ruta{docker-compose.yml}:] composición de desarrollo que construye imágenes locales.
+	\item[\ruta{docker-compose.ghcr.yml}:] composición que consume imágenes publicadas.
+\end{description}
 
-\section{Configuración del entorno}
+Core y scraper comparten una instancia y una base MySQL, pero no la propiedad de las migraciones: Flyway mantiene identidad, sesiones, bundles, trabajos, outbox y proyecciones de Core; Alembic mantiene aplicaciones, fuentes, resoluciones, colas del pipeline y la proyección incremental del catálogo. El download-worker y notification-service no crean esquemas MySQL propios: cada uno conserva su \emph{inbox} idempotente en H2 sobre su volumen local.
 
-Se documentarán versiones compatibles de Java, Maven, Node.js, Docker y herramientas auxiliares, así como las variables necesarias. Los secretos no se incluirán en el repositorio; se proporcionarán ejemplos sin valores reales.
+\section{Inventario tecnológico verificable}
 
-\section{Manual del programador}
+\begin{longtable}{p{0.20\textwidth}p{0.70\textwidth}}
+\toprule
+\textbf{Área} & \textbf{Tecnologías directas}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Área} & \textbf{Tecnologías directas}\\
+\midrule
+\endhead
+Frontend & React, React DOM, React Router, TypeScript, Vite, Lucide React, Testing Library, Vitest, jsdom, HTML, CSS y Nginx~\cite{react,typescript,vitest,nginx}. El Dockerfile fija Node 20 y Nginx 1.27; las versiones de paquetes se toman de \ruta{package.json} y \ruta{package-lock.json}.\\
+Java & Java 25 como nivel de compilación, runtime Temurin 26.0.1, Spring Boot 3.5.16, Spring Web, WebSocket, Security, Session JDBC, Validation, Data JPA/JDBC, AMQP, Mail y Actuator; Flyway, conector MySQL, H2, MinIO SDK, JUnit, Mockito, Spring Rabbit Test, JaCoCo y ArchUnit~\cite{h2database}.\\
+Python & CPython 3.14.6 \emph{free-threaded}, FastAPI, Uvicorn, HTTPX, Selectolax, Playwright 1.61, SQLAlchemy, Alembic, aiomysql, aiosqlite, Pydantic Settings, Tenacity, APScheduler, tldextract, dnspython, structlog, cryptography y packaging. Pruebas con pytest, pytest-asyncio, respx y Testcontainers para MySQL~\cite{fastapi,sqlalchemy,alembic,pytest,testcontainers}.\\
+Datos e infraestructura & MySQL 8.4 compartido, triggers y columnas generadas para la proyección; PostgreSQL 16/pgvector para documentos, embeddings, jobs y benchmarks; H2 para inbox locales; RabbitMQ, MinIO, Mailpit 1.30.0, Docker y Docker Compose~\cite{mysql84,mysql-triggers,h2database,rabbitmq,minio,mailpit}.\\
+Proveedores & Winstall como catálogo origen; GitHub y páginas oficiales como superficies de resolución; Groq y DeepSeek únicamente para descripciones largas; SMTP mediante Mailpit en desarrollo~\cite{deepseek,mailpit}.\\
+Calidad y CI/CD & Maven, Ruff, mypy, pytest-cov, JaCoCo, SonarQube, GitHub Actions, Docker Buildx y GHCR. Los workflows fijan Java 26, Python 3.14, Node 20, verifican una imagen 3.14t real y conservan las versiones de Redocly CLI y AsyncAPI CLI~\cite{github-actions,ghcr,sonarqube}.\\
+Contratos y documentación & OpenAPI, AsyncAPI, JSON Schema, Redocly CLI, AsyncAPI CLI, Mermaid, \LaTeX{}, \ruta{latexmk} y Poppler para revisión visual.\\
+\bottomrule
+\end{longtable}
 
-Se describirán arquitectura, convenciones, módulos, contratos internos, migraciones, resolvers, colas, almacenamiento temporal y proceso para añadir una aplicación o un proveedor.
+Solo se muestran números de versión cuando un POM, Dockerfile, imagen, manifiesto o workflow los fija. Las dependencias runtime y test de Python se bloquean en \ruta{requirements.txt} o \ruta{pyproject.toml}; cualquier actualización requiere repetir imports nativos, navegador y concurrencia.
 
-\section{Compilación, instalación y ejecución del proyecto}
+\section{Preparación del entorno}
 
-Se incluirán procedimientos reproducibles para desarrollo local, pruebas, construcción de imágenes y despliegue. Los comandos se validarán desde una copia limpia del repositorio.
+Se necesitan Docker Desktop con el motor Linux disponible, JDK 26, Maven, Python 3.14 y Node.js. JDK 26 es el runtime; los POM fijan bytecode Java 25. La imagen de producción del scraper compila su propio CPython 3.14.6t. A partir de una copia limpia del repositorio se crea el archivo de configuración y se valida la composición:
 
-\section{Pruebas del sistema}
+\begin{verbatim}
+Copy-Item .env.example .env
+docker compose --env-file .env config --quiet
+docker compose --env-file .env up --build
+\end{verbatim}
 
-El manual final indicará cómo ejecutar pruebas unitarias, integración, extremo a extremo, seguridad y carga; qué servicios de prueba se requieren; y cómo interpretar los informes.
+La variante de imágenes publicadas se inicia sustituyendo el último comando por:
 
-\section{Operación y resolución de incidencias}
+\begin{verbatim}
+docker compose --env-file .env `
+  -f docker-compose.ghcr.yml up -d
+\end{verbatim}
 
-Se documentarán métricas, logs, colas, limpieza de temporales, rotación de secretos, copias de seguridad, fuentes rotas y recuperación de trabajos. Esta sección se escribirá a partir del comportamiento observado, no de supuestos.
+El archivo \ruta{.env.example} no contiene secretos. Para un entorno real deben configurarse, como mínimo, credenciales de MySQL, token interno scraper--worker, claves SMTP, credenciales MinIO y los secretos de sesión y HMAC. Nunca se deben copiar valores reales a \ruta{.env.example}, contratos, trazas o capturas.
+
+\section{Compilación y pruebas}
+
+Las comprobaciones se ejecutan por componente para aislar incidencias. En el scraper se instala primero el entorno declarado en \ruta{requirements.txt}, se instala Chromium para Playwright y se aplican migraciones antes de ejecutar el scheduler:
+
+\begin{verbatim}
+cd api/scraper
+pip install -r requirements.txt
+playwright install chromium
+alembic upgrade head
+python -m ruff check app tests
+python -m pytest -q
+\end{verbatim}
+
+El frontend se prueba desde el directorio que contiene \ruta{package.json}:
+
+\begin{verbatim}
+cd services/webapp/src/main/resources/frontend
+npm ci
+npm test -- --run
+npm run build
+\end{verbatim}
+
+Los servicios Java se comprueban con \ruta{mvn test} en cada módulo. Las cifras de una ejecución no se mantienen duplicadas en este manual: la entrega debe registrar una única tabla final, fechada y asociada al commit verificado. Los avisos de deprecación de dependencias deben registrarse y resolverse antes de actualizar el runtime, pero no sustituyen un fallo de prueba.
+
+Los contratos se validan desde la raíz:
+
+\begin{verbatim}
+npx --yes @redocly/cli@1.34.2 lint `
+  shared/contracts/openapi/batch-downloader-api.yaml
+npx --yes @asyncapi/cli@3.4.2 validate `
+  shared/contracts/asyncapi/messaging.yaml
+\end{verbatim}
+
+El servicio semántico se comprueba con PostgreSQL/pgvector real. Su indexador y entrenador se operan mediante CLI/Compose; no existe una pantalla administrativa de modelos:
+
+\begin{verbatim}
+docker compose --env-file .env run --rm semantic-indexer \
+  python -m app.indexer
+docker compose --env-file .env --profile training run --rm \
+  semantic-trainer
+docker compose --env-file .env run --rm semantic-trainer \
+  python -m app.model_admin activate MODELO --rrf-weight 1.0
+docker compose --env-file .env --profile benchmark up --build \
+  --exit-code-from scraper-python314-benchmark-report \
+  scraper-python314-benchmark-report
+\end{verbatim}
+
+El último perfil compara 3.14 estándar y 3.14t con HTML almacenado, servidor HTTP controlado, 1/2/4/8 hilos y cinco repeticiones. Comprueba equivalencia por checksum y produce informes JSON, CSV y Markdown.
+
+\section{Migraciones y datos}
+
+Core API aplica las migraciones Flyway al iniciar. La migración de trabajos anónimos añade propietario autenticado opcional, HMAC anónimo y los contadores solicitados, aceptados y omitidos. Antes de un corte se debe ensayar la transformación sobre una copia y comprobar conteos, UUID, slugs, claves y proyecciones. La copia antigua se mantiene en modo lectura durante el periodo definido de reversión.
+
+El catálogo se migra exclusivamente con Alembic. Las tablas de cola mantienen un lease, número de reintentos, prioridad, estado y fecha de disponibilidad. No se deben crear ni modificar desde Core API.
+
+La migración \ruta{20260718\_0011} añade \ruta{catalog\_counters}, una fila singleton con total, disponibles, revisión, sin instalador, versión y fecha; también incorpora las columnas generadas \ruta{download\_sources.catalog\_available} y \ruta{software\_apps.catalog\_status}. Los triggers propagan operaciones aritméticas por clave primaria desde candidatos a fuentes, de fuentes a aplicaciones y de aplicaciones a la fila global. El código de aplicación nunca actualiza los totales.
+
+Después de una restauración o intervención manual se ejecuta una auditoría fuera de la ruta HTTP:
+
+\begin{verbatim}
+cd api/scraper
+python -m app.worker catalog-projection-check
+# Solo si el informe detecta discrepancias:
+python -m app.worker catalog-projection-repair
+python -m app.worker catalog-projection-check
+\end{verbatim}
+
+Toda migración que cambie la clasificación debe incluir backfill, triggers, invariantes y reparación. Las pruebas adecuadas usan MySQL 8.4 real con Testcontainers y escenarios multifuente, movimientos, borrados, rollback y concurrencia; comprobar únicamente cadenas SQL no verifica el comportamiento de los triggers.
+
+Las migraciones del servicio semántico se aplican desde \ruta{services/semantic-service/migrations}. No se escriben DSN completos en Compose: host, puerto interno 5432, base, usuario y contraseña se inyectan por separado. La tabla de migraciones, la validación de dimensión y los índices parciales se prueban con la imagen pgvector real.
+
+\section{Extender el scraper}
+
+Para añadir un proveedor se implementa \ruta{CatalogProvider} y se registra en el adaptador correspondiente. Para una nueva forma de localizar instaladores se añade una \ruta{ResolverStrategy}; las estrategias existentes cubren endpoints conocidos, GitHub Releases, HTML, páginas de destino y Playwright. Toda estrategia devuelve candidatos, no una descarga aceptada: \ruta{ArtifactFormatRegistry} y el validador determinan extensión, MIME, firma, plataforma y arquitectura. Si no existe evidencia suficiente, la arquitectura se conserva como \emph{UNKNOWN} o \emph{UNIVERSAL}, nunca como \emph{x86\_64} por defecto.
+
+La obtención de iconos forma parte de \ruta{PlatformScraperWorker}; no existe una cola \ruta{icon\_enrichment} ni un endpoint administrativo de backfill. El pipeline persistente enlaza \ruta{searcher\_filter}, \ruta{filter\_scraper}, \ruta{scraper\_so\_filter} y \ruta{so\_filter\_descriptor}. Cada etapa adquiere leases, respeta backpressure y permite pausa cooperativa sin perder los elementos encolados.
+
+Las descripciones se procesan tras \ruta{so\_filter\_descriptor}. El supervisor aplica pausas cooperativas, leases y límites de proveedor. Groq utiliza el modelo y la lista de respaldo configurados; DeepSeek es el último respaldo opcional. Estos proveedores solo redactan descripciones largas: no generan embeddings, no realizan búsquedas y no seleccionan instaladores. Los prompts y claves no se persisten en mensajes de cola.
+
+El documento semántico se construye en el scraper con una allowlist compartida por feed y hash. Al añadir un campo se debe actualizar simultáneamente su esquema, pruebas de determinismo y metodología del snapshot; nunca se incorporan URL completas, secretos o metadatos crudos. El servicio de embeddings descarga pesos fijados por revisión, pero no envía textos ni consultas a Hugging Face.
+
+\section{Descargas, mensajes y operaciones}
+
+El Core crea el trabajo, los elementos y el evento outbox en una transacción. \ruta{DownloadJobRequested} contiene identificadores de trabajo, elemento, aplicación y fuente; el worker obtiene la resolución por \ruta{/internal/v1} con \ruta{X-Internal-Service-Token}. El consumidor admite duplicados, respeta la cancelación y publica eventos de progreso y resultado. Los errores de formato se encaminan a DLQ; los fallos transitorios se reintentan por RabbitMQ.
+
+El worker aplica sus propios límites configurables: 100 aplicaciones, 4 GiB por archivo, 20 GiB por trabajo y ocho descargas concurrentes. Antes de entregar una URL resuelta, el scraper revalida bajo bloqueo los candidatos caducados. Un éxito renueva sus metadatos; un fallo transitorio es reintentable y no reclasifica; un fallo terminal invalida el candidato y deja que los triggers recalculen la fuente, la aplicación y los contadores. Una alternativa válida mantiene la aplicación disponible.
+
+El ZIP contiene los instaladores aceptados en su raíz y un único \ruta{manifest.json}; no crea \ruta{README.txt} ni directorios de errores. Si existe al menos un éxito y algún fallo, el trabajo queda \ruta{PARTIAL} y conserva el ZIP. Si fallan todos, queda \ruta{FAILED}. Después de empaquetar se elimina staging y el resultado permanece temporalmente en MinIO. El limpiador elimina el prefijo de objetos al expirar un trabajo; un error de limpieza se registra, pero no revive el trabajo.
+
+Para diagnosticar una incidencia se correlacionan \ruta{correlationId}, \ruta{causationId}, \ruta{jobId} y \ruta{eventId} en logs estructurados. El panel administrativo expone estado de runs, leases, colas y snapshots; RabbitMQ muestra colas y DLQ, y Mailpit captura el SMTP local. La composición no incluye Prometheus, por lo que no se debe afirmar que existe una pila de métricas desplegada. Nunca se debe pedir una URL firmada, una cookie de propietario o una cabecera interna a un usuario para depurar una incidencia.
+
+\section{Documentación reproducible}
+
+El proyecto de memoria contiene fuentes Mermaid en \ruta{diagrams/}. El script \ruta{scripts/render-mermaid.ps1} genera PDF y SVG en \ruta{img/}; \ruta{scripts/build-pdfs.ps1} ejecuta Mermaid y \ruta{latexmk} para \ruta{memoria.tex} y \ruta{anexos.tex}. Tras compilar se renderizan las páginas a PNG para revisión visual. Los PDF finales se copian a \ruta{docs/memorie/} del repositorio principal y se comparan por SHA-256 antes de publicar una entrega.
