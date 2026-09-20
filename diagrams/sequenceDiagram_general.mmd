@@ -15,17 +15,15 @@ sequenceDiagram
     W->>S: Obtener resolución con token interno
     alt resolución caducada
         S->>S: Bloquear y revalidar JIT
-        alt fallo terminal
-            S->>S: Invalidar candidato; triggers reclasifican
-        else fallo transitorio
-            S-->>W: Error reintentable sin reclasificar
-        end
+        S-->>W: URL renovada o error reintentable
+    else resolución vigente
+        S-->>W: URL validada desde el candidato existente
     end
     S-->>W: URL validada solo por canal interno
     W->>M: ZIP temporal: instaladores + manifest.json
-    W->>Q: Progreso y READY / PARTIAL / FAILED
+    W->>Q: Progreso y READY / PARTIAL / MANUAL_ONLY / FAILED
     Q->>C: Evento de estado con failureCode
     B->>C: GET /api/v1/download-jobs/{id}/events
     C-->>B: SSE o sondeo
     B->>C: GET /api/v1/download-jobs/{id}/file
-    C-->>B: 303 si READY o PARTIAL
+    C-->>B: 303 si READY, PARTIAL o MANUAL_ONLY

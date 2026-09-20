@@ -24,12 +24,11 @@ Este anexo describe la arquitectura implementada y los contratos vigentes. Los n
 \emph{download\_sources} & Aplicación, plataforma, arquitectura, URL de origen, estado de resolución y validación, configuración del resolver, contador de candidatos y columna generada \ruta{catalog\_available}.\\
 \emph{resolved\_sources} & Candidato de resolución: URL protegida, dominio final, nombre, MIME, tamaño, comprobación, expiración y marca \ruta{catalog\_downloadable}. Su antigüedad no cambia automáticamente la clasificación.\\
 \emph{catalog\_counters} & Fila singleton de clave 1 con \ruta{total\_count}, \ruta{available\_count}, \ruta{review\_count}, \ruta{missing\_count}, versión y fecha. Una restricción exige que las tres categorías sumen el total.\\
-\emph{bundles}, \emph{bundle\_items} y \emph{bundle\_tags} & Bundles públicos u oficiales consultables y descargables, con mantenimiento por rutas administrativas. Algunas columnas heredadas de comunidad no implican una función pública de estrellas, clonación o personalización.\\
+\emph{bundles}, \emph{bundle\_items} y \emph{bundle\_tags} & Bundles oficiales y bundles propios públicos o privados, con UUID de propietario, visibilidad y control de versión; las rutas personales protegen la propiedad.\\
 \emph{download\_jobs} & Propietario autenticado o HMAC de propietario anónimo, estado, contadores solicitados/aceptados/omitidos, progreso, referencia temporal al ZIP, errores y expiración.\\
 \emph{download\_job\_items} & Aplicación, fuente resuelta, nombre, tamaños, estado, error, reintentos y progreso individual.\\
 \emph{core\_outbox\_events} y \emph{core\_inbox\_messages} & Mensajes de Core pendientes de publicación y deduplicación de eventos, con identificadores de correlación y payload versionado.\\
-\emph{software\_requests} & Solicitante, nombre, descripción propuesta manualmente por el usuario registrado, URL oficial propuesta, estado, respuesta administrativa y fechas.\\
-\emph{scrape\_runs}, tablas de cola y snapshots & Estado observable del pipeline del scraper, leases, reintentos, backpressure y capturas HTML seguras.\\
+\emph{scrape\_runs}, tablas de cola y snapshots & Estado observable del pipeline del scraper, leases, reintentos, backpressure, descubrimientos e inspecciones manuales.\\
 \emph{admin\_audit\_logs} & Administrador, acción, tipo e identificador del objetivo, metadatos seguros y fecha.\\
 \bottomrule
 \end{longtable}
@@ -38,9 +37,9 @@ Los secretos de configuración proceden del entorno y no se copian a las tablas.
 
 \subsection{Estados}
 
-El estado operativo de una aplicación determina si es visible; una aplicación activa recibe una única clasificación pública generada: \emph{available} cuando existe una fuente directa o \emph{fallback} válida con un candidato descargable, \emph{review} cuando no existe fuente disponible y queda alguna fuente \emph{requires\_manual\_review}, y \emph{missing} en el resto de casos. Las aplicaciones no activas obtienen \ruta{catalog\_status=NULL}. \emph{Pending} se conserva en colas o solicitudes internas, pero no es un estado del catálogo.
+El estado operativo de una aplicación determina si es visible; una aplicación activa recibe una única clasificación pública generada: \emph{available} cuando existe una fuente directa o \emph{fallback} válida con un candidato descargable, \emph{review} cuando no existe fuente disponible y queda alguna fuente \emph{requires\_manual\_review}, y \emph{missing} en el resto de casos. Las aplicaciones no activas obtienen \ruta{catalog\_status=NULL}. \emph{Pending} puede aparecer en colas internas, pero no es un estado del catálogo ni una solicitud pública.
 
-Los trabajos utilizan \emph{QUEUED}, \emph{RESOLVING}, \emph{DOWNLOADING}, \emph{PACKAGING}, \emph{READY}, \emph{PARTIAL}, \emph{FAILED}, \emph{CANCELLED} y \emph{EXPIRED}. Las transiciones válidas se comprueban en el dominio; no se admiten saltos arbitrarios desde controladores o workers.
+Los trabajos utilizan \emph{QUEUED}, \emph{RESOLVING}, \emph{DOWNLOADING}, \emph{PACKAGING}, \emph{READY}, \emph{PARTIAL}, \emph{MANUAL\_ONLY}, \emph{FAILED}, \emph{CANCELLED} y \emph{EXPIRED}. Las transiciones válidas se comprueban en el dominio; no se admiten saltos arbitrarios desde controladores o workers.
 
 \subsection{Restricciones e índices}
 
@@ -61,15 +60,14 @@ PostgreSQL contiene una proyección reconstruible y separada de MySQL. Sus tabla
 \begin{verbatim}
 semantic_documents(app_id, content_hash, content, metadata, active, seen_at)
 embedding_models(model_version, repository, revision, dimensions,
-                 prefixes, artifact_path, dataset_hash, rrf_weight, state)
+                 artifact_path, manifest_hash, state)
 software_embeddings(app_id, model_version, content_hash, embedding)
 embedding_jobs(app_id, model_version, content_hash, status, lease)
 semantic_index_state(model_version, index_version, snapshot_hash,
                      expected_documents, indexed_documents, complete)
-benchmark_runs(dataset_hash, seed, configuration, metrics, report_paths)
 \end{verbatim}
 
-La clave lógica del vector combina aplicación y versión inmutable de modelo; el \ruta{contentHash} debe coincidir con el documento vigente. Un trigger consulta la dimensión registrada y rechaza vectores incompatibles. Los índices HNSW usan un cast de dimensión y una condición parcial por \ruta{modelVersion}. El estado del índice guarda cobertura y hash del snapshot para que la promoción o el rollback sean atómicos.
+La clave lógica del vector combina aplicación y versión inmutable de modelo; el \ruta{contentHash} debe coincidir con el documento vigente. Un trigger consulta la dimensión registrada y rechaza vectores incompatibles. El manifiesto del modelo se valida antes de arrancar con pesos locales; no existe descarga dinámica. El estado del índice guarda cobertura y hash del snapshot para que la reconstrucción o el rollback sean controlados.
 
 PostgreSQL participa únicamente en la recuperación de candidatos. Una caída o reconstrucción no modifica el catálogo, la selección ni las descargas; Core vuelve al modo literal. Groq y DeepSeek se usan solamente para descripciones.
 
@@ -103,14 +101,14 @@ Scraper API y scheduler & Proveedores, resoluciones, runs, colas y enriquecimien
 Download worker & Transferencia, validación, ZIP con \ruta{manifest.json}, progreso e inbox H2 & Por red, cola y límite de concurrencia\\
 Notification service & Inbox H2, plantillas españolas y SMTP; Mailpit en local & Por cola y tasa del proveedor\\
 Translation service & Locales versionados, ETag y caché HTTP & Réplicas o CDN\\
-Semantic service e indexer & Documentos, embeddings, búsqueda exacta, versiones y benchmark & Servicio de lectura replicable; indexador único por lease\\
+Semantic service e indexer & Documentos, embeddings locales, búsqueda semántica, cobertura y versión de índice & Servicio de lectura replicable; indexador único por lease\\
 \bottomrule
 \end{tabularx}
 \caption{Componentes lógicos y criterio de escalado.}
 \label{tabla:componentes-arquitectura}
 \end{table}
 
-Los servicios se despliegan por separado en Compose. Core y scraper comparten MySQL 8.4, con propiedad de tablas separada entre Flyway y Alembic; worker y notificaciones persisten sus inbox en H2 local. MinIO conserva únicamente objetos temporales~\cite{minio}; RabbitMQ intercambia identificadores y metadatos de correlación~\cite{rabbitmq}. La composición incorpora Mailpit para SMTP de desarrollo y no despliega Prometheus.
+Los servicios se despliegan por separado en Compose y en la aplicación de Coolify. Core y scraper comparten MySQL 8.4, con propiedad de tablas separada entre Flyway y Alembic; worker y notificaciones persisten sus inbox en H2 local. MinIO conserva únicamente objetos temporales~\cite{minio}; RabbitMQ intercambia identificadores y metadatos de correlación~\cite{rabbitmq}. La composición incorpora Mailpit para SMTP de desarrollo, mientras producción usa Resend/SMTP, healthchecks, métricas expuestas y monitorización diaria; no se afirma un servidor Prometheus central.
 
 \imagen{architecture_containers.pdf}{Contenedores y dependencias de la composición actual.}
 
@@ -144,16 +142,20 @@ DELETE & \url{/api/v1/download-jobs/<id>} & Cancelar un trabajo de forma idempot
 GET & \url{/api/v1/download-jobs/<id>/file} & Redirigir al ZIP temporal firmado.\\
 GET & \url{/api/v1/bundles} & Listar bundles públicos u oficiales.\\
 GET & \url{/api/v1/bundles/<id>} & Consultar el detalle de un bundle visible.\\
-GET, POST & \url{/api/admin/bundles} & Listar para administración o crear un bundle.\\
-PATCH, DELETE & \url{/api/admin/bundles/<id>} & Actualizar o eliminar un bundle administrado.\\
+GET, POST & \url{/api/v1/users/me/bundles} & Listar o crear bundles propios.\\
+GET, PATCH, DELETE & \url{/api/v1/users/me/bundles/<id>} & Consultar, editar o eliminar un bundle propio.\\
+GET & \url{/api/v1/users/me/dashboard} & Consultar panel personal, contadores y descargas recientes.\\
+GET & \url{/api/v1/users/me/downloads} & Consultar historial paginado de descargas.\\
+GET, POST & \url{/api/v1/admin/bundles} & Listar para administración o crear un bundle.\\
+PATCH, DELETE & \url{/api/v1/admin/bundles/<id>} & Actualizar o eliminar un bundle administrado.\\
 POST & \url{/api/admin/scraper/descriptions/enqueue-missing} & Encolar descripciones faltantes.\\
 GET & \url{/internal/v1/semantic/documents} & Recorrer documentos canónicos mediante \ruta{afterAppId} y \ruta{limit}.\\
-POST & \url{/internal/v1/semantic/search} & Enumerar candidatos exactos con versiones, peso RRF y truncamiento.\\
+POST & \url{/internal/v1/semantic/search} & Enumerar candidatos semánticos con versión de modelo, índice y estado de cobertura.\\
 \bottomrule
 \end{longtable}
 \normalsize
 
-Los cuerpos y respuestas se definen en OpenAPI. Los errores comparten un esquema con código estable, mensaje público, identificador de incidencia y detalles de validación permitidos. Los parámetros \ruta{os=windows\&os=linux} aplican una unión de plataformas y, cuando están ausentes, equivalen a las tres activas. El parámetro \ruta{status} solo admite \ruta{all}, \ruta{available}, \ruta{review} y \ruta{missing}; cualquier otro valor devuelve 400 con \ruta{invalid\_catalog\_status}. \ruta{searchMode} admite \ruta{lexical} o \ruta{hybrid}; omitirlo conserva el comportamiento literal de clientes anteriores. Las respuestas añaden \ruta{requestedMode}, \ruta{appliedMode}, versiones y un motivo opcional de degradación.
+Los cuerpos y respuestas se definen en OpenAPI. Los errores comparten un esquema con código estable, mensaje público, identificador de incidencia y detalles de validación permitidos. Los parámetros \ruta{os=windows\&os=linux} aplican una unión de plataformas y, cuando están ausentes, equivalen a las tres activas. El parámetro \ruta{status} solo admite \ruta{all}, \ruta{available}, \ruta{review} y \ruta{missing}; cualquier otro valor devuelve 400 con \ruta{invalid\_catalog\_status}. \ruta{searchMode} admite \ruta{lexical} o \ruta{semantic}; omitirlo conserva el comportamiento literal de clientes anteriores. Las respuestas añaden \ruta{requestedMode}, \ruta{appliedMode}, versiones y un motivo opcional de degradación.
 
 \subsection{Propiedad anónima y sesiones}
 
@@ -207,7 +209,7 @@ Durante la transferencia se controla el número real de bytes. Al terminar se co
 	\item Generar \ruta{manifest.json}; los instaladores se guardan en la raíz y no se crean \ruta{README.txt} ni directorios de errores.
 	\item Construir el ZIP en el espacio temporal.
 	\item Publicarlo en MinIO con expiración.
-	\item Marcar el trabajo como \ruta{READY}, \ruta{PARTIAL} si queda al menos un instalador o \ruta{FAILED} si fallan todos.
+	\item Marcar el trabajo como \ruta{READY}, \ruta{PARTIAL} si queda al menos un instalador, \ruta{MANUAL\_ONLY} si solo quedan accesos manuales o \ruta{FAILED} si fallan todos.
 	\item Eliminar instaladores intermedios.
 	\item Enviar aviso si fue solicitado.
 \end{enumerate}
@@ -242,9 +244,9 @@ El supervisor final del scraper genera descripciones con Groq y DeepSeek, valida
 	\item realizar upsert por hash, encolar cambios e inactivar documentos no vistos al cerrar el barrido;
 	\item reclamar trabajos mediante lease y generar embeddings con la revisión inmutable seleccionada;
 	\item comprobar dimensión, persistir vector y recalcular cobertura;
-	\item construir el índice parcial y activar la versión solo cuando \(expected=indexed>0\);
-	\item atender consultas exactas; Core degrada íntegramente si aparece el candidato centinela 2.001 o falla cualquier precondición;
-	\item para entrenamiento, versionar el snapshot, minar negativos difíciles, ajustar los tres modelos con LoRA y producir informes JSON, CSV y Markdown.
+	\item construir el índice y activar la versión solo cuando la cobertura esperada coincide con la indexada;
+	\item atender consultas semánticas; Core degrada íntegramente si falta el modelo, el índice está incompleto o falla cualquier precondición;
+	\item conservar el manifiesto y el volumen local para reconstrucción, sin descarga dinámica de pesos.
 \end{enumerate}
 
 La activación conserva la versión anterior. El comando administrativo interno puede restaurarla únicamente si sus embeddings siguen cubriendo todos los hashes actuales.
@@ -257,6 +259,10 @@ Los logs utilizarán campos estructurados y excluirán contraseñas, claves, cab
 
 La salida del LLM se considera entrada no confiable: se limita a descripciones, no se renderiza como HTML sin sanitización, no se ejecuta como código y no se convierte en comandos, estados de catálogo o cambios de configuración.
 
+\subsection{Migraciones y propiedad de datos}
+
+Core mantiene identidad, bundles, trabajos y outbox con Flyway; el scraper mantiene catálogo y pipeline con Alembic. En producción los objetivos comprobados son Flyway \ruta{V16} y Alembic \ruta{20260914\_0021}. El cambio de esquema se ejecuta con expand/contract: primero se añaden columnas o tablas compatibles, se realiza backfill y se valida con una copia restaurable; después se observa la aplicación, se comprueban invariantes y consultas y solo entonces se promueve una fase contractiva. Mientras no se supere esa compuerta, las columnas antiguas se conservan y el rollback vuelve al estado anterior.
+
 \section{Diseño de despliegue}
 
 El entorno local utiliza Docker Compose. La composición actual aplica redes internas para las dependencias y permite escalar servicios que no requieren exclusividad mediante \ruta{docker compose --scale}. Incluye:
@@ -265,7 +271,7 @@ El entorno local utiliza Docker Compose. La composición actual aplica redes int
 	\item servicios separados para Core API, scraper, worker, notificaciones, traducciones, búsqueda semántica e indexación;
 	\item MySQL compartido por Core y scraper, PostgreSQL/pgvector para la proyección semántica, H2 local para los inbox de worker y notificaciones, RabbitMQ, MinIO y Mailpit;
 	\item healthchecks y readiness para ordenar dependencias; Core espera a \ruta{scraper-api} y \ruta{semantic-service}, y los dos motores aplican sus migraciones;
-	\item perfiles explícitos \ruta{training} y \ruta{benchmark}, con volúmenes para modelos e informes;
+	\item volumen persistente para el modelo local y los artefactos de índice;
 	\item comprobaciones de vida y disponibilidad;
 	\item límites y solicitudes de recursos;
 	\item volúmenes o almacenamiento de objetos para temporales controlados;
@@ -273,4 +279,4 @@ El entorno local utiliza Docker Compose. La composición actual aplica redes int
 	\item políticas de red y variables de entorno que restrinjan el acceso entre componentes.
 \end{itemize}
 
-El scheduler mantiene exclusividad mediante lock persistente. El escalado automático de workers queda fuera de la composición inicial, pero puede basarse en longitud de cola y datos operativos. Playwright no se escala sin límites, porque cada navegador consume memoria y conexiones externas. Prometheus y Kubernetes quedan fuera de esta entrega.
+El scheduler mantiene exclusividad mediante lock persistente. El escalado automático de workers queda fuera de la composición inicial, pero puede basarse en longitud de cola y datos operativos. Playwright no se escala sin límites, porque cada navegador consume memoria y conexiones externas. La aplicación se despliega actualmente en Oracle mediante Coolify desde Compose/Git; la topología, las variables por categoría, los tags GHCR, las copias OCI y la promoción de migraciones se describen en \href{run:coolify-oracle.pdf}{\ruta{coolify-oracle.pdf}}. No se afirma un servidor Prometheus central ni una campaña de carga.

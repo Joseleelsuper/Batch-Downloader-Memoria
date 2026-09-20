@@ -36,9 +36,9 @@ Las revisiones con los tutores se utilizarán para confirmar alcance, arquitectu
 3--4 & Catálogo y seguridad base & Usuarios, roles, aplicaciones, fuentes, etiquetas, validación de entradas y panel administrativo mínimo.\\
 5--7 & Resolución y descargas & Playwright, validación HTTPS y de red pública, RabbitMQ, workers y estados de trabajos.\\
 8--9 & ZIP y temporales & Descarga controlada, manifiesto, resultado parcial, MinIO temporal, cancelación y limpieza automática.\\
-10--11 & Bundles & Consulta y descarga de bundles públicos u oficiales; mantenimiento administrativo. Clonación, estrellas y personalización quedan diferidas.\\
-12 & Solicitudes y avisos & Peticiones de nuevo software, revisión administrativa y notificaciones configurables.\\
-13--14 & Búsqueda semántica & Feed canónico, PostgreSQL/pgvector, modelos locales, indexación, integración híbrida y evaluación.\\
+10--11 & Bundles y cuenta & Bundles oficiales y propios públicos o privados, panel personal e historial de descargas; clonación y estrellas quedan diferidas.\\
+12 & Instaladores y avisos & Selección de versiones, perfiles Linux, accesos manuales \ruta{.url}, verificación y notificaciones configurables.\\
+13--14 & Búsqueda semántica & Feed canónico, PostgreSQL/pgvector, modelo local aprovisionado, indexación y degradación segura a literal.\\
 15 & Asistencia con LLM & Enriquecimiento validado de descripciones con Groq y DeepSeek; no se implementan recomendaciones ni borradores.\\
 16--17 & Pruebas y rendimiento & Integración, extremo a extremo, seguridad, carga, concurrencia y consumo de almacenamiento.\\
 18 & Despliegue y cierre & Imágenes definitivas, demostración, documentación, manuales y preparación de defensa.\\
@@ -47,17 +47,17 @@ Las revisiones con los tutores se utilizarán para confirmar alcance, arquitectu
 
 \section{Estado de ejecución}
 
-Se han completado el catálogo, los filtros por sistema operativo, sesiones y roles, trabajos asíncronos, almacenamiento temporal, lectura pública y mantenimiento administrativo de bundles, contratos y el pipeline persistente del scraper. La clasificación del catálogo se materializa mediante columnas generadas, triggers y una fila singleton de contadores en MySQL. La búsqueda híbrida utiliza embeddings locales y una proyección pgvector; Groq y DeepSeek solo enriquecen descripciones. Las funciones comunitarias de bundles permanecen fuera del alcance funcional.
+Se han completado el catálogo, los filtros por sistema operativo, sesiones y roles, trabajos asíncronos, almacenamiento temporal, lectura pública, bundles oficiales y bundles propios con propiedad explícita, panel personal, historial, contratos y el pipeline persistente del scraper. La clasificación del catálogo se materializa mediante la proyección vigente de MySQL. La búsqueda semántica utiliza un modelo local aprovisionado y una proyección pgvector; ante incoherencias vuelve a literal. Groq y DeepSeek solo enriquecen descripciones. Las funciones de valoración y clonación comunitarias permanecen fuera del alcance funcional.
 
-El núcleo se ejecuta en pruebas focalizadas de Core API, worker, notificaciones, traducciones, scraper, servicio semántico y frontend. La aceptación exige además MySQL 8.4 y PostgreSQL/pgvector reales, casos multifuente, fallback íntegro y una inspección completa del navegador. Permanecen como trabajos posteriores una campaña prolongada de carga y el despliegue público.
+El núcleo se ejecuta en pruebas focalizadas de Core API, worker, notificaciones, traducciones, scraper, servicio semántico y frontend. La aceptación exige además MySQL 8.4 y PostgreSQL/pgvector reales, casos multifuente, fallback íntegro y una inspección completa del navegador. La aplicación está desplegada en Oracle/Coolify y cuenta con smoke tests externos; permanece pendiente una campaña prolongada de carga.
 
 \section{Hitos}
 
 \begin{description}
 	\item[H1 - Catálogo utilizable:] un administrador puede registrar aplicaciones y un usuario puede buscarlas.
 	\item[H2 - Descarga segura:] una selección genera un ZIP desde fuentes validadas y elimina los temporales.
-	\item[H3 - Bundles administrados:] los usuarios consultan y descargan bundles visibles; los administradores los crean y mantienen. Las funciones comunitarias previstas no se completaron.
-	\item[H4 - Búsqueda semántica:] el catálogo ofrece modos literal e híbrido, con modelos versionados, evaluación, cobertura completa y fallback.
+	\item[H3 - Bundles y cuenta:] los usuarios consultan bundles visibles, mantienen sus bundles públicos o privados y disponen de panel e historial; la administración conserva los bundles oficiales.
+	\item[H4 - Búsqueda semántica:] el catálogo ofrece modos literal y semántico, con modelo local aprovisionado, cobertura controlada y fallback seguro.
 	\item[H5 - Entrega:] el sistema se despliega, se prueba y los manuales reflejan el comportamiento real.
 \end{description}
 
@@ -80,7 +80,7 @@ Ataques SSRF & Media & Crítico & HTTPS obligatorio, validación DNS e IP tras c
 Consumo excesivo de disco o red & Media & Alta & Límites, streaming futuro, expiración, limpieza periódica y métricas.\\
 Incompatibilidad entre Java y dependencias & Baja & Media & Prototipo inicial y posibilidad de adoptar una versión LTS compatible.\\
 Respuestas incorrectas del LLM & Alta & Media & Limitarlo a descripciones, validar el texto, rotar proveedores y degradar sin LLM.\\
-Degradación de calidad semántica & Media & Alta & Dataset versionado, métricas de validación/test, MRR@1 como guarda, versión anterior y rollback atómico.\\
+Degradación de calidad semántica & Media & Alta & Manifiesto local, comprobación de cobertura, versión anterior y rollback controlado.\\
 Reactivación del GIL & Media & Alta & Compilar 3.14t, comprobar después de todos los imports y limitar hilos a funciones puras.\\
 Alcance excesivo & Alta & Alta & Priorizar el núcleo, resolvers avanzados y modelo local después del producto mínimo.\\
 Falta de tiempo para manuales & Media & Media & Mantener esqueletos y completarlos durante las pruebas de aceptación.\\
@@ -98,30 +98,13 @@ La arquitectura puede simplificarse para el desarrollo local: un frontend, una a
 
 \subsection{Viabilidad económica}
 
-La siguiente estimación representa el coste equivalente del trabajo y de la infraestructura de desarrollo. No corresponde a gastos ya realizados.
+No se inventan costes de Oracle ni de la infraestructura de producción. La viabilidad económica se limita a constatar que el despliegue usa un VPS existente, imágenes GHCR y almacenamiento de copias en OCI; los precios dependen del contrato y de la cuota efectiva y deben registrarse fuera de esta memoria.
 
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{Xrrr}
-\toprule
-\textbf{Concepto} & \textbf{Cantidad} & \textbf{Precio estimado} & \textbf{Subtotal}\\
-\midrule
-Trabajo de análisis, desarrollo y documentación & 480 h & 15,00 €/h & 7200,00 €\\
-Infraestructura VPS & 5 meses & 15,00 €/mes & 75,00 €\\
-Dominio & 1 & 15,00 € & 15,00 €\\
-\midrule
-\multicolumn{3}{r}{\textbf{Total estimado}} & \textbf{7290,00 €}\\
-\bottomrule
-\end{tabularx}
-\caption{Estimación económica orientativa.}
-\label{tabla:viabilidad-economica}
-\end{table}
-
-La fase académica utiliza herramientas de código abierto y niveles gratuitos cuando están disponibles. El proveedor LLM se configura con límites y una cadena de modelos de respaldo para evitar agotamiento de cuota. Un despliegue público real exige revisar costes de transferencia, almacenamiento temporal, observabilidad y soporte antes de abrir el servicio.
+La fase académica utiliza herramientas de código abierto y límites de consumo. El proveedor LLM se configura con cuotas y una cadena de respaldo; el servicio de correo de producción usa Resend/SMTP. El documento independiente de Coolify describe la operación sin convertir sus variables privadas en una estimación económica.
 
 \subsection{Viabilidad legal}
 
-La plataforma tratará cuentas, direcciones IP, registros y solicitudes, por lo que deberá cumplir el Reglamento General de Protección de Datos~\cite{rgpd} y la Ley Orgánica 3/2018~\cite{lopdgdd}. Se aplicarán minimización, limitación de finalidad, plazos de conservación, información al usuario y mecanismos para ejercer derechos.
+La plataforma tratará cuentas, direcciones IP, registros e historial de descargas, por lo que deberá cumplir el Reglamento General de Protección de Datos~\cite{rgpd} y la Ley Orgánica 3/2018~cite{lopdgdd}. Se aplicarán minimización, limitación de finalidad, plazos de conservación, información al usuario y mecanismos para ejercer derechos.
 
 Si se presta como servicio web, deberán publicarse la identificación del responsable, condiciones de uso, política de privacidad y política de cookies conforme a la Ley 34/2002~\cite{lssi}. Los correos solo se enviarán para finalidades solicitadas y con mecanismos para evitar abuso.
 
@@ -131,4 +114,4 @@ El código propio se publica bajo GNU GPL 3.0, tal como declara el repositorio. 
 
 \section{Criterios de seguimiento}
 
-El avance se medirá por hitos demostrables y cobertura de riesgos, no únicamente por número de funcionalidades. En cada revisión se registrarán tareas completadas, incidencias abiertas, pruebas fallidas, decisiones pendientes y desviación respecto a la planificación. Si el calendario se reduce, se protegerán primero la seguridad, la descarga temporal, la trazabilidad y el fallback literal; el entrenamiento intensivo o el despliegue avanzado se reducirán antes que degradar esas garantías.
+El avance se medirá por hitos demostrables y cobertura de riesgos, no únicamente por número de funcionalidades. En cada revisión se registrarán tareas completadas, incidencias abiertas, pruebas fallidas, decisiones pendientes y desviación respecto a la planificación. Si el calendario se reduce, se protegerán primero la seguridad, la descarga temporal, la trazabilidad y el fallback literal; la evaluación avanzada y el escalado se reducirán antes que degradar esas garantías.

@@ -16,11 +16,10 @@ flowchart TB
     W -. "progreso y resultado" .-> R
     R -. "avisos" .-> N
 
-    SEM["semantic-service"] -. "scaffold sin ruta funcional" .-> PG[("PostgreSQL + pgvector")]
+    SEM["semantic-service\nmodelo local"] --> PG[("PostgreSQL + pgvector\nproyección reconstruible")]
 
     classDef owner fill:#e6f6f8,stroke:#007f86,color:#123;
     classDef data fill:#fff4d6,stroke:#b7791f,color:#423;
-    classDef future fill:#f4f4f4,stroke:#777,color:#555,stroke-dasharray: 5 5;
     class C,S,W,N,T owner;
-    class MYSQL,CORE,CAT,H2W,H2N,M,L,MAIL data;
-    class SEM,PG future;
+    class MYSQL,CORE,CAT,H2W,H2N,M,L,MAIL,PG data;
+    class SEM owner;

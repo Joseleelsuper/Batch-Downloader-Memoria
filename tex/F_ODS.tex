@@ -8,7 +8,7 @@ Las directrices de la CRUE entienden la sostenibilidad como la búsqueda conjunt
 
 La utilidad de la plataforma nace de una práctica extendida: al preparar un ordenador, cada usuario repite búsquedas y descargas en múltiples páginas. Centralizar el catálogo puede ahorrar tiempo y reducir el acceso accidental a sitios no oficiales. Sin embargo, esa comodidad también concentra responsabilidad. El servicio procesa ejecutables de terceros, depende de proveedores globales y puede generar un consumo elevado de red, disco y energía si se usa de forma indiscriminada.
 
-El análisis relaciona, por tanto, la experiencia individual con efectos más amplios. Una descarga fallida no es solo un error de programación: puede deberse a restricciones regionales, condiciones de uso, accesibilidad insuficiente o cambios comerciales del proveedor. La búsqueda semántica se limita al catálogo controlado y conserva filtros explícitos y fallback literal. Aun así, sus benchmarks deberán vigilar sesgos que favorezcan aplicaciones populares y oculten alternativas pequeñas o libres. No se implementan recomendaciones generativas.
+El análisis relaciona, por tanto, la experiencia individual con efectos más amplios. Una descarga fallida no es solo un error de programación: puede deberse a restricciones regionales, condiciones de uso, accesibilidad insuficiente o cambios comerciales del proveedor. La búsqueda semántica se limita al catálogo controlado y conserva filtros explícitos y fallback literal. La versión actual usa un modelo local aprovisionado y no presenta benchmarks históricos como resultado; una evaluación futura deberá vigilar sesgos que favorezcan aplicaciones populares y oculten alternativas pequeñas o libres. No se implementan recomendaciones generativas.
 
 \section{SOS2: uso sostenible de recursos}
 
@@ -16,13 +16,13 @@ El principio técnico más directamente relacionado con la sostenibilidad es no 
 
 Esta decisión no elimina el impacto. Agrupar aplicaciones puede aumentar la transferencia si el usuario selecciona programas que después no necesita. La interfaz muestra contenido y resultados omitidos antes y después de confirmar. Se aplican límites de 100 aplicaciones, 4 GiB por archivo, 20 GiB por trabajo y ocho descargas concurrentes. Una fuente validada permanece seleccionable hasta una invalidación explícita y, cuando su resolución caduca, se revalida justo antes de descargar para evitar trabajo preventivo innecesario.
 
-La inteligencia artificial merece una atención específica. Los embeddings se generan localmente a partir de un hash de contenido, de modo que no se recalculan documentos sin cambios. Las llamadas a Groq o DeepSeek se limitan al enriquecimiento asíncrono de descripciones ausentes y rotan de modelo cuando se agota una cuota. La clasificación del catálogo y el fallback literal siguen funcionando sin ningún modelo. El benchmark registra RAM, VRAM, latencia y tamaño de índice, aunque una medición energética completa queda fuera de esta entrega.
+La inteligencia artificial merece una atención específica. Los embeddings se generan localmente a partir de un hash de contenido, de modo que no se recalculan documentos sin cambios. Las llamadas a Groq o DeepSeek se limitan al enriquecimiento asíncrono de descripciones ausentes y rotan de modelo cuando se agota una cuota. La clasificación del catálogo y el fallback literal siguen funcionando sin ningún modelo. La medición energética completa queda fuera de esta entrega.
 
 \section{SOS3: participación}
 
-Las solicitudes de software permiten que los usuarios propongan incorporaciones, mientras que los bundles públicos u oficiales ofrecen colecciones reutilizables mantenidas por administración. Solo los administradores aprueban aplicaciones, fuentes y bundles. Las estrellas, la clonación y la personalización comunitaria no forman parte de la entrega y se tratan como ampliaciones posibles, no como mecanismos ya disponibles.
+Los bundles propios públicos o privados permiten organizar colecciones reutilizables desde el panel personal, mientras que los bundles oficiales los mantiene la administración. Solo los administradores incorporan aplicaciones y fuentes. Las estrellas, la clonación y la personalización comunitaria no forman parte de la entrega y se tratan como ampliaciones posibles, no como mecanismos ya disponibles.
 
-La participación también implica escuchar problemas de accesibilidad y uso. El proyecto ofrece navegación por teclado, estados ARIA para los filtros y mensajes comprensibles de progreso. Los registros técnicos no bastan para conocer la experiencia: las pruebas con usuarios y la revisión de solicitudes deben influir en la priorización.
+La participación también implica escuchar problemas de accesibilidad y uso. El proyecto ofrece navegación por teclado, estados ARIA para los filtros y mensajes comprensibles de progreso. Los registros técnicos no bastan para conocer la experiencia: las pruebas con usuarios y la revisión del historial de incidencias deben influir en la priorización.
 
 \section{SOS4: principios éticos}
 

@@ -19,11 +19,10 @@ flowchart LR
     N --> H2N[("H2 inbox\nvolumen local")]
     N --> MP["Mailpit\nSMTP local"]
 
-    SEM["semantic-service\nhealth-only scaffold"] -.-> PG[("PostgreSQL + pgvector\nscaffold futuro")]
+    SEM["semantic-service\nmodelo local + búsqueda"] --> PG[("PostgreSQL + pgvector\nproyección reconstruible")]
 
     classDef service fill:#e6f6f8,stroke:#007f86,color:#123;
     classDef data fill:#fff4d6,stroke:#b7791f,color:#423;
-    classDef future fill:#f4f4f4,stroke:#777,color:#555,stroke-dasharray: 5 5;
     class WEB,C,T,SA,SS,W,N service;
-    class MYSQL,H2W,H2N,M,MP data;
-    class SEM,PG future;
+    class MYSQL,H2W,H2N,M,MP,PG data;
+    class SEM service;

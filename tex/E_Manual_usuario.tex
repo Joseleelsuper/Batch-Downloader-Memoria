@@ -12,9 +12,9 @@ El panel lateral de filtros se abre y cierra con el marcapáginas situado en su 
 
 La búsqueda por texto, las etiquetas, el editor y el estado se combinan con el filtro de sistemas. Las cuatro vistas del catálogo son \emph{Todas}, \emph{Disponibles}, \emph{Revisión} y \emph{Sin instalador}; \emph{Pendientes} no es una categoría pública. Una URL antigua con \ruta{status=pending} se normaliza a \emph{Todas}. Los tres estados son disjuntos: una aplicación disponible no puede aparecer simultáneamente en revisión o sin instalador.
 
-Junto al cuadro de búsqueda se puede elegir \emph{Literal} o \emph{Híbrida}. La dirección compartida tiene prioridad; si no especifica el modo se recupera la última elección del navegador y, en la primera visita, se utiliza \emph{Híbrida}. El modo literal busca coincidencias de texto. El híbrido también interpreta intención mediante embeddings locales, pero conserva exactamente los mismos filtros, estados y páginas.
+Junto al cuadro de búsqueda se puede elegir \emph{Literal} o \emph{Semántica}. La dirección compartida tiene prioridad; si no especifica el modo se recupera la última elección del navegador y, en la primera visita, se utiliza \emph{Semántica}. El modo literal busca coincidencias de texto. El semántico consulta embeddings locales, pero conserva exactamente los mismos filtros, estados y páginas.
 
-Si el índice semántico se está reconstruyendo, tarda demasiado o no puede enumerar todos los candidatos, la petición se ejecuta completa como literal y aparece un aviso breve. Esta degradación no cambia la elección guardada: una consulta posterior volverá a intentar el modo híbrido.
+Si el modelo o el índice semántico no están disponibles, la consulta no cumple el mínimo o la enumeración no puede completarse, la petición se ejecuta completa como literal y aparece un aviso breve. Esta degradación no cambia la elección guardada: una consulta posterior volverá a intentar el modo semántico.
 
 La antigüedad de la última comprobación no retira por sí sola una aplicación disponible. Si la resolución ha caducado, el sistema la revalida al preparar la descarga. Un fallo transitorio permite reintentar sin alterar la categoría; un fallo terminal invalida el candidato y la aplicación cambia de estado solo si no queda otra fuente válida.
 
@@ -26,11 +26,13 @@ El servidor valida el conjunto completo. Un bundle de más de cien aplicaciones 
 
 Tras crear el trabajo aparece un panel con su estado, progreso y elementos. Puede cancelarlo mientras no sea terminal. Cuando se completa, el resultado puede ser total o parcial: un ZIP parcial contiene al menos un instalador válido y detalla los elementos omitidos. El botón de archivo obtiene una redirección temporal a MinIO; la dirección de descarga tiene una validez limitada y el ZIP se elimina al vencer la retención de veinticuatro horas.
 
-\section{Uso sin cuenta y con cuenta}
+\section{Bundles, cuenta e historial}
 
 Un visitante puede crear trabajos desde una selección o un bundle público u oficial. El navegador recibe una cookie segura de propiedad para consultar, cancelar o descargar únicamente sus trabajos. No borre las cookies del sitio hasta recuperar el ZIP; si se eliminan, el trabajo anónimo deja de ser accesible desde ese navegador. Esta cookie no se muestra ni se añade a enlaces compartidos.
 
-Los usuarios autenticados conservan los mismos flujos y pueden solicitar nuevas aplicaciones y recibir notificaciones cuando su correo está verificado. La entrega actual no permite crear, clonar, personalizar ni valorar bundles desde una cuenta: el público puede consultar y descargar bundles visibles, mientras que su creación y mantenimiento se reservan al panel administrativo. Las notificaciones no se envían para solicitudes anónimas.
+Los usuarios autenticados conservan los mismos flujos, verifican el correo y pueden recuperar la cuenta mediante el flujo de restablecimiento de contraseña. El panel personal muestra el perfil, las descargas recientes y el historial paginado. Desde \emph{Mis bundles} se pueden crear, editar y eliminar bundles propios; cada uno puede ser privado o público. Los bundles públicos aparecen en el catálogo y los privados solo se muestran a su propietario. Los bundles oficiales continúan bajo mantenimiento administrativo. Las notificaciones de finalización se envían solo cuando el correo está verificado.
+
+Las solicitudes públicas de incorporación de aplicaciones y el acceso mediante Google OAuth no forman parte de la versión actual.
 
 \section{Administración del contenido}
 
@@ -38,10 +40,10 @@ El panel de administración requiere el rol \emph{ADMIN}. En la vista del scrape
 
 No existe un botón ni una cola \ruta{icon\_enrichment}. La obtención de iconos forma parte del raspado de plataforma y no constituye un flujo administrativo independiente. La cola de descripciones sí es asíncrona: encolar durante una pausa es válido, pero el supervisor espera hasta que se reanude.
 
-Tampoco existe una pantalla administrativa de modelos. La indexación, el entrenamiento, la promoción y el rollback se ejecutan mediante comandos de operación y dejan informes versionados.
+Tampoco existe una pantalla administrativa de entrenamiento. La indexación valida el modelo local aprovisionado y la cobertura del índice; cualquier promoción o rollback se realiza mediante el procedimiento de operación, conservando el manifiesto y la versión anterior.
 
 \section{Mensajes y ayuda}
 
-Los estados \emph{En cola}, \emph{Resolviendo}, \emph{Descargando}, \emph{Empaquetando}, \emph{Listo}, \emph{Parcial}, \emph{Fallido}, \emph{Cancelado} y \emph{Expirado} explican el ciclo de vida del trabajo. Ante un resultado parcial o fallido revise el código de fallo del trabajo y el detalle de cada aplicación. Un resultado \emph{Parcial} conserva su ZIP con los instaladores correctos y \ruta{manifest.json}; si fallan todos los elementos, el trabajo termina como \emph{Fallido} y no ofrece un archivo vacío. Si recibe un mensaje de seguridad, no intente modificar la URL ni reutilizar una redirección temporal; comunique al administrador el identificador de trabajo y la hora aproximada.
+Los estados \emph{En cola}, \emph{Resolviendo}, \emph{Descargando}, \emph{Empaquetando}, \emph{Listo}, \emph{Parcial}, \emph{Solo manual}, \emph{Fallido}, \emph{Cancelado} y \emph{Expirado} explican el ciclo de vida del trabajo. Ante un resultado parcial o fallido revise el código de fallo y el detalle de cada aplicación. Un resultado \emph{Parcial} conserva su ZIP con los instaladores correctos; \emph{Solo manual} contiene accesos \ruta{.url} a páginas oficiales HTTPS. Si fallan todos los elementos, el trabajo termina como \emph{Fallido} y no ofrece un archivo vacío. Para Linux se elige el perfil APT, DNF, Pacman o Zypper y se muestran las comprobaciones SHA-256/GPG disponibles.
 
 La interfaz es navegable por teclado. Los controles de filtro indican su estado con \ruta{aria-pressed} y el marcapáginas informa si el panel está expandido. Si el servicio de traducciones no está disponible, el cliente conserva el catálogo español empaquetado para no bloquear el uso básico del catálogo.

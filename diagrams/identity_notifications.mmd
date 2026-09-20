@@ -6,7 +6,7 @@ sequenceDiagram
     participant R as RabbitMQ
     participant N as Notification service
     participant H as H2 inbox
-    participant M as Mailpit / SMTP
+    participant M as Resend SMTP (producción) / Mailpit (local)
 
     U->>C: Registro o recuperación de cuenta
     C->>D: Guardar token como hash

@@ -11,11 +11,12 @@ El concepto de \emph{fuente oficial} no se limita a la URL visible de una págin
 Un bundle es una colección identificable de aplicaciones. Puede representar una necesidad concreta, por ejemplo ``herramientas para desarrollo web'', y proporciona un enlace estable para consultar o descargar la selección completa. En la entrega se distinguen:
 
 \begin{description}
-	\item[Bundle persistente:] colección creada y mantenida desde la administración y consultable mediante la API pública cuando su estado lo permite.
+	\item[Bundle oficial:] colección creada y mantenida desde la administración, consultable mediante la API pública cuando su estado lo permite.
+	\item[Bundle propio:] colección creada por una cuenta autenticada. Puede ser privada, accesible solo desde el panel personal, o pública, en cuyo caso aparece en el catálogo de bundles.
 	\item[Selección temporal:] conjunto de aplicaciones elegido directamente en el catálogo para una descarga concreta.
 \end{description}
 
-La API pública permite listar, consultar y descargar bundles; las operaciones de alta, modificación y borrado requieren administración. La autoría comunitaria, clonación, personalización persistente y valoración mediante estrellas se mantienen fuera del alcance implementado.
+La API pública permite listar, consultar y descargar bundles oficiales y propios públicos. Las rutas bajo \ruta{/api/v1/users/me/bundles} permiten crear, editar y eliminar los bundles de la cuenta autenticada; el control de propiedad usa el UUID de la cuenta y una versión esperada para detectar ediciones concurrentes. El panel personal también reúne el historial de descargas. No se presenta como implementada la valoración comunitaria ni la clonación.
 
 \section{Resolución de enlaces y scraping}
 
@@ -65,17 +66,17 @@ Cada trabajo utiliza un espacio aislado identificado por su código. Los instala
 
 El ZIP incluye los instaladores disponibles en su raíz y un fichero \ruta{manifest.json}. El manifiesto registra la aplicación, el sistema operativo, la arquitectura, el nombre del archivo y el resultado del elemento. Si alguna descarga falla, el trabajo puede terminar como \emph{PARTIAL} y conservar el ZIP con los archivos restantes; si no se obtiene ninguno, finaliza como \emph{FAILED}.
 
-\section{Embeddings, búsqueda vectorial y fusión híbrida}
+\section{Embeddings y búsqueda semántica}
 
 Un embedding es una representación numérica de un elemento en un espacio vectorial. Textos con significado relacionado tienden a ocupar posiciones próximas según una medida de distancia.
 
 PostgreSQL con pgvector permite almacenar vectores y realizar búsquedas de vecinos cercanos mediante distancia euclídea, producto interno o similitud coseno~\cite{pgvector}.
 
-En Batch Downloader el vector no sustituye al registro transaccional. El scraper produce un documento canónico limitado a metadatos públicos y calcula un \ruta{contentHash}; el indexador solo vuelve a generar el embedding cuando cambia ese hash y marca como inactivos los documentos que desaparecen del barrido. Una versión de modelo solo puede activarse cuando todos los documentos activos poseen el vector correspondiente al hash vigente.
+En Batch Downloader el vector no sustituye al registro transaccional. El scraper produce un documento canónico limitado a metadatos públicos y calcula un \ruta{contentHash}; el indexador vuelve a generar el embedding cuando cambia ese hash y marca como inactivos los documentos que desaparecen del barrido. El modelo activo se aprovisiona en la imagen o en un volumen persistente con un manifiesto de revisión; el servicio funciona con \ruta{local\_files\_only} y no descarga pesos durante el arranque.
 
-La enumeración que delimita el conjunto funcional usa similitud coseno exacta. HNSW se conserva como índice aproximado y se compara con el recorrido exacto durante el benchmark, pero no gobierna facetas o totales. Si la enumeración supera 2.000 candidatos o el índice está incompleto, Core descarta todo el alcance semántico y repite la petición como literal.
+La búsqueda semántica enumera candidatos mediante similitud coseno y entrega a Core una colección acotada. Si falta el modelo, el índice está incompleto, la consulta no cumple el mínimo o la respuesta no puede enumerarse de forma íntegra, Core descarta la colección y repite la petición completa en modo literal. MySQL aplica después los filtros estructurales, los estados, las facetas, los desempates y la paginación.
 
-La combinación utiliza \emph{Reciprocal Rank Fusion}. Para una aplicación presente en los órdenes literal y semántico se suman términos inversos de su posición con una constante \(k=60\); el peso semántico queda asociado a la versión seleccionada por el benchmark. Después de la fusión, MySQL aplica los filtros estructurales, la regla que sitúa \emph{Revisión} al final, los desempates y la paginación.
+No se afirma una fusión RRF ni una familia de modelos entrenables: la degradación segura a búsqueda literal es la garantía funcional verificable de esta versión.
 
 \section{Modelo de lenguaje para enriquecimiento de descripciones}
 

@@ -1,0 +1,104 @@
+\chapter{Despliegue de Batch Downloader en un VPS de Oracle mediante Coolify}
+
+\section{Propósito y alcance}
+
+Este documento describe el despliegue operativo actual de Batch Downloader en un VPS de Oracle administrado por Coolify. Su objetivo es dejar una configuración reproducible y académica: se muestran categorías, nombres de variables, relaciones entre servicios y compuertas de operación, pero nunca tokens, contraseñas, direcciones privadas ni la IP concreta del servidor. El procedimiento se contrasta con la documentación oficial de Coolify para aplicaciones Docker Compose conectadas a Git~\cite{coolifyDockerCompose}.
+
+El despliegue acredita que la aplicación está publicada y que sus endpoints de salud responden desde el exterior. No equivale a una campaña de carga, a una garantía de disponibilidad contractual ni a una promoción automática de migraciones contractivas. Esas conclusiones requieren pruebas y una ventana de observación separadas.
+
+\section{Contexto: Oracle ARM64 y Coolify}
+
+El VPS de Oracle proporciona una máquina ARM64 adecuada para ejecutar un stack contenedorizado con consumo predecible. La imagen de cada componente se publica para \emph{linux/amd64} y \emph{linux/arm64}; el nodo selecciona la variante compatible mediante el manifiesto multi-arquitectura de GHCR. La compilación y publicación se realizan fuera del VPS para que Coolify solo tenga que extraer un tag inmutable y arrancar la composición.
+
+Coolify actúa como plano de aplicación: conserva la conexión al repositorio Git, materializa la aplicación Docker Compose, inyecta variables y secretos, configura dominios y observa el estado de los contenedores. GitHub Actions es el único iniciador de un despliegue de producción; no se depende de un webhook que pueda desplegar una rama sin revisión.
+
+\section{Topología y dominios}
+
+La topología pública separa la interfaz, la entrega de ZIP y el panel de operación:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.25\textwidth}X}
+\toprule
+\textbf{Entrada} & \textbf{Exposición} & \textbf{Uso}\\
+\midrule
+\url{batchdownloader.dev} & HTTPS público & Webapp, API pública y healthcheck del Core.\\
+\url{www.batchdownloader.dev} & HTTPS público & Redirección canónica hacia el dominio principal.\\
+\url{downloads.batchdownloader.dev} & HTTPS público & Redirecciones firmadas hacia objetos temporales de MinIO.\\
+\url{deploy.batchdownloader.dev} & HTTPS restringido & Panel de Coolify; no forma parte de la API de usuario.\\
+MySQL, PostgreSQL, RabbitMQ y MinIO & Red interna Compose & Persistencia y mensajería sin puertos públicos.\\
+\bottomrule
+\end{tabularx}
+\caption{Entradas y servicios de la topología de producción.}
+\label{tabla:coolify-topologia}
+\end{table}
+
+Nginx es la entrada de la composición. Core y scraper comparten MySQL con propiedad de tablas separada; el servicio semántico usa PostgreSQL/pgvector como proyección reconstruible; RabbitMQ transporta identificadores y correlación; MinIO conserva ZIP y manifiesto durante la retención. El modelo local vive en un volumen persistente de la composición semántica y se valida mediante un manifiesto antes de atender consultas.
+
+\section{Aplicación Docker Compose desde Git}
+
+La aplicación de Coolify apunta al repositorio y a la revisión que se desea desplegar. La configuración selecciona el tipo \emph{Docker Compose}, la ruta \ruta{docker-compose.ghcr.yml} para producción y el directorio raíz del proyecto. Cada servicio mantiene su nombre Compose, su healthcheck y su red interna. La documentación de Coolify permite definir dominios por servicio, variables de entorno y puertos publicados desde la propia aplicación~\cite{coolifyDockerCompose}.
+
+Los puertos internos se mantienen en la red Compose y solo se publica la entrada Nginx, además del endpoint de entrega que necesita la redirección firmada. Coolify termina TLS para los dominios públicos, fuerza HTTPS y renueva los certificados. Los servicios de datos no se exponen mediante reglas del firewall ni mediante dominios.
+
+\subsection{Variables y secretos}
+
+Las variables se dividen en categorías para que una revisión pueda comprobarlas sin revelar su valor:
+
+\begin{description}
+  \item[Identidad y sesión:] usuario administrador, secreto de sesión, clave HMAC de trabajos anónimos y parámetros de cookies seguras.
+  \item[Persistencia:] host, puerto, base, usuario y contraseña de MySQL; credenciales equivalentes de PostgreSQL, RabbitMQ y MinIO.
+  \item[Entrega:] endpoint público de descargas, retención, cuota de objetos, tamaño máximo y umbral de espacio libre.
+  \item[Correo:] host y puerto SMTP de Resend, usuario, contraseña y dirección remitente verificada.
+  \item[Semántica:] nombre del volumen del modelo, ruta de manifiesto, revisión, dimensión y modo local sin descarga dinámica.
+  \item[Publicación:] registro GHCR, propietario, prefijo de imagen y \ruta{GHCR\_IMAGE\_TAG}.
+  \item[Operación:] URL, token y UUID de aplicación de Coolify, almacenados solo como secretos de GitHub Actions.
+\end{description}
+
+La composición obtiene los valores desde el entorno de Coolify y sus secretos. Los ficheros \ruta{.env.example} documentan nombres y valores de ejemplo, pero no contienen credenciales. Los nombres de variables permanecen alineados con el script de validación de producción, que rechaza valores públicos incompatibles y exige todos los secretos requeridos.
+
+\section{Publicación multi-arquitectura y despliegue serializado}
+
+El workflow de GHCR construye las imágenes de webapp, Core, worker, notificaciones, traducciones, scraper y servicio semántico para AMD64 y ARM64. Publica un manifiesto con dos clases de tags:
+
+\begin{itemize}
+  \item \ruta{sha-<commit>}, inmutable y formado por el SHA completo de cuarenta caracteres;
+  \item \ruta{main}, alias móvil utilizado únicamente después de que el tag inmutable haya terminado de publicarse.
+\end{itemize}
+
+Coolify recibe siempre el tag inmutable. El despliegue se serializa para evitar dos migraciones concurrentes: se valida el entorno, se actualiza el tag de la aplicación, se espera a que los servicios estén saludables y se consulta el estado final. La automatización no considera suficiente que el contenedor esté creado; espera las rutas listas y comprueba el smoke externo.
+
+El smoke test consulta \ruta{https://batchdownloader.dev/healthz}, el catálogo de locales y \ruta{https://downloads.batchdownloader.dev/healthz}. También verifica HTTPS y la vigencia mínima del certificado. Si un healthcheck, una ruta o la validación de contrato falla, la automatización recupera el tag anterior y espera de nuevo a que la versión anterior quede saludable. El rollback se registra como resultado del despliegue y no oculta el fallo original.
+
+\section{Seguridad de red y secretos}
+
+La red pública solo alcanza Nginx y la entrega firmada. Las URL externas que procesa el scraper se validan contra SSRF antes de cada conexión y tras cada redirección. Las cookies de sesión y propiedad son \emph{Secure}, \emph{HttpOnly} y con política \emph{SameSite}; los tokens de descarga no se escriben en mensajes, logs ni parámetros permanentes.
+
+Los secretos se inyectan en tiempo de ejecución y no se incluyen en imágenes, etiquetas, artefactos de GHCR ni documentos. Las trazas de Coolify y GitHub Actions se revisan para comprobar que no imprimen valores sensibles. La URL firmada de MinIO tiene una vigencia corta y el objeto se elimina cuando expira el trabajo.
+
+El modelo semántico se almacena en el volumen local identificado por \ruta{SEMANTIC\_MODELS\_VOLUME\_NAME}. El servicio valida el manifiesto, la dimensión y el hash; si falta el volumen o el índice no cubre el feed, Core degrada la petición completa a búsqueda literal. No se descargan pesos durante el arranque.
+
+\section{Copias en OCI Object Storage}
+
+El VPS ejecuta el instalador de copias con un fichero de entorno separado. Restic usa un endpoint compatible con S3 de OCI Object Storage y un bucket dedicado; las credenciales, la clave de repositorio y el nombre de proyecto Compose son secretos. Las tareas guardan MySQL, PostgreSQL, RabbitMQ, notificaciones y el volumen del modelo según la política de retención.
+
+La copia no se considera válida por el mero hecho de existir. El instalador programa una verificación de restauración: descarga una instantánea a un espacio aislado, comprueba el repositorio y ejecuta las comprobaciones de esquema e integridad previstas. El monitor diario informa si falta una copia reciente, si el repositorio no se puede leer o si la restauración no supera el umbral.
+
+\section{Operación, métricas y límites}
+
+Cada servicio publica healthchecks y, cuando corresponde, métricas de Actuator o del supervisor del scraper. Coolify permite observar logs, reinicios, consumo y estado de los recursos; el monitor diario del VPS comprueba además la salud pública y las copias. La arquitectura no presupone un servidor Prometheus central: disponer de métricas expuestas no equivale a tener un sistema de series temporales desplegado.
+
+La admisión de descargas aplica cuotas por usuario y navegador, límite de aplicaciones, tamaño máximo, espacio libre y concurrencia del worker. MinIO se usa para objetos temporales y la entrega pública pasa por redirecciones firmadas. Resend/SMTP se reserva para verificación de correo, recuperación de cuenta y avisos de trabajos autenticados; Mailpit solo se utiliza en desarrollo.
+
+\section{Migraciones y promoción controlada}
+
+Producción permanece en Alembic \ruta{20260914\_0021} para el catálogo y Flyway \ruta{V16} para Core. Una migración nueva se prepara con el patrón expand/contract: añadir de forma compatible, hacer backfill, comprobar una copia restaurable, observar la versión desplegada y validar invariantes y consultas. Solo una promoción explícita después de esa compuerta puede eliminar columnas o restricciones antiguas.
+
+Coolify no debe ejecutar dos revisiones que migren el mismo esquema a la vez. Por ello el workflow serializa el despliegue, espera a la finalización de los jobs de migración y conserva el tag anterior para rollback. Un rollback de contenedores no deshace automáticamente una migración contractiva; por eso las fases contractivas no se aplican hasta que la copia y la observación sean suficientes.
+
+\section{Limitaciones y conclusión}
+
+El procedimiento documentado es reproducible para el VPS y los dominios actuales, pero depende de la cuota efectiva de Oracle, del proveedor SMTP, de GHCR, de los editores de software y de la disponibilidad de las fuentes externas. Los smoke tests prueban rutas públicas y TLS, no rendimiento sostenido ni capacidad máxima. La promoción de migraciones, el tamaño del modelo y el escalado horizontal siguen requiriendo una decisión operativa y evidencias de una campaña específica.
+
+Coolify aporta una interfaz declarativa para Compose, secretos, dominios y estados; GitHub Actions aporta la selección de un artefacto inmutable y la compuerta de rollback. La separación permite actualizar la aplicación sin convertir el VPS en un entorno de compilación ni exponer los servicios internos, y deja una base auditable para futuras ampliaciones.

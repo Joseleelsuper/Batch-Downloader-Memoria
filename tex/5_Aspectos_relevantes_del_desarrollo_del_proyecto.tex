@@ -9,10 +9,10 @@ Las iteraciones materializadas hasta esta entrega son:
 \begin{enumerate}
 	\item catálogo, roles, sesión persistente y búsqueda convencional;
 	\item selección de aplicaciones, filtrado por sistema operativo y generación asíncrona de ZIP;
-	\item consulta y descarga de bundles, solicitudes de software y administración;
+	\item consulta y descarga de bundles oficiales y propios públicos o privados, con panel personal e historial de descargas;
 	\item resolvers específicos, colas persistentes, enriquecimiento y observabilidad;
 	\item clasificación materializada, contadores incrementales y revalidación justo antes de descargar;
-	\item búsqueda literal e híbrida, proyección pgvector, evaluación reproducible de embeddings y fallback íntegro;
+	\item búsqueda literal y semántica, proyección pgvector, modelo local aprovisionado y degradación íntegra;
 	\item migración del scraper a CPython 3.14.6 \emph{free-threaded}, contratos OpenAPI/AsyncAPI, imágenes de contenedor y validaciones automatizadas.
 \end{enumerate}
 
@@ -30,8 +30,8 @@ Esta secuencia separa la generación de descripciones mediante LLM del núcleo d
 Consultar catálogo & Sí & Sí & Sí\\
 Generar ZIP & Sí, con cuotas & Sí, con cuotas propias & Sí\\
 Consultar y descargar bundles & Sí & Sí & Sí\\
-Mantener bundles & No & No & Sí\\
-Solicitar software & No & Sí & Sí\\
+Mantener bundles oficiales & No & No & Sí\\
+Mantener bundles propios & No & Sí, públicos o privados & No\\
 Mantener catálogo y resolvers & No & No & Sí\\
 Revisar registros & No & Solo los propios & Sí\\
 \bottomrule
@@ -40,14 +40,14 @@ Revisar registros & No & Solo los propios & Sí\\
 \label{tabla:permisos-actores}
 \end{table}
 
-Los usuarios públicos no modifican la composición persistida de un bundle. Core resuelve su contenido completo al crear el trabajo y vuelve a aplicar los límites de selección; únicamente la administración puede guardar cambios permanentes.
+Los usuarios públicos no modifican la composición persistida de un bundle oficial. Una cuenta autenticada puede guardar cambios en sus propios bundles públicos o privados; Core resuelve su contenido completo al crear el trabajo y vuelve a aplicar los límites de selección.
 
 \section{Arquitectura implementada}
 
 La solución utiliza una arquitectura de servicios con responsabilidades delimitadas:
 
 \begin{description}
-	\item[Frontend/Nginx:] presenta catálogo, selección, bundles, progreso SSE, administración y traducciones en español, y enruta la API pública.
+	\item[Frontend/Nginx:] presenta catálogo, selección, bundles, panel personal, historial, progreso SSE, administración y traducciones en español, y enruta la API pública.
 	\item[Core API:] valida entradas, aplica permisos, mantiene identidad, bundles y trabajos, y publica eventos mediante outbox.
 	\item[Scraper API y scheduler:] gestionan proveedor, fuentes, resoluciones, ejecuciones, estrategias y enriquecimiento.
 	\item[Download worker:] consume trabajos idempotentes, descarga y valida archivos, genera ZIP y publica resultados.
@@ -110,7 +110,7 @@ manifest.json
 
 El manifiesto indica la fecha de creación y el resultado de cada elemento. No incluye credenciales ni URL resueltas; las incidencias se representan mediante códigos estables. El nombre de la aplicación y los metadatos necesarios permiten relacionar cada instalador con la selección.
 
-El resultado conserva una retención configurada de veinticuatro horas. Core no expone directamente MinIO: responde con un \ruta{303} hacia una URL firmada de cinco minutos. Una tarea periódica limpia trabajos abandonados, archivos incompletos y objetos vencidos.
+El resultado conserva una retención configurada de veinticuatro horas. Core no expone directamente MinIO: responde con un \ruta{303} hacia una URL firmada de cinco minutos. Las cuotas de objetos y la admisión por capacidad comprueban espacio libre antes de aceptar un trabajo. Una tarea periódica limpia trabajos abandonados, archivos incompletos y objetos vencidos.
 
 \section{Bundles}
 
@@ -118,17 +118,21 @@ La figura~\ref{fig:secuencia-bundles} muestra la consulta pública, el mantenimi
 
 \diagramaapaisado{sequenceDiagram_bundle.pdf}{Secuencia de consulta, mantenimiento administrativo y descarga de un bundle.}{fig:secuencia-bundles}
 
-La API pública lista bundles activos, consulta su detalle y crea un trabajo de descarga a partir de su composición completa. Las operaciones de creación, actualización y borrado requieren rol administrador. No existen en la entrega propietarios comunitarios, clonación, personalización ni estrellas.
+La API pública lista bundles activos, consulta su detalle y crea un trabajo de descarga a partir de su composición completa. La administración crea, actualiza y borra bundles oficiales; una cuenta autenticada crea, actualiza y borra sus propios bundles públicos o privados desde el panel personal, con comprobación de propietario y versión esperada. La clonación, personalización de bundles ajenos y las estrellas no forman parte de la entrega.
 
 Los bundles descargables no superan cien aplicaciones. Los bundles históricos que exceden el máximo se conservan para corregirlos, pero el servidor no los trunca ni permite descargarlos o editarlos hasta que vuelven al límite.
 
-El contador de aplicaciones del bundle se mantiene junto a la entidad y se repara después de cambios administrativos. La descarga vuelve a consultar las aplicaciones, aplica el máximo y omite de forma explícita cualquier elemento no seleccionable.
+El contador de aplicaciones del bundle se mantiene junto a la entidad y se repara después de cambios autorizados. La descarga vuelve a consultar las aplicaciones, aplica el máximo y omite de forma explícita cualquier elemento no seleccionable.
+
+\section{Instaladores Linux y alternativas manuales}
+
+La descarga Linux admite perfiles para APT, DNF, Pacman y Zypper, además de una ruta portable. El usuario selecciona el gestor y la arquitectura; el sistema prioriza los formatos compatibles y conserva la versión solicitada cuando la fuente lo permite. Los bundles Linux incluyen instaladores automáticos, accesos \ruta{.url} a páginas oficiales HTTPS o una omisión explicada. El worker comprueba el hash SHA-256 y la firma GPG cuando existen y permite volver a una versión anterior del bundle publicado. La ausencia de instalador automático no se oculta: el trabajo termina como \emph{MANUAL\_ONLY} si todos sus elementos son alternativas manuales.
 
 \section{Enriquecimiento de descripciones}
 
 La figura~\ref{fig:secuencia-descripciones} refleja el flujo de generación de una descripción larga fuera de la ruta crítica.
 
-\diagramaapaisado{sequenceDiagram_description_enrichment.pdf}{Secuencia de enriquecimiento de descripciones mediante LLM.}{fig:secuencia-descripciones}
+\diagramaapaisado{sequenceDiagram_llmSearch.pdf}{Secuencia de enriquecimiento de descripciones mediante LLM.}{fig:secuencia-descripciones}
 
 El supervisor selecciona aplicaciones sin descripción larga, calcula un hash de la entrada y encola el trabajo de forma idempotente. El descriptor reúne únicamente metadatos persistidos y llama al proveedor configurado con límites de concurrencia y tiempo.
 
@@ -136,15 +140,15 @@ La respuesta se valida antes de persistirla junto con idioma, proveedor, modelo,
 
 Este flujo no genera embeddings, no consulta pgvector y no interviene en la clasificación de fuentes. El indexador semántico reutiliza después la descripción persistida junto con el resto de metadatos autorizados. La creación asistida de bundles y las recomendaciones generativas permanecen fuera del alcance.
 
-\section{Búsqueda semántica e híbrida}
+\section{Búsqueda semántica y degradación segura}
 
 El scraper publica un feed interno autenticado ordenado por identificador. Para cada aplicación activa construye el mismo texto canónico y el mismo \ruta{contentHash}; no incluye URL completas, secretos ni metadatos crudos. El indexador realiza barridos completos, actualiza únicamente documentos modificados, inactiva huérfanos y procesa embeddings mediante una cola PostgreSQL con leases.
 
-El endpoint semántico carga solo la versión activa y enumera mediante similitud coseno exacta. Core solicita como máximo 2.001 filas para detectar el centinela: si existe el candidato 2.001, si faltan versiones o cobertura, o si aparece un error de autenticación, red o tiempo, crea un contexto literal para toda la petición. Por tanto, lista, conteo o facetas nunca mezclan un conjunto semántico parcial.
+El endpoint semántico carga solo la versión activa y enumera mediante similitud coseno. Core limita la colección y comprueba cobertura, modelo e índice: si falta alguno, si la consulta no es elegible o si aparece un error de autenticación, red o tiempo, crea un contexto literal para toda la petición. Por tanto, lista, conteo o facetas nunca mezclan un conjunto semántico parcial.
 
-Cuando el alcance es válido, Core entrega una única colección a MySQL mediante \ruta{JSON\_TABLE}. Una CTE calcula los puestos literal y semántico, aplica RRF con \(k=60\), y solo después incorpora estado, sistemas, etiquetas, editor, \emph{review-last}, desempates, límite y desplazamiento. Los IDs semánticos huérfanos no producen filas porque la unión conserva la aplicación MySQL como requisito.
+Cuando el alcance es válido, Core entrega la colección de candidatos a MySQL mediante \ruta{JSON\_TABLE}. La consulta incorpora estado, sistemas, etiquetas, editor, desempates, límite y desplazamiento sobre la tabla autoritativa. Los IDs semánticos huérfanos no producen filas porque la unión conserva la aplicación MySQL como requisito.
 
-La interfaz presenta \emph{Literal} y \emph{Híbrida}. El modo de la URL tiene prioridad sobre \ruta{localStorage}; una primera visita selecciona híbrida. El fallback no modifica la preferencia guardada y muestra un aviso breve. Las respuestas públicas exponen modo solicitado y aplicado, versiones de modelo e índice y una causa opcional de degradación.
+La interfaz presenta \emph{Literal} y \emph{Semántica}. El modo de la URL tiene prioridad sobre \ruta{localStorage}; una primera visita selecciona semántica. El fallback no modifica la preferencia guardada y muestra un aviso breve. Las respuestas públicas exponen modo solicitado y aplicado, versiones de modelo e índice y una causa opcional de degradación.
 
 \section{Seguridad}
 
@@ -197,7 +201,7 @@ Spring Actuator, los eventos de progreso y las métricas persistidas del scraper
 	\item enriquecimientos de descripción, fallos del proveedor y validaciones rechazadas.
 \end{itemize}
 
-Los servicios Java exponen salud mediante Actuator, pero la entrega no configura un registro Prometheus. El scraper guarda instantáneas de colas, trabajadores y evolución; el panel recibe cambios por WebSocket y los trabajos por SSE. Estas señales permiten observar reintentos, leases y límites durante las pruebas sin afirmar una capacidad de producción no medida.
+Los servicios Java exponen salud mediante Actuator y métricas compatibles, y el despliegue publica healthchecks y monitorización diaria. El scraper guarda instantáneas de colas, trabajadores y evolución; el panel recibe cambios por WebSocket y los trabajos por SSE. Estas señales permiten observar reintentos, leases y límites. No se afirma que exista un servidor Prometheus central ni una capacidad de producción medida.
 
 \section{Estrategia de pruebas}
 
@@ -210,10 +214,10 @@ La calidad se verifica en varios niveles:
 	\item pruebas de ZIP correcto, parcial, cancelado y expirado;
 	\item pruebas de seguridad para SSRF, cuotas, autorización y datos maliciosos;
 	\item pruebas de extremo a extremo del catálogo, selección, progreso, bundles y administración;
-	\item pruebas PostgreSQL/pgvector de migraciones, dimensiones, sincronización, leases, cobertura, promoción, rollback y HNSW frente a búsqueda exacta;
-	\item pruebas de ranking RRF, filtros posteriores, totales, facetas, páginas y fallback íntegro del modo híbrido;
+	\item pruebas PostgreSQL/pgvector de migraciones, dimensiones, sincronización, leases, cobertura, promoción y rollback;
+	\item pruebas de filtros, totales, facetas, páginas y fallback íntegro del modo semántico;
 	\item verificación de CPython 3.14t, imports sin reactivación del GIL, Chromium y concurrencia repetida;
 	\item compilación de contratos, imágenes y documentos reproducibles.
 \end{itemize}
 
-La aceptación técnica demuestra que se rechazan destinos internos, que un fallo individual no produce estados incoherentes, que los tres filtros forman una partición del catálogo y que la interfaz coincide con la API. La medición de carga y un despliegue público prolongado permanecen fuera del alcance de esta entrega.
+La aceptación técnica demuestra que se rechazan destinos internos, que un fallo individual no produce estados incoherentes, que las categorías forman una partición del catálogo y que la interfaz coincide con la API. La aplicación está desplegada en Oracle mediante Coolify y se comprueba con smoke tests externos; la medición de carga sostenida permanece fuera del alcance de esta entrega. La configuración reproducible, los dominios y las compuertas de rollback se detallan en el documento independiente \href{run:coolify-oracle.pdf}{\ruta{coolify-oracle.pdf}}, que debe conservarse junto a los otros PDF.

@@ -5,6 +5,7 @@ stateDiagram-v2
     DOWNLOADING --> PACKAGING
     PACKAGING --> READY
     PACKAGING --> PARTIAL
+    PACKAGING --> MANUAL_ONLY
     QUEUED --> CANCELLED
     RESOLVING --> CANCELLED
     DOWNLOADING --> CANCELLED
@@ -14,6 +15,7 @@ stateDiagram-v2
     PACKAGING --> FAILED
     READY --> EXPIRED
     PARTIAL --> EXPIRED
+    MANUAL_ONLY --> EXPIRED
     CANCELLED --> [*]
     FAILED --> [*]
     EXPIRED --> [*]

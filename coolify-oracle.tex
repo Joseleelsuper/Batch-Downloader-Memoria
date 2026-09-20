@@ -1,0 +1,83 @@
+\documentclass[a4paper,12pt,oneside]{memoir}
+
+\usepackage[spanish,es-tabla]{babel}
+\selectlanguage{spanish}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{float}
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[colorlinks]{hyperref}
+\hypersetup{
+  colorlinks = true,
+  linkcolor = {blue!45!black},
+  citecolor = {blue!45!black},
+  urlcolor = {blue!55!black},
+  pdftitle = {Despliegue de Batch Downloader en un VPS de Oracle mediante Coolify},
+  pdfauthor = {José Gallardo Caballero}
+}
+\urlstyle{same}
+\newcommand{\ruta}[1]{{\sffamily #1}}
+\nonzeroparskip
+\setlength{\headheight}{16pt}
+\nouppercaseheads
+\graphicspath{{./img/}}
+\chapterstyle{bianchi}
+
+\makeatletter
+\newcommand{\tutor}[1]{\def\@tutor{#1}}
+\definecolor{cpardoBox}{HTML}{E6E6FF}
+\def\maketitle{
+  \null
+  \thispagestyle{empty}
+  \noindent\includegraphics[width=\textwidth]{cabecera}\vspace{1cm}%
+  \vfill
+  \colorbox{cpardoBox}{%
+    \begin{minipage}{.8\textwidth}
+      \vspace{.5cm}\Large
+      \begin{center}
+      \textbf{TFG del Grado en Ingeniería Informática}\vspace{.6cm}\\
+      \textbf{\LARGE\@title{}}
+      \end{center}
+      \vspace{.2cm}
+    \end{minipage}
+  }%
+  \hfill\begin{minipage}{.20\textwidth}
+    \includegraphics[width=\textwidth]{escudoInfor}
+  \end{minipage}
+  \vfill
+  \begin{center}
+    {\noindent\LARGE
+    Presentado por \@author{}\\
+    en Universidad de Burgos --- \@date{}\\
+    Tutores: \@tutor{}\\}
+  \end{center}
+  \null
+  \cleardoublepage
+}
+\makeatother
+
+\title{Despliegue de Batch Downloader en un VPS de Oracle mediante Coolify}
+\author{José Gallardo Caballero}
+\tutor{José Manuel Aroca Fernández, Rodrigo Pascual García}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\frontmatter
+\tableofcontents
+\clearpage
+\mainmatter
+\input{./tex/Coolify_Oracle}
+
+\bibliographystyle{plain}
+\bibliography{bibliografiaAnexos}
+
+\end{document}

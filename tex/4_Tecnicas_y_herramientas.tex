@@ -2,19 +2,19 @@
 
 \section{Criterios de selección}
 
-Las tecnologías se han seleccionado por su tipado, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. La selección se ha contrastado mediante la compilación de los servicios Java, las pruebas del scraper y del frontend, y la validación de los contratos públicos; los resultados de carga en un despliegue público se mantienen expresamente fuera de esta afirmación.
+Las tecnologías se han seleccionado por su tipado, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. La selección se ha contrastado mediante la compilación de los servicios Java, las pruebas del scraper y del frontend, la validación de los contratos públicos y los smoke tests del despliegue en Oracle/Coolify; no se presenta una campaña de carga como resultado.
 
 \section{Frontend}
 
 \subsection{React, React Router, TypeScript y Vite}
 
-El cliente utiliza React~18.3 y React DOM para componer la interfaz, React Router~6.30 para representar navegación y filtros en la URL, y TypeScript~5.6 para tipar contratos, estados y formularios. Vite~5.4 proporciona el servidor de desarrollo y la construcción optimizada~\cite{vite}; el plugin oficial de React integra la transformación JSX. Lucide React aporta iconos de interfaz sin introducir una biblioteca de marcas.
+El cliente utiliza React~18.3 y React DOM para componer la interfaz, React Router~7.18 para representar navegación y filtros en la URL, y TypeScript~5.9 para tipar contratos, estados y formularios. Vite~8.2 proporciona el servidor de desarrollo y la construcción optimizada~\cite{vite}; el plugin oficial de React integra la transformación JSX. Lucide React aporta iconos de interfaz sin introducir una biblioteca de marcas.
 
 HTML y CSS mantienen una tabla compacta y adaptable. Los eventos SSE notifican el progreso de trabajos y WebSocket anuncia cambios del catálogo y de la administración. Los catálogos JSON de idiomas se sirven desde \emph{translation-service} y el frontend conserva un texto español como referencia funcional.
 
 \subsection{Entrega y pruebas del cliente}
 
-La imagen de producción se construye con Node.js~20 y se entrega mediante Nginx~1.27, que sirve los recursos estáticos y enruta \ruta{/api} al Core. Vitest~2.1, Testing Library, jest-dom y jsdom verifican componentes y flujos sin navegador completo; el proveedor V8 produce cobertura. Estas dependencias son de desarrollo y no se incluyen en la imagen Nginx final.
+La imagen de producción se construye con Node.js~24 y se entrega mediante Nginx~1.27, que sirve los recursos estáticos y enruta \ruta{/api} al Core. Vitest~4.1, Testing Library, jest-dom y jsdom verifican componentes y flujos sin navegador completo; el proveedor V8 produce cobertura. Estas dependencias son de desarrollo y no se incluyen en la imagen Nginx final.
 
 \section{Backend}
 
@@ -58,7 +58,7 @@ La imagen de producción compila CPython~3.14.6 desde la fuente verificada con \
 
 HTTPX con HTTP/2 realiza peticiones controladas; selectolax analiza HTML y Playwright~1.61 resuelve páginas que requieren JavaScript. APScheduler inicia ejecuciones periódicas, Tenacity aplica reintentos, tldextract y dnspython apoyan las comprobaciones de dominio y DNS, cryptography cifra las URL, packaging interpreta versiones y structlog produce registros estructurados. Winstall se consulta mediante su API, \ruta{\_\_NEXT\_DATA\_\_} y HTML; GitHub Releases y los recursos de repositorio aportan versiones e iconos cuando existe evidencia suficiente.
 
-Se conserva un único event loop. Un \ruta{ThreadPoolExecutor} acotado recibe exclusivamente parseo HTML, normalización, scoring y deduplicación puros. Las sesiones SQLAlchemy, clientes HTTP, objetos Playwright, eventos, locks y cachés mutables no cruzan hilos. Una segunda imagen 3.14 estándar actúa como control del benchmark con el mismo driver y configuración.
+Se conserva un único event loop. Un \ruta{ThreadPoolExecutor} acotado recibe exclusivamente parseo HTML, normalización, scoring y deduplicación puros. Las sesiones SQLAlchemy, clientes HTTP, objetos Playwright, eventos, locks y cachés mutables no cruzan hilos. La imagen de producción se valida con CPython 3.14.6t y la configuración de ejecución queda fijada por los manifiestos.
 
 El scheduler adquiere leases y ejecuta \ruta{searcher\_filter}, \ruta{filter\_scraper}, \ruta{scraper\_so\_filter} y \ruta{so\_filter\_descriptor}. El enriquecimiento de descripciones tiene su propia cola persistente; los iconos se resuelven dentro del trabajador de plataforma. pytest, pytest-asyncio y respx cubren el comportamiento asíncrono y HTTP; Ruff y mypy se emplean como comprobaciones estáticas. \ruta{requirements.txt} bloquea las versiones de dependencias de ejecución y prueba para que la imagen y CI sean reproducibles.
 
@@ -66,7 +66,7 @@ El scheduler adquiere leases y ejecuta \ruta{searcher\_filter}, \ruta{filter\_sc
 
 \subsection{MySQL}
 
-MySQL~8.4 almacena los datos transaccionales de identidad, catálogo, fuentes, solicitudes, bundles, trabajos, outbox y pipeline. Core y scraper comparten una instancia, pero cada uno es propietario de grupos de tablas distintos. La clasificación pública del catálogo se proyecta de forma incremental: los triggers trasladan los cambios de candidatos a fuentes, aplicaciones y una única fila de contadores, de modo que el endpoint de estadísticas no agrega las tablas operativas.
+MySQL~8.4 almacena los datos transaccionales de identidad, catálogo, fuentes, bundles, trabajos, outbox y pipeline. Core y scraper comparten una instancia, pero cada uno es propietario de grupos de tablas distintos; las solicitudes públicas de aplicaciones ya no forman parte del esquema. La clasificación pública del catálogo se proyecta de forma incremental: los triggers trasladan los cambios de candidatos a fuentes, aplicaciones y una única fila de contadores, de modo que el endpoint de estadísticas no agrega las tablas operativas.
 
 \subsection{H2}
 
@@ -74,17 +74,17 @@ MySQL~8.4 almacena los datos transaccionales de identidad, catálogo, fuentes, s
 
 \subsection{PostgreSQL, pgvector y servicio semántico}
 
-La composición incluye PostgreSQL~16 con pgvector y un servicio Python independiente. Sus migraciones crean documentos canónicos, versiones inmutables de modelos, embeddings de dimensión variable, trabajos con lease, estado de índices y ejecuciones de benchmark. Los índices HNSW son parciales por versión de modelo; una comprobación en PostgreSQL rechaza cualquier vector cuya dimensión no coincida con el registro del modelo.
+La composición incluye PostgreSQL~16 con pgvector y un servicio Python independiente. Sus migraciones crean documentos canónicos, una única revisión local del modelo, embeddings de dimensión validada, trabajos con lease y estado de índice. La comprobación en PostgreSQL rechaza cualquier vector cuya dimensión no coincida con el manifiesto del modelo.
 
-El servicio expone una búsqueda interna autenticada y devuelve candidatos, versión de modelo, versión de índice, peso RRF y señal de truncamiento. El indexador reconcilia periódicamente el feed del scraper, actualiza solo hashes modificados y conserva los artefactos anteriores para rollback. MySQL continúa siendo la fuente de verdad efectiva para los datos públicos.
+El servicio expone una búsqueda interna autenticada y devuelve candidatos, versión de modelo, versión de índice y una señal de degradación. El indexador reconcilia periódicamente el feed del scraper, actualiza solo hashes modificados y conserva el estado suficiente para reconstruir la proyección. MySQL continúa siendo la fuente de verdad efectiva para los datos públicos.
 
-\subsection{Modelos de embeddings y entrenamiento}
+\subsection{Modelo local y degradación segura}
 
-Se registran tres revisiones inmutables obtenidas de Hugging Face: \ruta{paraphrase-multilingual-MiniLM-L12-v2} con 384 dimensiones, \ruta{multilingual-e5-base} con 768 dimensiones y prefijos \ruta{query:}/\ruta{passage:}, y \ruta{bge-m3} con 1.024 dimensiones. E5-base es la versión inicial \emph{zero-shot}.
+La imagen del servicio semántico contiene el runtime y recibe el modelo aprobado mediante un volumen persistente identificado por un manifiesto. El arranque valida la revisión, dimensión y hash; no descarga pesos de forma dinámica ni envía textos o consultas a Hugging Face. El indexador solo publica una versión cuando la cobertura del feed es coherente con el \ruta{contentHash} de los documentos activos.
 
-El entrenamiento es un trabajo explícito, nunca una fase del arranque. Produce un snapshot versionado, divide por aplicación y genera consultas navegacionales y de intención con múltiples positivos. Los negativos difíciles se minan dentro de la misma partición, excluyendo todos los positivos y alias exactos. Cada modelo se ajusta mediante LoRA/PEFT y \ruta{MultipleNegativesRankingLoss}; semilla, revisión, configuración, hash del dataset y artefactos se conservan en volúmenes.
+La API conserva dos modos explícitos: \ruta{lexical} y \ruta{semantic}. Si la consulta es demasiado corta, el modelo no está disponible, el índice está incompleto o se produce un error, Core ejecuta de nuevo la petición completa en modo léxico. Así se mantienen deterministas los filtros, las facetas y la paginación sin afirmar benchmarks históricos ni entrenamiento de varios modelos.
 
-La métrica primaria es nDCG@10. También se calculan MRR@10, MAP@10, Recall@10/20, MRR@1 de búsquedas exactas, p50/p95/p99, throughput, RAM, VRAM, tiempo y tamaño de índice y recall HNSW respecto al recorrido exacto. La puntuación de validación pondera un \(70\,\%\) de calidad, \(20\,\%\) de latencia inversa y \(10\,\%\) de memoria e índice. Solo el ganador elegible consulta test una vez.
+El control de coherencia compara la cobertura declarada con el feed vigente y conserva una versión anterior para reconstrucción. No se presenta esta comprobación como un benchmark de modelos ni como entrenamiento de una familia de embeddings.
 
 \section{Mensajería y almacenamiento temporal}
 
@@ -100,7 +100,7 @@ MinIO almacena temporalmente los ZIP preparados y los objetos intermedios que de
 
 \subsection{SMTP y Mailpit}
 
-El servicio de notificaciones consume eventos, conserva su inbox en H2 y envía correo mediante Spring Mail y SMTP~\cite{smtp}. Mailpit~1.30 captura los mensajes en desarrollo y ofrece una interfaz web de inspección; no forma parte del canal de entrega de producción.
+El servicio de notificaciones consume eventos, conserva su inbox en H2 y envía correo mediante Spring Mail y SMTP~\cite{smtp}. Mailpit~1.30 captura los mensajes en desarrollo; en producción se emplea Resend mediante SMTP, con verificación de dirección y restablecimiento de contraseña. Estas variables se inyectan como secretos y no se escriben en la memoria.
 
 \section{Enriquecimiento mediante LLM}
 
@@ -110,7 +110,7 @@ Groq y DeepSeek se utilizan exclusivamente para generar descripciones largas. El
 
 \subsection{Docker}
 
-Cada componente se empaqueta en una imagen Docker~\cite{docker}. \ruta{docker-compose.yml} construye el árbol local y \ruta{docker-compose.ghcr.yml} consume imágenes publicadas en GHCR. La composición incluye Nginx, Core, scraper API y scheduler, worker, notificaciones, traducciones, servicio e indexador semánticos, MySQL, PostgreSQL/pgvector, RabbitMQ, MinIO/\ruta{mc} y Mailpit. El entrenador y los dos controles de benchmark pertenecen a perfiles explícitos. Los healthchecks ordenan migraciones y arranque sin mezclar la propiedad de esquemas ni confundir el puerto publicado de PostgreSQL con su puerto interno 5432.
+Cada componente se empaqueta en una imagen Docker~\cite{docker}. \ruta{docker-compose.yml} construye el árbol local y \ruta{docker-compose.ghcr.yml} consume imágenes publicadas en GHCR. La composición incluye Nginx, Core, scraper API y scheduler, worker, notificaciones, traducciones, servicio e indexador semánticos, MySQL, PostgreSQL/pgvector, RabbitMQ, MinIO/\ruta{mc} y Mailpit. Los healthchecks ordenan migraciones y arranque sin mezclar la propiedad de esquemas ni confundir el puerto publicado de PostgreSQL con su puerto interno 5432.
 
 \section{Herramientas de desarrollo y documentación}
 
@@ -136,7 +136,7 @@ Trabajos asíncronos & RabbitMQ y Spring AMQP\\
 Scraping dinámico & CPython 3.14.6 \emph{free-threaded}, FastAPI, HTTPX, selectolax y Playwright\\
 Objetos temporales & MinIO con expiración\\
 Descripciones largas & Groq/DeepSeek mediante una interfaz desacoplada\\
-Búsqueda semántica & PostgreSQL 16, pgvector, Sentence Transformers, PEFT/LoRA y modelos locales\\
+Búsqueda semántica & PostgreSQL 16, pgvector, runtime de embeddings y modelo local aprovisionado\\
 Pruebas & JUnit, Testcontainers, pytest, Vitest y Testing Library\\
 Portabilidad y entrega & Docker Compose, GitHub Actions y GHCR\\
 Documentación & \LaTeX{}, BibTeX, Mermaid, PowerShell y Poppler\\

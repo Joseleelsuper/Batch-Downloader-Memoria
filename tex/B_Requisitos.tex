@@ -8,8 +8,8 @@ Este documento recoge los requisitos implementados y las comprobaciones de traza
 
 \begin{description}
 	\item[Usuario anónimo:] consulta el catálogo, crea selecciones temporales y descarga bundles públicos dentro de cuotas.
-	\item[Usuario registrado:] solicita software, consulta sus trabajos y puede pedir notificaciones de finalización.
-	\item[Administrador:] mantiene catálogo, fuentes, resolvers, bundles públicos u oficiales y estados; revisa solicitudes, colas del scraper y registros.
+	\item[Usuario registrado:] consulta su panel e historial, crea y mantiene bundles propios públicos o privados, y puede pedir notificaciones de finalización.
+	\item[Administrador:] mantiene catálogo, fuentes, resolvers, bundles oficiales y estados; revisa colas del scraper, inspecciones manuales y registros.
 	\item[Sistema externo oficial:] página o servicio del editor desde el que se resuelve y descarga un instalador.
 	\item[Proveedor LLM:] Groq o DeepSeek, utilizado exclusivamente para redactar descripciones largas.
 	\item[Servicio semántico:] componente interno que ejecuta modelos de embeddings locales y devuelve candidatos versionados; no decide filtros, permisos ni descargas.
@@ -28,7 +28,7 @@ Los usuarios anónimos pueden descargar selecciones y bundles públicos u oficia
 	\item Mantener el origen oficial y la trazabilidad de cada instalador.
 	\item Evitar almacenamiento permanente y eliminar artefactos temporales.
 	\item Permitir reutilizar selecciones mediante bundles.
-	\item Facilitar el descubrimiento mediante búsqueda literal o híbrida, filtros y bundles mantenidos.
+	\item Facilitar el descubrimiento mediante búsqueda literal o semántica, filtros y bundles mantenidos.
 	\item Proteger la infraestructura frente a URL maliciosas y uso abusivo.
 \end{itemize}
 
@@ -57,17 +57,18 @@ RF-09 & Descargar un ZIP listo antes de su expiración. & Alta & Todos\\
 RF-10 & Producir un ZIP parcial cuando alguna aplicación falle y exista al menos una descarga válida. & Alta & Sistema\\
 RF-11 & Incluir los instaladores aceptados en la raíz del ZIP y un único \ruta{manifest.json} con el resultado y los errores individuales. & Alta & Sistema\\
 RF-12 & Registrar y eliminar los archivos temporales al finalizar, cancelar o expirar. & Alta & Sistema\\
-RF-13 & Registrar, iniciar y cerrar sesión con controles de seguridad. & Alta & Registrado\\
+RF-12a & Permitir seleccionar versión, arquitectura y perfil Linux (APT, DNF, Pacman o Zypper) cuando la fuente lo soporte. & Alta & Todos\\
+RF-12b & Incluir comprobaciones SHA-256/GPG, accesos manuales \ruta{.url} y estados \emph{PACKAGING} o \emph{MANUAL\_ONLY} según el resultado. & Alta & Sistema\\
+RF-13 & Registrar, iniciar, cerrar sesión, verificar el correo y recuperar la cuenta mediante restablecimiento de contraseña. & Alta & Registrado\\
 RF-14 & Consultar la lista y el detalle de bundles públicos u oficiales. & Alta & Todos\\
 RF-15 & Crear un trabajo a partir de un bundle, resolviendo su composición en el servidor. & Alta & Todos\\
-RF-16 & Crear, editar y eliminar bundles desde las rutas administrativas. & Alta & Administrador\\
-RF-17 & Mantener nombre, descripción, tipo, visibilidad, etiquetas y aplicaciones de un bundle. & Media & Administrador\\
+RF-16 & Crear, editar y eliminar bundles oficiales desde las rutas administrativas. & Alta & Administrador\\
+RF-17 & Crear, editar y eliminar bundles propios públicos o privados desde el panel personal, con control de propietario y versión. & Alta & Registrado\\
 RF-18 & Ordenar y paginar los bundles visibles por los criterios admitidos por la API. & Media & Todos\\
-RF-20 & Solicitar la incorporación de software indicando nombre, descripción y página oficial. & Media & Registrado\\
 RF-21 & Añadir, editar, desactivar y reactivar aplicaciones, fuentes y etiquetas. & Alta & Administrador\\
 RF-22 & Configurar la estrategia de resolución por fuente y revisar evidencias de validación pública. & Alta & Administrador\\
 RF-23 & Probar un resolver y consultar sus redirecciones, metadatos y errores. & Alta & Administrador\\
-RF-24 & Revisar trabajos, fallos de resolución, solicitudes y acciones administrativas. & Alta & Administrador\\
+RF-24 & Revisar trabajos, fallos de resolución, inspecciones manuales y acciones administrativas. & Alta & Administrador\\
 RF-25 & Ejecutar el pipeline persistente del scraper y marcar fuentes para revisión manual cuando corresponda. & Media & Sistema\\
 RF-26 & Clasificar cada aplicación activa en exactamente uno de los estados \emph{available}, \emph{review} o \emph{missing}. & Alta & Sistema\\
 RF-27 & Mantener incrementalmente los cuatro contadores globales del catálogo mediante la proyección transaccional de MySQL. & Alta & Sistema\\
@@ -76,12 +77,12 @@ RF-29 & Enviar un aviso de finalización por correo cuando un usuario autenticad
 RF-30 & Permitir a un administrador crear y mantener bundles oficiales. & Media & Administrador\\
 RF-31 & Encolar de forma idempotente aplicaciones activas sin descripción larga desde el panel de administración. & Media & Administrador\\
 RF-32 & Obtener iconos durante la etapa de raspado de plataforma, sin una cola pública o administrativa independiente. & Media & Sistema\\
-RF-33 & Permitir elegir \ruta{searchMode=lexical|hybrid} y conservar la elección del usuario sin sobrescribirla durante un fallback. & Alta & Todos\\
+RF-33 & Permitir elegir \ruta{searchMode=lexical|semantic} y conservar la elección del usuario sin sobrescribirla durante un fallback. & Alta & Todos\\
 RF-34 & Publicar un feed interno autenticado de documentos canónicos, paginado por aplicación y acompañado de \ruta{contentHash}. & Alta & Sistema\\
 RF-35 & Sincronizar documentos y embeddings de forma idempotente, inactivar huérfanos y activar una versión solo con cobertura completa. & Alta & Sistema\\
-RF-36 & Fusionar ranking literal y semántico mediante RRF antes de aplicar filtros, \emph{review-last}, desempates y paginación MySQL. & Alta & Todos\\
+RF-36 & Aplicar los candidatos semánticos solo después de mantener MySQL como autoridad de filtros, estados, facetas, desempates y paginación. & Alta & Todos\\
 RF-37 & Degradar toda la petición a literal ante timeout, 401, 5xx, índice incompleto o enumeración truncada. & Alta & Sistema\\
-RF-38 & Entrenar y comparar mediante CLI MiniLM, E5-base y BGE-M3, conservar informes y permitir promoción o rollback atómico. & Media & Administrador\\
+RF-38 & Aprovisionar un modelo local con manifiesto de revisión y conservar la versión anterior para reconstrucción o rollback. & Media & Administrador\\
 \bottomrule
 \end{longtable}
 }
@@ -122,7 +123,7 @@ RNF-20 & Los comandos y eventos AMQP se entregarán al menos una vez, con outbox
 RNF-21 & Los contadores globales se leerán por clave primaria; ninguna petición de estadísticas agregará las tablas operativas. & Rendimiento\\
 RNF-22 & \ruta{available}, \ruta{review} y \ruta{missing} serán disjuntos y su suma será igual al total de aplicaciones activas visibles. & Integridad\\
 RNF-23 & Las descripciones y consultas usadas por embeddings no se enviarán a Hugging Face ni a otro servicio de inferencia externo. & Privacidad\\
-RNF-24 & Los totales y facetas híbridos solo se publicarán cuando la enumeración semántica completa no supere 2.000 candidatos. & Integridad\\
+RNF-24 & Los totales y facetas semánticos solo se publicarán cuando el modelo y el índice estén disponibles; cualquier incoherencia degrada la petición completa a literal. & Integridad\\
 RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL deshabilitado tras todos los imports y sin compartir recursos async entre hilos. & Portabilidad\\
 \bottomrule
 \end{longtable}
@@ -132,7 +133,7 @@ RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL
 
 \begin{enumerate}
 	\item Una selección directa y un bundle son dos entradas alternativas para crear un trabajo; la API exige exactamente una.
-	\item Los bundles visibles se consultan por rutas públicas y su mantenimiento se realiza exclusivamente por rutas administrativas.
+	\item Los bundles oficiales se mantienen por rutas administrativas; los bundles propios se gestionan únicamente bajo el UUID de su cuenta, desde el panel personal, y pueden ser públicos o privados.
 	\item Las estrellas, la clonación y la personalización comunitaria no están implementadas, aunque queden columnas o tablas de compatibilidad sin uso.
 	\item Un bundle oficial solo puede ser creado o marcado como tal por un administrador.
 	\item Una descripción larga ausente puede completarse mediante la cola de enriquecimiento; una descripción manual o personalizada no se sobrescribe automáticamente.
@@ -142,9 +143,9 @@ RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL
 	\item Los triggers son los únicos que modifican \ruta{catalog\_counters}; las escrituras de aplicación pasan por las tablas operativas cubiertas.
 	\item El LLM se utiliza para descripciones y nunca evita la validación normal de aplicaciones y descargas.
 	\item MySQL conserva la autoridad de estados, filtros, facetas y paginación; PostgreSQL/pgvector es una proyección reconstruible.
-	\item La preferencia de búsqueda se resuelve por URL, después \ruta{localStorage} y finalmente híbrida en la primera visita.
+	\item La preferencia de búsqueda se resuelve por URL, después \ruta{localStorage} y finalmente semántica en la primera visita.
 	\item Un fallo semántico degrada la petición completa; no se publican listas, totales o facetas parcialmente semánticos.
-	\item La versión anterior del modelo y sus embeddings se conservan para rollback.
+	\item El manifiesto del modelo local y el estado de la proyección se conservan para reconstrucción y rollback.
 	\item El trabajo parcial será válido cuando incluya al menos un instalador y describa todos los fallos.
 	\item Un trabajo listo permanece disponible durante la retención configurada y deja de estarlo al eliminarse o vencer el plazo.
 \end{enumerate}
@@ -299,7 +300,7 @@ RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL
 \label{tabla:cu-enriquecer-descripcion}
 \end{table}
 
-\subsection{CU-07 Buscar en modo híbrido}
+\subsection{CU-07 Buscar en modo semántico}
 
 \begin{table}[H]
 \centering
@@ -307,18 +308,18 @@ RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL
 \toprule
 \textbf{Actor} & Usuario anónimo o registrado\\
 \textbf{Requisitos} & RF-33 a RF-37; RNF-23 y RNF-24\\
-\textbf{Precondición} & Existe una consulta no vacía; el modo solicitado es híbrido.\\
-\textbf{Flujo principal} & 1. Core solicita una enumeración semántica exacta.\newline
-2. El servicio devuelve candidatos y versiones sin truncamiento.\newline
-3. Core materializa la colección mediante \ruta{JSON\_TABLE}.\newline
-4. MySQL fusiona ambos rankings, aplica filtros y pagina.\newline
+\textbf{Precondición} & Existe una consulta no vacía; el modo solicitado es semántico y el modelo local está aprovisionado.\\
+\textbf{Flujo principal} & 1. Core solicita candidatos semánticos al servicio interno.\newline
+2. El servicio devuelve candidatos, versión de modelo y estado de cobertura.\newline
+3. Core entrega los identificadores a la consulta autoritativa de MySQL.\newline
+4. MySQL aplica filtros, estados, facetas, desempates y paginación.\newline
 5. La respuesta indica modo solicitado y aplicado, modelo e índice.\\
-\textbf{Alternativas} & Ante error, timeout, falta de cobertura o más de 2.000 candidatos se ejecuta toda la petición como literal y se informa del motivo.\\
+\textbf{Alternativas} & Ante consulta no elegible, modelo ausente, índice incompleto, timeout o error se ejecuta toda la petición como literal y se informa del motivo.\\
 \textbf{Postcondición} & La preferencia guardada no cambia por una degradación temporal.\\
 \bottomrule
 \end{tabularx}
-\caption{CU-07 Buscar en modo híbrido.}
-\label{tabla:cu-busqueda-hibrida}
+\caption{CU-07 Buscar en modo semántico.}
+\label{tabla:cu-busqueda-semantica}
 \end{table}
 
 \section{Trazabilidad final}
@@ -332,10 +333,10 @@ RNF-25 & El scraper arrancará solo con CPython 3.14.6 \emph{free-threaded}, GIL
 \midrule
 Catálogo y selección & RF-01 a RF-05 & Pruebas de filtro, columna de sistemas y componentes frontend.\\
 Descarga y ZIP & RF-06 a RF-12 & Pruebas de dominio, servicio, worker, ZIP parcial, cancelación y limpieza.\\
-Usuarios y bundles & RF-13 a RF-18, RF-30 & Pruebas de autorización, propiedad anónima, lectura pública y mantenimiento administrativo.\\
-Administración & RF-20 a RF-25, RF-31 y RF-32 & Permisos, auditoría, rutas internas y colas persistentes.\\
+Usuarios y bundles & RF-13 a RF-18, RF-30 & Pruebas de autorización, recuperación de cuenta, historial, propiedad anónima, lectura pública y mantenimiento personal/administrativo.\\
+Administración & RF-21 a RF-25, RF-31 y RF-32 & Permisos, auditoría, inspecciones manuales, rutas internas y colas persistentes.\\
 Proyección de catálogo & RF-26 a RF-28 & Testcontainers con MySQL 8.4, triggers multifuente, rollback y \ruta{check/repair}.\\
-Búsqueda semántica & RF-33 a RF-38 & pgvector real, hashes, dimensiones, RRF, facetas, fallback, promoción y rollback.\\
+Búsqueda semántica & RF-33 a RF-38 & pgvector real, hashes, dimensiones, cobertura, fallback, reconstrucción y rollback.\\
 Calidad transversal & RNF-01 a RNF-25 & Validación de contratos, seguridad, observabilidad, integridad, privacidad y runtime 3.14t.\\
 \bottomrule
 \end{tabularx}

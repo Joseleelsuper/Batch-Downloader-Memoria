@@ -4,55 +4,51 @@
 
 La implementación documentada confirma que Batch Downloader es más que una página con enlaces. La generación conjunta de instaladores exige resolver fuentes cambiantes, validar destinos, procesar archivos grandes de forma asíncrona, comunicar progreso y eliminar temporales. Estos requisitos justifican la separación entre API, workers, resolvers y almacenamiento temporal.
 
-La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacena conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtiene en el contexto de un trabajo. Esta política reduce duplicación y favorece la actualización, aunque obliga a asumir que las páginas externas pueden cambiar y que es necesario mantener resolvers y registros.
+La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacena conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtiene en el contexto de un trabajo. MinIO conserva temporalmente el staging y el ZIP; las cuotas y la admisión por capacidad impiden aceptar trabajos que no puedan ejecutarse con el espacio disponible.
 
-Los bundles aportan reutilización sin perder control sobre su composición. Las rutas públicas permiten listarlos, consultar su detalle y crear un trabajo; las rutas administrativas concentran su mantenimiento. La clonación, las estrellas y la personalización comunitaria no están implementadas y no se presentan como resultado de esta entrega.
+Los bundles aportan reutilización sin perder control sobre su composición. Las rutas públicas permiten consultar y descargar bundles oficiales y propios públicos; cada cuenta gestiona sus bundles públicos o privados desde el panel personal y consulta su historial de descargas. La clonación y la valoración comunitaria no están implementadas y no se presentan como resultado.
 
-La búsqueda semántica se incorpora sin convertir el modelo en autoridad del catálogo. El feed canónico, el indexador, pgvector, la búsqueda exacta y la fusión RRF forman una ruta funcional con fallback literal íntegro. Los pesos se ejecutan localmente; Groq y DeepSeek se emplean exclusivamente para redactar descripciones largas y no intervienen en el ranking, no aprueban enlaces, no recomiendan aplicaciones y no modifican configuraciones críticas.
+La búsqueda semántica se incorpora sin convertir el modelo en autoridad del catálogo. El modelo se aprovisiona localmente y el índice de PostgreSQL/pgvector se reconstruye desde el feed canónico. Ante una consulta no elegible, un modelo ausente, un índice incompleto o un error de servicio, Core degrada la petición completa a búsqueda literal. No se afirma una búsqueda híbrida, RRF ni una campaña de entrenamiento de varios modelos.
 
-La arquitectura se ha incorporado por etapas. La prioridad fue validar un núcleo seguro y observable antes de introducir el LLM en el enriquecimiento de texto. La proyección incremental del catálogo completa ese núcleo: los triggers de MySQL propagan cambios de candidato, fuente y aplicación hasta una fila singleton, manteniendo \emph{Disponible}, \emph{Revisión} y \emph{Sin instalador} como partición exhaustiva de las aplicaciones activas.
+La entrega también materializa la selección de versiones y perfiles de instalador, el descubrimiento e inspección manual, los accesos \ruta{.url}, los estados \emph{PACKAGING} y \emph{MANUAL\_ONLY} y los bundles Linux para APT, DNF, Pacman y Zypper. La verificación SHA-256/GPG y el rollback se mantienen como propiedades del flujo de publicación de instaladores, no como una garantía de que todas las fuentes externas estén disponibles.
 
-\section{Limitaciones actuales}
+\section{Limitaciones actuales y verificación}
 
-La tabla~\ref{tabla:resultados-verificacion-semantica} recoge la ejecución local del 23 de julio de 2026 sobre el árbol de trabajo. Estas cifras describen pruebas funcionales, no una campaña de carga ni una evaluación de calidad de los modelos sobre un conjunto humano definitivo.
+La tabla~\ref{tabla:resultados-verificacion-semantica} es el único registro de pruebas de esta versión. Está fechada y asociada al commit de corte del repositorio de aplicación; la única actividad que no se ejecutó, la campaña de carga sostenida, se marca explícitamente como no verificada. No se reutilizan cifras históricas de julio ni benchmarks de modelos que ya no forman parte del contrato.
 
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.20\textwidth}X}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.22\textwidth}X}
 \toprule
-\textbf{Ámbito} & \textbf{Resultado} & \textbf{Cobertura relevante}\\
+\textbf{Ámbito} & \textbf{Estado en el corte} & \textbf{Alcance}\\
 \midrule
-Core API & 41 pruebas superadas & Contrato híbrido, fallback, RRF, filtros y consultas de catálogo\\
-Frontend & 51 pruebas y build & Selector, precedencia URL/\ruta{localStorage}, aviso y tipos\\
-Scraper & 156 pruebas superadas & Feed canónico, hash, MySQL~8.4, proyección y driver aiomysql\\
-Servicio semántico & 10 pruebas superadas & Migraciones pgvector, dimensiones, sincronización, promoción, variantes de entrenamiento y HNSW exacto\\
-Compose & Stack construido y operativo & Healthchecks, migraciones, 13.667 embeddings E5 y fallback íntegro a través de Nginx\\
-Entrenamiento acotado & 3 modelos y 25 variantes & Snapshot de 512 aplicaciones, artefactos LoRA recargables e informes JSON, CSV y Markdown\\
-CPython 3.14/3.14t & 5 repeticiones por configuración & Checksums equivalentes; aceleración a 8 hilos de \(3{,}100\times\) en HTML y \(3{,}380\times\) en HTTP controlado\\
+Commit documentado & \ruta{afb30bb} (2026-09-19) & Estado local de \ruta{Batch-Downloader} usado para contrastar esta memoria.\\
+Java y contratos & OK & \ruta{mvn -B verify}: 292 pruebas Java; contratos HTTP/RabbitMQ, OpenAPI válido (una advertencia de componente no usado) y AsyncAPI válido.\\
+Scraper Python & OK & 314 pruebas, Ruff y mypy sin errores; la comprobación externa de Winstall respondió 404 y no se presenta como verificada.\\
+Servicio semántico & OK & 24 pruebas, Ruff y mypy sin errores; modelo local, migraciones pgvector e identificación del fallback.\\
+Frontend & OK & 181 pruebas Vitest, lint, typecheck y build Vite; entrada pública de 94,04 KiB gzip.\\
+Compose y GHCR & Parcial & Ambos archivos renderizan correctamente; la paridad estricta detecta los ajustes intencionados de capacidad/retención entre local y producción.\\
+Automatización de despliegue & OK & 13 pruebas de release/smoke, 16 de agregación Compose y 4 de contratos HTTP adicionales.\\
+Despliegue externo & Smoke verificado & \ruta{/healthz}, locales y endpoint de descargas en los dominios públicos; no es una prueba de carga.\\
+Campaña de carga sostenida & No verificada & Requiere un despliegue controlado y fuentes de prueba; queda como trabajo futuro.\\
 \bottomrule
 \end{tabularx}
-\caption{Resultados funcionales obtenidos durante la verificación integral local del stack.}
+\caption{Registro único de verificación asociado al commit de corte.}
 \label{tabla:resultados-verificacion-semantica}
 \end{table}
 
-El perfil \ruta{--smoke} creó el snapshot \ruta{06e6b8dda8bc}, con 512 aplicaciones y 2.830 consultas generadas, y acotó la evaluación efectiva a 256 documentos y ocho consultas de validación. En ese alcance de integración, BGE-M3 \emph{zero-shot} obtuvo nDCG@10 y MRR@10 iguales a \(1{,}0000\), mientras el literal obtuvo \(0{,}9126\) y \(0{,}8889\), respectivamente. Estas cifras no constituyen una comparación de calidad concluyente: el conjunto es pequeño y sintético, y todas las variantes se marcaron expresamente como no elegibles. Por ello no se consultó test ni se promocionó un modelo; E5-base \emph{zero-shot} continuó activo.
+La producción permanece en Alembic \ruta{20260914\_0021} y Flyway \ruta{V16}. El rollout de MySQL sigue un esquema expand/contract: primero se añade lo compatible, se realiza backfill y se observa con una copia restaurable; solo después de comprobar invariantes, restauración, consultas y una ventana de observación se puede promover una fase contractiva. Esta memoria no presenta las fases contractivas como aplicadas.
 
-La comparación del runtime utilizó 200 tareas por configuración, HTML almacenado, un servidor HTTP controlado, 1/2/4/8 hilos y cinco repeticiones. A un hilo, 3.14t asumió una sobrecarga en la carga puramente CPU (\(0{,}916\times\)); a ocho hilos alcanzó \(699{,}15\) tareas/s frente a \(225{,}56\) en el control estándar. En la carga HTTP controlada obtuvo \(642{,}49\) frente a \(190{,}11\) tareas/s. Los checksums fueron idénticos en todas las configuraciones.
+La compatibilidad con Windows, Linux y macOS depende de la disponibilidad y condiciones de las fuentes oficiales. La antigüedad de una resolución no retira por sí sola un candidato estructuralmente válido: si ha caducado, se revalida bajo bloqueo justo antes de descargar. Un fallo terminal invalida el candidato; uno transitorio conserva la categoría y permite reintentar. Cuando solo existe página oficial, el resultado puede contener un acceso \ruta{.url} y finalizar como \emph{MANUAL\_ONLY}.
 
-La selección automática de producción sigue exigiendo ejecutar el perfil completo: el ajuste debe superar a su variante \emph{zero-shot} y no reducir MRR@1 respecto al literal. Solo entonces se confirma una vez sobre test y se activa con cobertura completa; si no existe un ganador elegible, se conserva E5-base \emph{zero-shot}.
-
-La compatibilidad con Windows, Linux y macOS depende de la disponibilidad y condiciones de las fuentes oficiales. La interfaz muestra únicamente sistemas con una fuente seleccionable. \ruta{checked\_at} y \ruta{expires\_at} no retiran por sí solos un candidato estructuralmente válido: si ha caducado, se revalida bajo bloqueo justo antes de descargar. Un fallo terminal invalida el candidato y activa la reclasificación por triggers; uno transitorio conserva la categoría y permite reintentar.
-
-La proyección incluye un comando de auditoría y otro de reparación para restauraciones manuales. Su corrección transaccional debe seguir comprobándose con MySQL 8.4 real, escenarios multifuente, movimientos, borrados, rollback y concurrencia; una prueba basada solo en fragmentos SQL no cubre esas propiedades.
-
-Los servicios se ejecutan con JDK 26, pero el proceso Maven fija la generación de bytecode Java 25 para mantener compatibilidad de herramientas. La matriz de dependencias sigue siendo una responsabilidad de mantenimiento: cada actualización de Spring Boot, SonarJava o la plataforma Java debe validarse en integración continua antes de su adopción.
+El despliegue actual en Oracle/Coolify demuestra una operación reproducible con imágenes multi-arquitectura, tags inmutables, healthchecks, métricas expuestas y monitorización diaria. No se afirma la existencia de un servidor Prometheus central ni una campaña de carga. Las copias OCI, la verificación de restauraciones y el procedimiento de rollback se describen en \href{run:coolify-oracle.pdf}{\ruta{coolify-oracle.pdf}}.
 
 \section{Líneas de trabajo futuras}
 
 \subsection{Rendimiento y pruebas de extremo a extremo}
 
-La siguiente línea de trabajo es ejecutar una campaña reproducible con MySQL, RabbitMQ, MinIO, Mailpit y un servidor HTTP controlado. Debe cubrir el flujo visitante--bundle--job--ZIP, revalidación JIT, cancelación, resultados parciales, recuperación tras caída y los límites de 100 aplicaciones y 20 GiB. Las pruebas de SSRF y limpieza temporal seguirán siendo criterios de aceptación, no mejoras opcionales.
+La siguiente línea de trabajo es ejecutar una campaña reproducible con MySQL, RabbitMQ, MinIO, SMTP de producción y un servidor HTTP controlado. Debe cubrir el flujo visitante--bundle--job--ZIP, revalidación JIT, cancelación, resultados parciales, alternativas manuales, recuperación tras caída y los límites de admisión. Las pruebas de SSRF y limpieza temporal seguirán siendo criterios de aceptación.
 
 \subsection{Resolvers y salud del catálogo}
 
@@ -64,15 +60,7 @@ Tras medir el uso de disco y memoria se estudiará añadir archivos al ZIP media
 
 \subsection{Evaluación semántica continua}
 
-La ruta funcional queda preparada para repetir snapshots y benchmarks sin cambiar la API. Como continuación se deberá ampliar el conjunto de consultas humanas en español, errores tipográficos, sinónimos e intención cruzada entre idiomas; vigilar deriva del catálogo; y revisar periódicamente umbral, peso RRF y recall HNSW. La promoción seguirá requiriendo cobertura completa y conservará la versión anterior para rollback.
-
-\subsection{Modelos locales, eficiencia y privacidad}
-
-Los tres modelos de embeddings ya se ejecutan localmente. Como trabajo posterior se estudiarán cuantización, aceleradores, batching adaptativo y modelos más pequeños, comparando calidad, latencia y consumo energético. Las consultas y descripciones continuarán fuera de servicios de inferencia externos y los informes no incluirán secretos ni datos de contacto.
-
-\subsection{Despliegue y escalado}
-
-Docker Compose cubre el entorno inicial con MySQL compartido, H2 local en los consumidores, RabbitMQ, MinIO y Mailpit. Un despliegue distribuido deberá añadir gestión de secretos, límites de recursos, copias de seguridad, políticas de red y una solución de métricas; Prometheus y Kubernetes no forman parte de esta entrega.
+La ruta funcional queda preparada para repetir snapshots y comprobaciones de cobertura sin cambiar la API. Como continuación se deberá ampliar el conjunto de consultas humanas en español, errores tipográficos, sinónimos e intención cruzada entre idiomas, vigilar la deriva del catálogo y medir latencia y memoria bajo carga controlada. La promoción seguirá exigiendo copia restaurable, observación y rollback.
 
 \subsection{Accesibilidad e internacionalización}
 
@@ -80,4 +68,4 @@ La interfaz podrá ampliarse con varios idiomas, navegación completa por teclad
 
 \section{Cierre}
 
-Batch Downloader reúne en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles administrados, enriquecimiento de descripciones y búsqueda híbrida. La implementación establece límites claros para cada componente y proporciona una base verificable para continuar el trabajo sin presentar como terminadas las funciones comunitarias, una campaña de carga de producción o el despliegue público.
+Batch Downloader reúne en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles con propiedad explícita, enriquecimiento de descripciones, instaladores Linux y recuperación semántica degradable. La implementación establece límites claros para cada componente y proporciona una base verificable para continuar el trabajo sin presentar como terminadas funciones retiradas, campañas de carga o cambios contractivos de base de datos aún no promovidos.

@@ -13,7 +13,7 @@ Este manual describe la estructura actual de Batch Downloader y los procedimient
 	\item[\ruta{services/translation-service}:] entrega de locales versionados y caché HTTP.
 	\item[\ruta{services/webapp}:] cliente React, TypeScript y Vite, ubicado bajo \ruta{src/main/resources/frontend}.
 	\item[\ruta{api/scraper}:] FastAPI, SQLAlchemy, Alembic, proveedores, resolvers, scheduler y colas de enriquecimiento.
-	\item[\ruta{services/semantic-service}:] migraciones PostgreSQL/pgvector, búsqueda, indexador, entrenamiento y benchmark.
+	\item[\ruta{services/semantic-service}:] migraciones PostgreSQL/pgvector, búsqueda, indexador y validación del modelo local.
 	\item[\ruta{shared/contracts}:] OpenAPI, AsyncAPI y JSON Schema de los mensajes.
 	\item[\ruta{docker-compose.yml}:] composición de desarrollo que construye imágenes locales.
 	\item[\ruta{docker-compose.ghcr.yml}:] composición que consume imágenes publicadas.
@@ -32,12 +32,12 @@ Core y scraper comparten una instancia y una base MySQL, pero no la propiedad de
 \textbf{Área} & \textbf{Tecnologías directas}\\
 \midrule
 \endhead
-Frontend & React, React DOM, React Router, TypeScript, Vite, Lucide React, Testing Library, Vitest, jsdom, HTML, CSS y Nginx~\cite{react,typescript,vitest,nginx}. El Dockerfile fija Node 20 y Nginx 1.27; las versiones de paquetes se toman de \ruta{package.json} y \ruta{package-lock.json}.\\
+Frontend & React, React DOM, React Router, TypeScript, Vite, Lucide React, Testing Library, Vitest, jsdom, HTML, CSS y Nginx~\cite{react,typescript,vitest,nginx}. El Dockerfile fija Node 24 y Nginx 1.27; las versiones de paquetes se toman de \ruta{package.json} y \ruta{package-lock.json}.\\
 Java & Java 25 como nivel de compilación, runtime Temurin 26.0.1, Spring Boot 3.5.16, Spring Web, WebSocket, Security, Session JDBC, Validation, Data JPA/JDBC, AMQP, Mail y Actuator; Flyway, conector MySQL, H2, MinIO SDK, JUnit, Mockito, Spring Rabbit Test, JaCoCo y ArchUnit~\cite{h2database}.\\
 Python & CPython 3.14.6 \emph{free-threaded}, FastAPI, Uvicorn, HTTPX, Selectolax, Playwright 1.61, SQLAlchemy, Alembic, aiomysql, aiosqlite, Pydantic Settings, Tenacity, APScheduler, tldextract, dnspython, structlog, cryptography y packaging. Pruebas con pytest, pytest-asyncio, respx y Testcontainers para MySQL~\cite{fastapi,sqlalchemy,alembic,pytest,testcontainers}.\\
-Datos e infraestructura & MySQL 8.4 compartido, triggers y columnas generadas para la proyección; PostgreSQL 16/pgvector para documentos, embeddings, jobs y benchmarks; H2 para inbox locales; RabbitMQ, MinIO, Mailpit 1.30.0, Docker y Docker Compose~\cite{mysql84,mysql-triggers,h2database,rabbitmq,minio,mailpit}.\\
+Datos e infraestructura & MySQL 8.4 compartido, triggers y columnas generadas para la clasificación; PostgreSQL 16/pgvector para documentos y embeddings; H2 para inbox locales; RabbitMQ, MinIO, Mailpit 1.30.0, Docker y Docker Compose~\cite{mysql84,mysql-triggers,h2database,rabbitmq,minio,mailpit}.\\
 Proveedores & Winstall como catálogo origen; GitHub y páginas oficiales como superficies de resolución; Groq y DeepSeek únicamente para descripciones largas; SMTP mediante Mailpit en desarrollo~\cite{deepseek,mailpit}.\\
-Calidad y CI/CD & Maven, Ruff, mypy, pytest-cov, JaCoCo, SonarQube, GitHub Actions, Docker Buildx y GHCR. Los workflows fijan Java 26, Python 3.14, Node 20, verifican una imagen 3.14t real y conservan las versiones de Redocly CLI y AsyncAPI CLI~\cite{github-actions,ghcr,sonarqube}.\\
+Calidad y CI/CD & Maven, Ruff, mypy, pytest-cov, JaCoCo, SonarQube, GitHub Actions, Docker Buildx y GHCR. Los workflows fijan Java 26, Python 3.14, Node 24, verifican una imagen 3.14t real y conservan las versiones de Redocly CLI y AsyncAPI CLI~\cite{github-actions,ghcr,sonarqube}.\\
 Contratos y documentación & OpenAPI, AsyncAPI, JSON Schema, Redocly CLI, AsyncAPI CLI, Mermaid, \LaTeX{}, \ruta{latexmk} y Poppler para revisión visual.\\
 \bottomrule
 \end{longtable}
@@ -96,29 +96,24 @@ npx --yes @asyncapi/cli@3.4.2 validate `
   shared/contracts/asyncapi/messaging.yaml
 \end{verbatim}
 
-El servicio semántico se comprueba con PostgreSQL/pgvector real. Su indexador y entrenador se operan mediante CLI/Compose; no existe una pantalla administrativa de modelos:
+El servicio semántico se comprueba con PostgreSQL/pgvector real. El indexador valida el modelo local aprovisionado y no existe una pantalla de entrenamiento ni descarga dinámica de pesos:
 
 \begin{verbatim}
 docker compose --env-file .env run --rm semantic-indexer \
   python -m app.indexer
-docker compose --env-file .env --profile training run --rm \
-  semantic-trainer
-docker compose --env-file .env run --rm semantic-trainer \
-  python -m app.model_admin activate MODELO --rrf-weight 1.0
-docker compose --env-file .env --profile benchmark up --build \
-  --exit-code-from scraper-python314-benchmark-report \
-  scraper-python314-benchmark-report
+docker compose --env-file .env run --rm semantic-indexer \
+  python -m app.indexer
+docker compose --env-file .env run --rm semantic-service \
+  python -m app.model_validation
 \end{verbatim}
-
-El último perfil compara 3.14 estándar y 3.14t con HTML almacenado, servidor HTTP controlado, 1/2/4/8 hilos y cinco repeticiones. Comprueba equivalencia por checksum y produce informes JSON, CSV y Markdown.
 
 \section{Migraciones y datos}
 
-Core API aplica las migraciones Flyway al iniciar. La migración de trabajos anónimos añade propietario autenticado opcional, HMAC anónimo y los contadores solicitados, aceptados y omitidos. Antes de un corte se debe ensayar la transformación sobre una copia y comprobar conteos, UUID, slugs, claves y proyecciones. La copia antigua se mantiene en modo lectura durante el periodo definido de reversión.
+Core API aplica las migraciones Flyway al iniciar. Producción permanece en Flyway \ruta{V16}; el scraper mantiene Alembic \ruta{20260914\_0021}. Antes de un corte se debe ensayar la transformación sobre una copia restaurable y comprobar conteos, UUID, slugs, claves y proyecciones. La copia antigua se mantiene en modo lectura durante el periodo definido de reversión.
 
 El catálogo se migra exclusivamente con Alembic. Las tablas de cola mantienen un lease, número de reintentos, prioridad, estado y fecha de disponibilidad. No se deben crear ni modificar desde Core API.
 
-La migración \ruta{20260718\_0011} añade \ruta{catalog\_counters}, una fila singleton con total, disponibles, revisión, sin instalador, versión y fecha; también incorpora las columnas generadas \ruta{download\_sources.catalog\_available} y \ruta{software\_apps.catalog\_status}. Los triggers propagan operaciones aritméticas por clave primaria desde candidatos a fuentes, de fuentes a aplicaciones y de aplicaciones a la fila global. El código de aplicación nunca actualiza los totales.
+La proyección \ruta{catalog\_counters} conserva una fila singleton con total, disponibles, revisión, sin instalador, versión y fecha; las columnas generadas \ruta{download\_sources.catalog\_available} y \ruta{software\_apps.catalog\_status} se mantienen bajo propiedad del esquema. Los triggers propagan operaciones aritméticas por clave primaria desde candidatos a fuentes, de fuentes a aplicaciones y de aplicaciones a la fila global. El código de aplicación nunca actualiza los totales.
 
 Después de una restauración o intervención manual se ejecuta una auditoría fuera de la ruta HTTP:
 
@@ -142,7 +137,7 @@ La obtención de iconos forma parte de \ruta{PlatformScraperWorker}; no existe u
 
 Las descripciones se procesan tras \ruta{so\_filter\_descriptor}. El supervisor aplica pausas cooperativas, leases y límites de proveedor. Groq utiliza el modelo y la lista de respaldo configurados; DeepSeek es el último respaldo opcional. Estos proveedores solo redactan descripciones largas: no generan embeddings, no realizan búsquedas y no seleccionan instaladores. Los prompts y claves no se persisten en mensajes de cola.
 
-El documento semántico se construye en el scraper con una allowlist compartida por feed y hash. Al añadir un campo se debe actualizar simultáneamente su esquema, pruebas de determinismo y metodología del snapshot; nunca se incorporan URL completas, secretos o metadatos crudos. El servicio de embeddings descarga pesos fijados por revisión, pero no envía textos ni consultas a Hugging Face.
+El documento semántico se construye en el scraper con una allowlist compartida por feed y hash. Al añadir un campo se debe actualizar simultáneamente su esquema, pruebas de determinismo y metodología del snapshot; nunca se incorporan URL completas, secretos o metadatos crudos. El servicio de embeddings usa pesos locales fijados por revisión y manifiesto, pero no descarga pesos dinámicamente ni envía textos o consultas a Hugging Face.
 
 \section{Descargas, mensajes y operaciones}
 
@@ -150,10 +145,10 @@ El Core crea el trabajo, los elementos y el evento outbox en una transacción. \
 
 El worker aplica sus propios límites configurables: 100 aplicaciones, 4 GiB por archivo, 20 GiB por trabajo y ocho descargas concurrentes. Antes de entregar una URL resuelta, el scraper revalida bajo bloqueo los candidatos caducados. Un éxito renueva sus metadatos; un fallo transitorio es reintentable y no reclasifica; un fallo terminal invalida el candidato y deja que los triggers recalculen la fuente, la aplicación y los contadores. Una alternativa válida mantiene la aplicación disponible.
 
-El ZIP contiene los instaladores aceptados en su raíz y un único \ruta{manifest.json}; no crea \ruta{README.txt} ni directorios de errores. Si existe al menos un éxito y algún fallo, el trabajo queda \ruta{PARTIAL} y conserva el ZIP. Si fallan todos, queda \ruta{FAILED}. Después de empaquetar se elimina staging y el resultado permanece temporalmente en MinIO. El limpiador elimina el prefijo de objetos al expirar un trabajo; un error de limpieza se registra, pero no revive el trabajo.
+El ZIP contiene los instaladores aceptados en su raíz y un único \ruta{manifest.json}; no crea \ruta{README.txt} ni directorios de errores. Si existe al menos un éxito y algún fallo, el trabajo queda \ruta{PARTIAL}; si solo quedan accesos manuales \ruta{.url}, queda \ruta{MANUAL\_ONLY}; si fallan todos, queda \ruta{FAILED}. Después de empaquetar se elimina staging y el resultado permanece temporalmente en MinIO. El limpiador elimina el prefijo de objetos al expirar un trabajo; un error de limpieza se registra, pero no revive el trabajo.
 
 Para diagnosticar una incidencia se correlacionan \ruta{correlationId}, \ruta{causationId}, \ruta{jobId} y \ruta{eventId} en logs estructurados. El panel administrativo expone estado de runs, leases, colas y snapshots; RabbitMQ muestra colas y DLQ, y Mailpit captura el SMTP local. La composición no incluye Prometheus, por lo que no se debe afirmar que existe una pila de métricas desplegada. Nunca se debe pedir una URL firmada, una cookie de propietario o una cabecera interna a un usuario para depurar una incidencia.
 
 \section{Documentación reproducible}
 
-El proyecto de memoria contiene fuentes Mermaid en \ruta{diagrams/}. El script \ruta{scripts/render-mermaid.ps1} genera PDF y SVG en \ruta{img/}; \ruta{scripts/build-pdfs.ps1} ejecuta Mermaid y \ruta{latexmk} para \ruta{memoria.tex} y \ruta{anexos.tex}. Tras compilar se renderizan las páginas a PNG para revisión visual. Los PDF finales se copian a \ruta{docs/memorie/} del repositorio principal y se comparan por SHA-256 antes de publicar una entrega.
+El proyecto de memoria contiene fuentes Mermaid en \ruta{diagrams/}. Cada fuente se renderiza con Mermaid CLI, por ejemplo \ruta{npx --yes @mermaid-js/mermaid-cli -i diagrams/architecture\_containers.mmd -o img/architecture\_containers.pdf}; el mismo nombre base se conserva para SVG cuando se necesite. Los maestros se compilan desde este directorio con \ruta{latexmk -pdf -outdir=build memoria.tex}, \ruta{latexmk -pdf -outdir=build anexos.tex} y \ruta{latexmk -pdf -outdir=build coolify-oracle.tex}. Tras compilar se renderizan las páginas con Poppler para revisión visual. Los tres PDF permanecen juntos en \ruta{build/}; no se copia nada al repositorio principal ni se recrea \ruta{docs/memorie}.

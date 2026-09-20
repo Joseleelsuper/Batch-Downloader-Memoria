@@ -10,8 +10,8 @@ El objetivo general es diseñar e implementar una plataforma web que permita loc
 	\item Construir un catálogo administrable de software con nombre, descripción, etiquetas, página oficial, sistemas operativos, arquitecturas y estado de disponibilidad.
 	\item Permitir búsqueda por nombre, editor o descripción y combinarla con filtros de estado, sistema operativo, etiquetas y editor, manteniendo la paginación en el servidor.
 	\item Permitir la selección de una o varias aplicaciones. Una selección múltiple se tratará como un bundle temporal para generar un ZIP.
-	\item Consultar y descargar bundles mediante enlaces estables y reservar su creación, modificación y eliminación al panel administrativo.
-	\item Permitir a los usuarios registrados solicitar la incorporación de una aplicación, proporcionando al menos su nombre y su página oficial.
+	\item Consultar y descargar bundles oficiales y propios mediante enlaces estables; cada cuenta puede crear, editar y eliminar sus bundles públicos o privados desde el panel personal.
+	\item Proporcionar panel personal, historial de descargas, verificación de correo y recuperación de cuenta.
 	\item Proporcionar al administrador funciones para mantener aplicaciones, etiquetas, reglas de resolución, evidencias de fuente y estados del catálogo.
 	\item Clasificar cada aplicación activa de forma exhaustiva como disponible, en revisión o sin instalador, manteniendo contadores incrementales coherentes con el catálogo.
 	\item Informar del progreso de cada descarga, de los archivos incluidos y de los errores que impidan completar una parte de la solicitud.
@@ -22,9 +22,9 @@ El objetivo general es diseñar e implementar una plataforma web que permita loc
 \begin{enumerate}
 	\item Resolver dinámicamente el enlace del instalador desde una fuente oficial mediante una estrategia específica o, como respaldo, mediante navegación automatizada con Playwright.
 	\item Validar protocolo, dominio final, redirecciones, tipo de contenido, extensión y tamaño antes de aceptar un archivo.
-	\item Descargar los instaladores en el servidor, generar un ZIP con un manifiesto y eliminar todos los archivos temporales al terminar, cancelar o expirar el trabajo.
+	\item Descargar los instaladores en el servidor, generar un ZIP con un manifiesto, incluir accesos \ruta{.url} cuando solo exista una página oficial y eliminar todos los archivos temporales al terminar, cancelar o expirar el trabajo.
 	\item Procesar las solicitudes de manera asíncrona con RabbitMQ para separar la interacción web de las operaciones de resolución, descarga y compresión.
-	\item Aplicar reintentos controlados y permitir un resultado parcial cuando una aplicación falle, manteniendo una explicación individual para cada incidencia.
+	\item Aplicar reintentos controlados y permitir resultados \emph{PARTIAL} o \emph{MANUAL\_ONLY} cuando una aplicación falle o solo admita instalación manual, manteniendo una explicación individual para cada incidencia.
 	\item Calcular, cuando las fuentes lo permitan, un tamaño estimado antes de iniciar el trabajo y aplicar límites por archivo, ZIP, usuario, dirección IP y número de operaciones concurrentes.
 \end{enumerate}
 
@@ -34,28 +34,28 @@ La iteración documentada materializa el flujo esencial de catálogo y descarga.
 
 La creación de un trabajo es asíncrona: el Core persiste el trabajo, sus elementos y el evento de salida en una única transacción; RabbitMQ entrega solo identificadores al worker; y el resultado se publica como progreso, estado terminal y URL temporal de MinIO.
 
-La descarga funciona tanto para selecciones como para bundles. El servidor resuelve un bundle completo, no la previsualización mostrada por la interfaz, impone el máximo de cien aplicaciones y comunica las aplicaciones solicitadas, aceptadas y omitidas. Los trabajos anónimos se asocian a una cookie aleatoria cuyo HMAC se almacena en la base de datos; no se incluyen tokens de propiedad en mensajes, URL ni registros. Los trabajos autenticados y anónimos comparten los estados \emph{QUEUED}, \emph{RESOLVING}, \emph{DOWNLOADING}, \emph{PACKAGING}, \emph{READY}, \emph{PARTIAL}, \emph{FAILED}, \emph{CANCELLED} y \emph{EXPIRED}.
+La descarga funciona tanto para selecciones como para bundles. El servidor resuelve un bundle completo, no la previsualización mostrada por la interfaz, impone el máximo de cien aplicaciones y comunica las aplicaciones solicitadas, aceptadas y omitidas. Los trabajos anónimos se asocian a una cookie aleatoria cuyo HMAC se almacena en la base de datos; no se incluyen tokens de propiedad en mensajes, URL ni registros. Los trabajos autenticados y anónimos comparten los estados \emph{QUEUED}, \emph{RESOLVING}, \emph{DOWNLOADING}, \emph{PACKAGING}, \emph{READY}, \emph{PARTIAL}, \emph{MANUAL\_ONLY}, \emph{FAILED}, \emph{CANCELLED} y \emph{EXPIRED}. Para Linux se seleccionan perfiles APT, DNF, Pacman o Zypper y se conservan las comprobaciones SHA-256/GPG y la posibilidad de rollback.
 
 \section{Objetivos de búsqueda semántica}
 
 \begin{enumerate}
 	\item Construir un documento canónico por aplicación con nombre, package ID, editor, etiquetas, descripciones, plataformas, arquitecturas, versión y dominio registrado, acompañado de un hash determinista.
-	\item Representar esos documentos mediante embeddings locales y mantenerlos en PostgreSQL con pgvector como una proyección reconstruible del catálogo MySQL.
-	\item Interpretar consultas en lenguaje natural, enumerar candidatos mediante similitud coseno exacta y fusionarlos con el ranking literal mediante RRF antes de aplicar los filtros ordinarios.
-	\item Comparar \ruta{paraphrase-multilingual-MiniLM-L12-v2}, \ruta{multilingual-e5-base} y \ruta{bge-m3}, tanto en estado \emph{zero-shot} como ajustados mediante LoRA y \ruta{MultipleNegativesRankingLoss}.
-	\item Seleccionar una versión con train, validación y test separados por aplicación, métricas reproducibles y guardas que impidan empeorar las búsquedas exactas por nombre o package ID.
-	\item Degradar de forma íntegra al modo literal ante timeout, error, falta de cobertura o truncamiento; el índice vectorial nunca decide estados, totales o permisos.
+	\item Representar esos documentos mediante un modelo de embeddings local aprovisionado y mantenerlos en PostgreSQL con pgvector como una proyección reconstruible del catálogo MySQL.
+	\item Interpretar consultas en lenguaje natural, enumerar candidatos mediante similitud coseno y aplicar después los filtros ordinarios en MySQL.
+	\item Validar la revisión, dimensión, manifiesto y cobertura del modelo local sin descargar pesos dinámicamente.
+	\item Degradar de forma íntegra al modo literal ante timeout, error, falta de cobertura o consulta no elegible; el índice vectorial nunca decide estados, totales o permisos.
 \end{enumerate}
 
 \section{Objetivos técnicos y de calidad}
 
 \begin{itemize}
-	\item Desarrollar un cliente con React, React Router, Vite, HTML, CSS y TypeScript.
+	\item Desarrollar un cliente con React, React Router, Vite, HTML, CSS y TypeScript, con las versiones de Vite/Vitest fijadas por el lockfile.
 	\item Ejecutar los servicios Java con JDK 26 y generar bytecode Java 25, manteniendo una separación explícita entre Core API, worker de descarga, notificaciones y traducciones.
 	\item Documentar la API HTTP mediante OpenAPI, cuyo propósito es describir de forma independiente del lenguaje las capacidades de una API~\cite{openapi}.
 	\item Utilizar MySQL para la información transaccional y su proyección incremental del catálogo; mantener PostgreSQL con pgvector como proyección semántica reconstruible.
 	\item Ejecutar el scraper sobre CPython 3.14.6 \emph{free-threaded}, comprobar que el GIL continúa deshabilitado tras importar extensiones y reservar los hilos para funciones puras de CPU.
-	\item Contenerizar los componentes con Docker y preparar su despliegue compatible con Compose.
+	\item Contenerizar los componentes con Docker y desplegarlos en Compose local y en el VPS de Oracle mediante Coolify, usando imágenes multi-arquitectura de GHCR y tags inmutables.
+	\item Configurar Resend/SMTP, healthchecks, métricas expuestas, copias OCI y monitorización diaria sin afirmar un servidor Prometheus central.
 	\item Definir pruebas unitarias, de integración, de seguridad, de resolución de enlaces, de generación de ZIP y de extremo a extremo.
 	\item Mantener trazabilidad mediante registros de administración, resolución, descargas y uso del asistente.
 \end{itemize}

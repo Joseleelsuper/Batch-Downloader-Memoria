@@ -38,9 +38,9 @@ Ejecución automática & Sí & Sí, local o remota según la aplicación & No; e
 Control de acceso & Servicio general, con oferta profesional & Credenciales, permisos y condiciones de red & Catálogo público y funciones asociadas a cuentas\\
 Persistencia de binarios & Gestionada por cada servicio & Aplicaciones alojadas o desplegadas por la Universidad & Prohibida por diseño para instaladores\\
 Colecciones compartibles & Selección de aplicaciones & No es su objetivo & Bundles oficiales y públicos consultables y descargables\\
-Participación comunitaria & Sugerencia de aplicaciones & Solicitud institucional de aplicaciones & Solicitudes de software; mantenimiento de bundles por administración\\
+Participación comunitaria & Sugerencia de aplicaciones & Catálogo institucional mantenido & Bundles propios públicos o privados y mantenimiento de bundles oficiales\\
 Sistemas operativos & Principalmente Windows & Depende de la aplicación y del método de acceso & Windows, Linux y macOS cuando exista instalador validado\\
-Búsqueda semántica & No & No & Sí; modo híbrido local con fallback literal\\
+Búsqueda semántica & No & No & Sí; modo semántico local con fallback literal\\
 Uso de LLM & No es central & No & Solo enriquecimiento de descripciones; el ranking usa embeddings locales\\
 \bottomrule
 \end{tabularx}
@@ -54,9 +54,9 @@ Ninite y Patch My PC buscan que la instalación o actualización sea automática
 
 UBULabs resuelve un problema diferente: garantizar que una comunidad concreta pueda utilizar software sujeto a licencias institucionales. Su combinación de despliegue y virtualización permite ejecutar aplicaciones incluso cuando no pueden instalarse libremente en el equipo del usuario. Batch Downloader no cubre este escenario: incorpora software cuyos instaladores pueden obtenerse desde fuentes oficiales y no gestiona licencias de uso.
 
-Los bundles introducen una capa organizativa. Las rutas públicas permiten listar, consultar y descargar colecciones oficiales o públicas; su creación, modificación y borrado pertenecen a la administración. La entrega no ofrece clonación, estrellas ni personalización comunitaria, aunque el esquema conserve campos heredados que podrían apoyar una ampliación futura.
+Los bundles introducen una capa organizativa. Las rutas públicas permiten listar, consultar y descargar colecciones oficiales o públicas; la administración mantiene los oficiales y cada cuenta mantiene sus propios bundles públicos o privados bajo control de propietario. La entrega no ofrece clonación, estrellas ni personalización comunitaria, aunque el esquema conserve campos heredados que podrían apoyar una ampliación futura.
 
-La búsqueda híbrida forma parte del recorrido funcional sin desplazar a MySQL. PostgreSQL, pgvector y \ruta{semantic-service} amplían la recuperación por intención, mientras que Core conserva filtros, facetas, clasificación y paginación deterministas. Groq y DeepSeek solo redactan descripciones largas; el ranking utiliza embeddings locales y no genera recomendaciones ni bundles.
+La búsqueda semántica forma parte del recorrido funcional sin desplazar a MySQL. PostgreSQL, pgvector y \ruta{semantic-service} amplían la recuperación por intención, mientras que Core conserva filtros, facetas, clasificación y paginación deterministas. Groq y DeepSeek solo redactan descripciones largas; el modelo de embeddings se aprovisiona localmente, no genera recomendaciones ni crea bundles y se degrada a búsqueda literal ante cualquier incoherencia.
 
 \section{Lecciones aplicadas al diseño}
 
