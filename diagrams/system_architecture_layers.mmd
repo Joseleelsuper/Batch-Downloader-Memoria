@@ -1,0 +1,117 @@
+---
+config:
+  layout: dagre
+  theme: default
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    fontSize: 22px
+    lineColor: "#536579"
+    primaryTextColor: "#172b42"
+  themeCSS: ".cluster-label { font-size: 24px !important; font-weight: 700 !important; } .nodeLabel, .edgeLabel { font-family: Arial, sans-serif !important; background-color: transparent !important; }"
+  flowchart:
+    nodeSpacing: 32
+    rankSpacing: 45
+    wrappingWidth: 205
+    subGraphTitleMargin:
+      top: 14
+      bottom: 24
+---
+flowchart TB
+    %% Vista de componentes desplegables, agrupados por responsabilidad.
+    %% Fuentes: Compose/GHCR, nginx.conf, clientes HTTP y mensajería del repositorio.
+    %% Los iconos representan la tecnología del componente; el nombre está debajo.
+    %% Mermaid CLI 11.12: --iconPacksNamesAndUrls logos#https://unpkg.com/@iconify-json/logos@1.2.16/icons.json simple-icons#https://unpkg.com/@iconify-json/simple-icons@1.2.100/icons.json lucide#https://unpkg.com/@iconify-json/lucide@1.2.145/icons.json
+
+    subgraph ACCESS[" "]
+        direction LR
+    subgraph L1["1 · Cliente"]
+        direction LR
+        WEB@{ icon: "logos:react", label: "webapp", pos: "b", h: 64 }
+    end
+
+    subgraph L2["2 · Acceso"]
+        direction LR
+        TLS@{ icon: "logos:traefik-proxy-icon", label: "Traefik", pos: "b", h: 64 }
+        NGINX@{ icon: "logos:nginx", label: "Nginx", pos: "b", h: 64 }
+    end
+
+    subgraph L3["3 · API"]
+        direction LR
+        CORE@{ icon: "logos:spring-icon", label: "core-api", pos: "b", h: 64 }
+        TRANS@{ icon: "logos:java", label: "translation-service", pos: "b", h: 64 }
+    end
+
+    L1 -->|"HTTPS"| L2
+    TLS --> NGINX
+    L2 -->|"HTTP · SSE · WS"| L3
+    CORE ~~~ TRANS
+    end
+
+    subgraph PROCESS[" "]
+        direction LR
+    subgraph L4["4 · Tareas asíncronas"]
+        direction LR
+        MQ@{ icon: "logos:rabbitmq-icon", label: "RabbitMQ", pos: "b", h: 64 }
+        WORK@{ icon: "logos:spring-icon", label: "download-worker", pos: "b", h: 64 }
+        NOTIFY@{ icon: "logos:spring-icon", label: "notification-service", pos: "b", h: 64 }
+    end
+
+    subgraph L5["5 · Catálogo e IA"]
+        direction LR
+        SCRAPER@{ icon: "logos:python", label: "scraper-api<br/>scraper-scheduler", pos: "b", h: 64 }
+        SEM@{ icon: "logos:pytorch-icon", label: "semantic-service<br/>semantic-indexer", pos: "b", h: 64 }
+    end
+
+    end
+
+    subgraph L6["6 · Datos"]
+        direction LR
+        MYSQL@{ icon: "logos:mysql-icon", label: "MySQL", pos: "b", h: 64 }
+        PG@{ icon: "logos:postgresql", label: "PostgreSQL<br/>pgvector", pos: "b", h: 64 }
+        H2@{ icon: "simple-icons:h2database", label: "H2 (x2)", pos: "b", h: 64 }
+        MINIO@{ icon: "simple-icons:minio", label: "MinIO", pos: "b", h: 64 }
+    end
+
+    subgraph EXT["Externos"]
+        direction LR
+        SOURCES@{ icon: "lucide:globe", label: "Winstall / GitHub<br/>Proveedores", pos: "b", h: 64 }
+        LLM@{ icon: "logos:groq", label: "Groq", pos: "b", h: 64 }
+        DEEPSEEK@{ icon: "logos:deepseek-icon", label: "DeepSeek", pos: "b", h: 64 }
+        MAIL@{ icon: "logos:resend-icon", label: "Resend", pos: "b", h: 64 }
+    end
+
+    subgraph L7["7 · Despliegue"]
+        direction LR
+        CI@{ icon: "logos:github-actions", label: "GitHub Actions<br/>GHCR", pos: "b", h: 64 }
+        COOLIFY@{ icon: "simple-icons:coolify", label: "Coolify", pos: "b", h: 64 }
+        DOCKER@{ icon: "logos:docker-icon", label: "Docker Compose", pos: "b", h: 64 }
+        ORACLE@{ icon: "logos:oracle", label: "Oracle VPS", pos: "b", h: 64 }
+        CI --> COOLIFY --> DOCKER
+        DOCKER ~~~ ORACLE
+    end
+
+    %% Las relaciones entre límites conservan la disposición por capas.
+    %% Los destinos concretos se indican en las etiquetas y en cada almacén.
+    MQ <-.->|"AMQP"| WORK
+    MQ -.->|"AMQP"| NOTIFY
+    SEM -->|"HTTP"| SCRAPER
+    L4 -->|"HTTP"| L5
+    MYSQL ~~~ PG ~~~ H2 ~~~ MINIO
+    SOURCES ~~~ LLM ~~~ DEEPSEEK ~~~ MAIL
+    ACCESS -->|"HTTP · AMQP"| PROCESS
+    ACCESS -->|"SQL · S3"| L6
+    PROCESS -->|"SQL · S3"| L6
+    PROCESS -->|"HTTPS"| EXT
+    L6 ~~~ L7
+
+    style L1 fill:#e8f3fb,stroke:#4d81aa,stroke-width:2px
+    style L2 fill:#fff2dd,stroke:#b18139,stroke-width:2px
+    style L3 fill:#e9f3e8,stroke:#52815c,stroke-width:2px
+    style L4 fill:#eceafa,stroke:#8173a8,stroke-width:2px
+    style L5 fill:#e6f4f3,stroke:#44898a,stroke-width:2px
+    style L6 fill:#f7ece6,stroke:#ad7960,stroke-width:2px
+    style L7 fill:#edf1f5,stroke:#78899d,stroke-width:2px
+    style EXT fill:#fff8ed,stroke:#af9670,stroke-width:2px,stroke-dasharray:5 3
+
+    style ACCESS fill:#ffffff,stroke:#d4dde6,stroke-width:1px
+    style PROCESS fill:#ffffff,stroke:#d4dde6,stroke-width:1px

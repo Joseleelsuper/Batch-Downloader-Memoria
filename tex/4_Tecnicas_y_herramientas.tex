@@ -2,7 +2,27 @@
 
 \section{Criterios de selección}
 
-Las tecnologías se han seleccionado por su tipado, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. La selección se ha contrastado mediante la compilación de los servicios Java, las pruebas del scraper y del frontend, la validación de los contratos públicos y los smoke tests del despliegue en Oracle/Coolify; no se presenta una campaña de carga como resultado.
+Las tecnologías se han seleccionado por su tipado, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. La selección se ha contrastado mediante la compilación de los servicios Java, las pruebas del scraper y del frontend, la validación de los contratos públicos y los smoke tests del despliegue en Oracle/Coolify.
+
+\section{Mapa tecnológico}
+
+\begin{landscape}
+\begin{figure}[p]
+\centering
+\includegraphics[width=0.96\linewidth,height=0.90\textheight,keepaspectratio]{system_architecture_layers.pdf}
+\caption{Arquitectura de sistema de Batch Downloader.}
+\label{fig:arquitectura-capas}
+\end{figure}
+\end{landscape}
+\FloatBarrier
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth,height=0.90\textheight,keepaspectratio]{technology_stack.pdf}
+\caption{Tecnologías del proyecto.}
+\label{fig:mapa-tecnologico}
+\end{figure}
+\FloatBarrier
 
 \section{Frontend}
 
@@ -10,26 +30,25 @@ Las tecnologías se han seleccionado por su tipado, separación de responsabilid
 
 El cliente utiliza React~18.3 y React DOM para componer la interfaz, React Router~7.18 para representar navegación y filtros en la URL, y TypeScript~5.9 para tipar contratos, estados y formularios. Vite~8.2 proporciona el servidor de desarrollo y la construcción optimizada~\cite{vite}; el plugin oficial de React integra la transformación JSX. Lucide React aporta iconos de interfaz sin introducir una biblioteca de marcas.
 
-HTML y CSS mantienen una tabla compacta y adaptable. Los eventos SSE notifican el progreso de trabajos y WebSocket anuncia cambios del catálogo y de la administración. Los catálogos JSON de idiomas se sirven desde \emph{translation-service} y el frontend conserva un texto español como referencia funcional.
+HTML y CSS mantienen una tabla compacta y adaptable. Los eventos SSE notifican el progreso de trabajos y WebSocket anuncia cambios del catálogo y de la administración. \emph{translation-service} sirve catálogos JSON en español e inglés; el cliente detecta el idioma del navegador y permite cambiarlo en cualquier momento.
 
 \subsection{Entrega y pruebas del cliente}
 
-La imagen de producción se construye con Node.js~24 y se entrega mediante Nginx~1.27, que sirve los recursos estáticos y enruta \ruta{/api} al Core. Vitest~4.1, Testing Library, jest-dom y jsdom verifican componentes y flujos sin navegador completo; el proveedor V8 produce cobertura. Estas dependencias son de desarrollo y no se incluyen en la imagen Nginx final.
+La imagen de producción se construye con Node.js~24 y se entrega mediante Nginx~1.27, que sirve los recursos estáticos y enruta \ruta{/api} al Core. Vitest~4.1, Testing Library, jest-dom y jsdom verifican componentes y flujos sin navegador completo; el proveedor V8 produce cobertura. Todas estas pruebas y código no se incluyen en la imagen de producción.
 
 \section{Backend}
 
 \subsection{JDK 26 y bytecode Java 25}
 
-Java es el lenguaje de los servicios del servidor por su sistema de tipos, madurez y bibliotecas. Los contenedores se ejecutan con JDK 26~\cite{java26}, mientras que Maven genera bytecode Java 25. Esta separación evita depender prematuramente del soporte de herramientas de análisis para Java 26 y mantiene una base de ejecución común para Core API, download-worker, notification-service y translation-service.
-
+Java es el lenguaje de los servicios del servidor por su sistema de tipos, madurez y bibliotecas. Los contenedores se ejecutan con JDK 26~\cite{java26}, mientras que Maven genera bytecode Java 25. Con Java 26 me permito tener la ventaja de correciones, warnings y rendimiento que me ofrece el lenguaje dentro del desarrollo, incluyendo las respectivas extensiones de VS Code, mientras que con Java 25 me aseguro de que el bytecode generado sea compatible con todas las librerías y dependencias como, por ejemplo, SonarQube.
 \subsection{Spring Boot}
 
 Los cuatro servicios Java usan Spring Boot~3.5.16~\cite{springboot}. Sus dependencias directas se distribuyen por responsabilidad:
 
 \begin{description}
 	\item[Spring Web MVC y WebSocket:] API REST, SSE, comprobaciones de salud y notificación de cambios del catálogo.
-\item[Spring Security, BCrypt y Spring Session JDBC:] autenticación, sesiones persistentes, CSRF, cookies seguras, roles y protección de rutas~\cite{springsession}.
-\item[Spring Data JPA y Spring JDBC:] repositorios transaccionales para identidad, outbox y trabajos, junto con consultas explícitas para las proyecciones de catálogo~\cite{springdatajpa}.
+	\item[Spring Security, BCrypt y Spring Session JDBC:] acceso de usuarios mediante enlaces de un solo uso, credencial administrativa con hash, sesiones persistentes, CSRF, cookies seguras, roles y protección de rutas~\cite{springsession}.
+	\item[Spring Data JPA y Spring JDBC:] repositorios transaccionales para identidad, outbox y trabajos, junto con consultas explícitas para las proyecciones de catálogo~\cite{springdatajpa}.
 	\item[Spring Validation:] validación declarativa de entradas y configuraciones.
 	\item[Spring Actuator:] salud, métricas y observabilidad de servicios.
 	\item[Spring AMQP:] publicación y consumo de comandos y eventos mediante RabbitMQ.
@@ -38,7 +57,7 @@ Los cuatro servicios Java usan Spring Boot~3.5.16~\cite{springboot}. Sus depende
 
 Flyway administra las tablas propiedad del Core; el scraper mantiene las suyas con Alembic. El driver MySQL conecta Core con la base compartida, el SDK de MinIO gestiona objetos y H2 conserva los inbox locales del worker y de notificaciones. \emph{springdoc-openapi}~2.6 expone documentación navegable del contrato.
 
-Las pruebas Java usan JUnit~5, Spring Test, Mockito, AssertJ y Spring Rabbit Test. Testcontainers ejecuta los casos que requieren semántica real de MySQL~8.4~\cite{testcontainers}; H2 se limita a pruebas y a los inbox locales que no dependen de funciones MySQL. JaCoCo~0.8.14 genera cobertura. ArchUnit está declarado en Core, aunque la entrega aún no contiene reglas arquitectónicas activas.
+Las pruebas Java usan JUnit~5, Spring Test, Mockito, AssertJ y Spring Rabbit Test. Testcontainers ejecuta los casos que requieren semántica real de MySQL~8.4~\cite{testcontainers}; H2 se limita a pruebas y a los inbox locales que no dependen de funciones MySQL. JaCoCo~0.8.14 genera cobertura. ArchUnit verifica la arquitectura y las dependencias de paquetes~\cite{archunit}.
 
 \subsection{OpenAPI}
 
@@ -54,7 +73,7 @@ La navegación generalista se mantendrá como mecanismo de respaldo. Los proveed
 
 \subsection{Scraper y supervisor de enriquecimiento en Python}
 
-La imagen de producción compila CPython~3.14.6 desde la fuente verificada con \ruta{--disable-gil}. El arranque exige \ruta{Py\_GIL\_DISABLED=1} y \ruta{sys.\_is\_gil\_enabled()=False} después de importar las extensiones nativas; no se utiliza \ruta{PYTHON\_GIL=0} para ocultar una incompatibilidad. FastAPI y Uvicorn proporcionan la API y el servidor ASGI~\cite{fastapi}; Pydantic Settings valida la configuración. SQLAlchemy, Alembic y aiomysql gestionan el catálogo y sus migraciones MySQL~\cite{sqlalchemy,alembic}; aiosqlite se utiliza en pruebas ligeras. La distribución fuente de SQLAlchemy se instala con \ruta{DISABLE\_SQLALCHEMY\_CEXT=1}, tanto en 3.14t como en el control estándar, para usar su implementación Python y evitar que una extensión C reactive el GIL.
+La imagen de producción compila CPython~3.14.6 desde la fuente verificada con \ruta{--disable-gil}. Al arrancar comprueba que el GIL permanece deshabilitado después de importar las extensiones nativas; una variable de entorno no puede ocultar una incompatibilidad. FastAPI y Uvicorn proporcionan la API y el servidor ASGI~\cite{fastapi}; Pydantic Settings valida la configuración. SQLAlchemy, Alembic y aiomysql gestionan el catálogo y sus migraciones MySQL~\cite{sqlalchemy,alembic}; aiosqlite se utiliza en pruebas ligeras. La distribución fuente de SQLAlchemy se instala con \ruta{DISABLE\_SQLALCHEMY\_CEXT=1}, tanto en 3.14t como en el control estándar, para usar su implementación Python y evitar que una extensión C reactive el GIL.
 
 HTTPX con HTTP/2 realiza peticiones controladas; selectolax analiza HTML y Playwright~1.61 resuelve páginas que requieren JavaScript. APScheduler inicia ejecuciones periódicas, Tenacity aplica reintentos, tldextract y dnspython apoyan las comprobaciones de dominio y DNS, cryptography cifra las URL, packaging interpreta versiones y structlog produce registros estructurados. Winstall se consulta mediante su API, \ruta{\_\_NEXT\_DATA\_\_} y HTML; GitHub Releases y los recursos de repositorio aportan versiones e iconos cuando existe evidencia suficiente.
 
@@ -96,11 +115,11 @@ Los mensajes contendrán identificadores, no datos sensibles ni archivos. El est
 
 \subsection{MinIO}
 
-MinIO almacena temporalmente los ZIP preparados y los objetos intermedios que deben compartirse entre instancias~\cite{minio}. El cliente \ruta{mc} configura el bucket al arrancar, mientras las políticas de expiración y el limpiador eliminan resultados vencidos. No se utiliza como repositorio permanente de instaladores.
+MinIO almacena temporalmente los ZIP preparados y los objetos intermedios que deben compartirse entre instancias~\cite{minio}. El cliente \ruta{mc} configura el bucket al arrancar. Core conserva el inventario y las reservas de almacenamiento, entrega el ZIP mediante streaming con soporte de rangos y coordina la limpieza al confirmarse el guardado, cancelarse el trabajo o agotarse la actividad. No se utiliza como repositorio permanente de instaladores.
 
 \subsection{SMTP y Mailpit}
 
-El servicio de notificaciones consume eventos, conserva su inbox en H2 y envía correo mediante Spring Mail y SMTP~\cite{smtp}. Mailpit~1.30 captura los mensajes en desarrollo; en producción se emplea Resend mediante SMTP, con verificación de dirección y restablecimiento de contraseña. Estas variables se inyectan como secretos y no se escriben en la memoria.
+El servicio de notificaciones consume eventos, conserva su inbox en H2 y envía correo mediante Spring Mail y SMTP~\cite{smtp}. Mailpit~1.30 captura los mensajes en desarrollo; Resend mediante SMTP entrega en producción el enlace de acceso de un solo uso. Las credenciales administrativas siguen un flujo separado. Las variables de correo se inyectan como secretos y no se escriben en la memoria.
 
 \section{Enriquecimiento mediante LLM}
 
@@ -121,27 +140,27 @@ La memoria se mantiene con \LaTeX{}, pdf\LaTeX{}, latexmk y BibTeX. Mermaid CLI~
 \section{Resumen de correspondencia}
 
 \begin{table}[H]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
-\toprule
-\textbf{Necesidad} & \textbf{Tecnología empleada}\\
-\midrule
-Cliente web & React, React Router, TypeScript, Vite, Lucide y Nginx\\
-API y lógica de negocio & JDK 26, bytecode Java 25 y Spring Boot\\
-Contrato HTTP y eventos & OpenAPI, AsyncAPI y JSON Schema\\
-Datos transaccionales & MySQL 8.4, Flyway, Alembic y proyecciones mediante triggers\\
-Inbox idempotente & H2 en worker y notificaciones\\
-Trabajos asíncronos & RabbitMQ y Spring AMQP\\
-Scraping dinámico & CPython 3.14.6 \emph{free-threaded}, FastAPI, HTTPX, selectolax y Playwright\\
-Objetos temporales & MinIO con expiración\\
-Descripciones largas & Groq/DeepSeek mediante una interfaz desacoplada\\
-Búsqueda semántica & PostgreSQL 16, pgvector, runtime de embeddings y modelo local aprovisionado\\
-Pruebas & JUnit, Testcontainers, pytest, Vitest y Testing Library\\
-Portabilidad y entrega & Docker Compose, GitHub Actions y GHCR\\
-Documentación & \LaTeX{}, BibTeX, Mermaid, PowerShell y Poppler\\
-\bottomrule
-\end{tabularx}
-\caption{Tecnologías empleadas por responsabilidad.}
-\label{tabla:tecnologias-responsabilidad}
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
+		\toprule
+		\textbf{Necesidad}      & \textbf{Tecnología empleada}                                                 \\
+		\midrule
+		Cliente web             & React, React Router, TypeScript, Vite, Lucide y Nginx                        \\
+		API y lógica de negocio & JDK 26, bytecode Java 25 y Spring Boot                                       \\
+		Contrato HTTP y eventos & OpenAPI, AsyncAPI y JSON Schema                                              \\
+		Datos transaccionales   & MySQL 8.4, Flyway, Alembic y proyecciones mediante triggers                  \\
+		Inbox idempotente       & H2 en worker y notificaciones                                                \\
+		Trabajos asíncronos     & RabbitMQ y Spring AMQP                                                       \\
+		Scraping dinámico       & CPython 3.14.6 \emph{free-threaded}, FastAPI, HTTPX, selectolax y Playwright \\
+		Objetos temporales      & MinIO con expiración                                                         \\
+		Descripciones largas    & Groq/DeepSeek mediante una interfaz desacoplada                              \\
+		Búsqueda semántica      & PostgreSQL 16, pgvector, runtime de embeddings y modelo local aprovisionado  \\
+		Pruebas                 & JUnit, Testcontainers, pytest, Vitest, ArchUnit y Testing Library                      \\
+		Portabilidad y entrega  & Docker Compose, GitHub Actions y GHCR                                        \\
+		Documentación           & \LaTeX{}, BibTeX, Mermaid, PowerShell y Poppler                              \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Tecnologías empleadas por responsabilidad.}
+	\label{tabla:tecnologias-responsabilidad}
 \end{table}
