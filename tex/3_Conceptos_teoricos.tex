@@ -25,11 +25,11 @@ Las URL de descarga cambian por versiones, regiones, sistemas operativos o decis
 La estrategia implementada es progresiva y combina información estructurada con navegación controlada:
 
 \begin{enumerate}
-	\item consultar las API y datos JSON de Winstall.
-	\item priorizar la web oficial y resolvers específicos, como GitHub Releases;
-	\item analizar HTML y candidatos HTTP con reglas acotadas;
-	\item navegar por la página oficial mediante Playwright como último respaldo, inspeccionando enlaces, botones, redirecciones y tráfico de red;
-	\item marcar la fuente para revisión manual si no se obtiene un resultado seguro.
+	\item Consultar las API y datos JSON de Winstall.
+	\item Priorizar la web oficial y resolvers específicos, como GitHub Releases.
+	\item Analizar HTML y candidatos HTTP con reglas acotadas.
+	\item Navegar por la página oficial mediante Playwright como último respaldo, inspeccionando enlaces, botones, redirecciones y tráfico de red.
+	\item Marcar la fuente para revisión manual si no se obtiene un resultado seguro.
 \end{enumerate}
 
 Playwright permite controlar navegadores modernos en modo sin interfaz~\cite{playwright}. En el proyecto se encapsula como respaldo de los resolvers de Python; El resultado debe mantener HTTPS, resolver a una red pública, cumplir los límites establecidos y superar la validación del binario.
@@ -85,9 +85,9 @@ El enriquecimiento admite Groq y DeepSeek mediante una interfaz desacoplada~\cit
 Las respuestas se validan antes de persistirse. Las responsabilidades implementadas del modelo quedan limitadas a:
 
 \begin{itemize}
-	\item redactar una descripción larga a partir de metadatos existentes;
-	\item registrar proveedor, modelo, fecha y error de generación;
-	\item respetar una descripción manual y permitir reintentos controlados.
+	\item Redactar una descripción larga a partir de metadatos existentes.
+	\item Registrar proveedor, modelo, fecha y error de generación.
+	\item Respetar una descripción manual y permitir reintentos controlados.
 \end{itemize}
 
 El modelo de lenguaje no puede aprobar dominios, resolver una URL, ejecutar descargas, cambiar reglas de scraping ni generar un ZIP.
@@ -97,12 +97,12 @@ El modelo de lenguaje no puede aprobar dominios, resolver una URL, ejecutar desc
 El backend recibirá y seguirá URL externas, lo que introduce riesgo de falsificación de peticiones del lado del servidor o SSRF. Un atacante podría intentar acceder a servicios internos, metadatos de infraestructura o redes privadas. La mitigación prevista incluye:
 
 \begin{itemize}
-	\item admitir exclusivamente HTTPS;
-	\item resolver DNS y rechazar direcciones locales, privadas, de enlace local o reservadas;
-	\item repetir la validación después de cada redirección;
-	\item no degradar a HTTP y comprobar la red pública después de cada redirección;
-	\item limitar redirecciones, tiempo, tamaño y concurrencia;
-	\item no ejecutar ningún archivo y sanitizar su nombre antes de incorporarlo al ZIP.
+	\item Admitir exclusivamente HTTPS.
+	\item Resolver DNS y rechazar direcciones locales, privadas, de enlace local o reservadas.
+	\item Repetir la validación después de cada redirección.
+	\item No degradar a HTTP y comprobar la red pública después de cada redirección.
+	\item Limitar redirecciones, tiempo, tamaño y concurrencia.
+	\item No ejecutar ningún archivo y sanitizar su nombre antes de incorporarlo al ZIP.
 \end{itemize}
 
 También se aplican controles de autenticación, autorización, limitación de frecuencia, cuotas y auditoría. Estas medidas reducen el riesgo de uso abusivo y proporcionan evidencias para investigar incidencias pero, por desgracia, no garantizan la seguridad absoluta.
