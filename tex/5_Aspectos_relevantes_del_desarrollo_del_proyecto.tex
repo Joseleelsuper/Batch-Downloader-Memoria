@@ -2,57 +2,55 @@
 
 \section{Enfoque de desarrollo}
 
-El proyecto se ha desarrollado de forma incremental. El flujo esencial ya separa el catálogo, la resolución de una fuente oficial, la descarga segura, la producción de un ZIP y la limpieza de temporales. Las capacidades semánticas no forman parte del camino crítico de descarga: el enriquecimiento de descripciones se ejecuta mediante una cola independiente.
+Las partes más importantes del proyecto se dividen en la creación y correcta funcionalidad del scraper y la IA semántica. Con respecto a la seguridad, el proyecto pide a los usuarios registrarse solo con el correo, de tal forma que no se almacenan contraseñas, no hace falta cambiarla, olvidarse de ella es imposible. Solo necesita el correo. Es el mismo sistema que siguen empresas a día de hoy, como Antrophic (Claude) o Groq INC (Groq).
 
 Las iteraciones materializadas hasta esta entrega son:
 
 \begin{enumerate}
-	\item catálogo, roles, sesión persistente y búsqueda convencional;
-	\item selección de aplicaciones, filtrado por sistema operativo y generación asíncrona de ZIP;
-	\item consulta y descarga de bundles oficiales y propios públicos o privados, con panel personal e historial de descargas;
-	\item resolvers específicos, colas persistentes, enriquecimiento y observabilidad;
-	\item clasificación materializada, contadores incrementales y revalidación justo antes de descargar;
-	\item búsqueda literal y semántica, proyección pgvector, modelo local aprovisionado y degradación íntegra;
-	\item migración del scraper a CPython 3.14.6 \emph{free-threaded}, contratos OpenAPI/AsyncAPI, imágenes de contenedor y validaciones automatizadas.
+	\item Catálogo, roles, sesión persistente y búsqueda convencional.
+	\item Selección de aplicaciones, filtrado por sistema operativo y generación asíncrona de ZIP.
+	\item Consulta y descarga de bundles oficiales y públicos o privados, con panel personal e historial de descargas.
+	\item Resolvers específicos, colas persistentes, enriquecimiento y observabilidad.
+	\item Clasificación materializada, contadores incrementales y revalidación justo antes de descargar.
+	\item Búsqueda literal y semántica, proyección pgvector, modelo local aprovisionado y degradación íntegra.
+	\item Contratos OpenAPI/AsyncAPI, imágenes de contenedor y validaciones automatizadas.
 \end{enumerate}
 
-Esta secuencia separa la generación de descripciones mediante LLM del núcleo de descarga. La evidencia final se recoge en una única tabla de pruebas fechada, después de ejecutar los cuatro módulos Java, el scraper, el frontend y los contratos. La integración continua aplica las reglas configuradas de SonarQube Community Build para el código nuevo~\cite{sonarqube}. Esta verificación no se presenta como una medición de capacidad en producción.
+Esta secuencia separa la generación de descripciones mediante LLM del núcleo de descarga. Se completaron catálogos en español e inglés, se introdujo la entrega observable del ZIP y se amplió la operación del scraper. La evidencia ejecutada y sus límites se registran en el anexo de pruebas. La integración continua configura SonarQube Community Build para el código nuevo~\cite{sonarqube}.
 
 \section{Actores y permisos}
 
 \begin{table}[H]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{0.19\textwidth}XXX}
-\toprule
-\textbf{Acción} & \textbf{Anónimo} & \textbf{Registrado} & \textbf{Administrador}\\
-\midrule
-Consultar catálogo & Sí & Sí & Sí\\
-Generar ZIP & Sí, con cuotas & Sí, con cuotas propias & Sí\\
-Consultar y descargar bundles & Sí & Sí & Sí\\
-Mantener bundles oficiales & No & No & Sí\\
-Mantener bundles propios & No & Sí, públicos o privados & No\\
-Mantener catálogo y resolvers & No & No & Sí\\
-Revisar registros & No & Solo los propios & Sí\\
-\bottomrule
-\end{tabularx}
-\caption{Permisos generales por actor.}
-\label{tabla:permisos-actores}
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{p{0.19\textwidth}XXX}
+		\toprule
+		\textbf{Acción}               & \textbf{Anónimo} & \textbf{Registrado}     & \textbf{Administrador} \\
+		\midrule
+		Consultar catálogo            & Sí               & Sí                      & Sí                     \\
+		Generar ZIP                   & Sí, con cuota global   & Sí, con cuotas propias  & Sí                     \\
+		Consultar y descargar bundles & Sí               & Sí                      & Sí                     \\
+		Mantener bundles oficiales    & No               & No                      & Sí                     \\
+		Mantener bundles propios      & No               & Sí 					   & No                     \\
+		Mantener catálogo y resolvers & No               & No                      & Sí                     \\
+		Revisar registros             & No               & Solo los propios        & Sí                     \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Permisos generales por actor.}
+	\label{tabla:permisos-actores}
 \end{table}
-
-Los usuarios públicos no modifican la composición persistida de un bundle oficial. Una cuenta autenticada puede guardar cambios en sus propios bundles públicos o privados; Core resuelve su contenido completo al crear el trabajo y vuelve a aplicar los límites de selección.
 
 \section{Arquitectura implementada}
 
 La solución utiliza una arquitectura de servicios con responsabilidades delimitadas:
 
 \begin{description}
-	\item[Frontend/Nginx:] presenta catálogo, selección, bundles, panel personal, historial, progreso SSE, administración y traducciones en español, y enruta la API pública.
+	\item[Frontend/Nginx:] presenta catálogo, selección, bundles, panel personal, historial, progreso SSE, administración y traducciones en español e inglés, y enruta la API pública.
 	\item[Core API:] valida entradas, aplica permisos, mantiene identidad, bundles y trabajos, y publica eventos mediante outbox.
 	\item[Scraper API y scheduler:] gestionan proveedor, fuentes, resoluciones, ejecuciones, estrategias y enriquecimiento.
 	\item[Download worker:] consume trabajos idempotentes, descarga y valida archivos, genera ZIP y publica resultados.
 	\item[Notification service:] consume eventos de identidad y de trabajos, registra intentos y entrega correo SMTP sin cambiar el resultado del job.
-	\item[Translation service:] entrega el catálogo español versionado con ETag y una alternativa local en el frontend.
+	\item[Translation service:] entrega los catálogos español e inglés versionados con ETag; el frontend conserva una alternativa local para el idioma de referencia.
 	\item[Semantic service e indexer:] mantienen la proyección PostgreSQL/pgvector, generan embeddings locales y enumeran candidatos exactos para Core.
 \end{description}
 
@@ -64,9 +62,9 @@ Core y scraper comparten una instancia MySQL, pero la propiedad se delimita por 
 
 El catálogo público usa tres categorías exhaustivas. Una aplicación está disponible cuando conserva una fuente \emph{direct} o \emph{fallback}, válida y con al menos un candidato \ruta{catalog\_downloadable}. Si no existe esa alternativa y alguna fuente requiere revisión manual, aparece en revisión; el resto de aplicaciones activas se clasifica como sin instalador. La antigüedad de \ruta{checked\_at} o \ruta{expires\_at} no cambia por sí sola este estado.
 
-MySQL materializa la contribución segura de cada candidato y fuente, el \ruta{catalog\_status} de cada aplicación y una fila singleton con \ruta{total}, \ruta{available}, \ruta{review} y \ruta{missing}. Los triggers trasladan exclusivamente deltas \(+1/-1\) dentro de la transacción que modifica el dato original. La igualdad \(total=available+review+missing\) es una restricción de integridad, no un cálculo del endpoint. Una orden de mantenimiento permite auditar o reconstruir la proyección después de una restauración.
+MySQL materializa la contribución segura de cada candidato y fuente, el \ruta{catalog\_status} de cada aplicación y una fila singleton con \ruta{total}, \ruta{available}, \ruta{review} y \ruta{missing}. Los triggers trasladan exclusivamente deltas \(+1/-1\) dentro de la transacción que modifica el dato original. La igualdad \(total=available+review+missing\) es una restricción de integridad. Una orden de mantenimiento permite auditar o reconstruir la proyección después de una restauración.
 
-Esta proyección también actúa como versión de cambios para WebSocket. Las búsquedas y facetas filtran por el estado materializado, mientras que la selección de descarga sigue comprobando el candidato concreto y nunca confía solo en el contador agregado.
+Esta proyección también actúa como versión de cambios para WebSocket. Las búsquedas y facetas filtran por el estado materializado, mientras que la selección de descarga sigue comprobando el candidato concreto, ignorando la veracidad de la proyección.
 
 \section{Flujo general de descarga}
 
@@ -76,7 +74,7 @@ La figura~\ref{fig:secuencia-general} resume el recorrido desde la selección de
 
 El backend no devuelve el ZIP en la misma petición que crea el trabajo. Tras validar la selección y las cuotas, persiste el estado inicial, sus elementos y un evento outbox. La respuesta inmediata contiene un identificador que el frontend utiliza para consultar el progreso por SSE, con sondeo como alternativa.
 
-El worker procesa cada aplicación de forma aislada. Una incidencia no oculta el estado de las demás. Cuando hay al menos un archivo válido, el trabajo produce un ZIP parcial acompañado de errores legibles. Si no se incluye ningún archivo, el estado es \emph{FAILED}. La cancelación es idempotente y la limpieza elimina staging al terminar o fallar una fase.
+El worker procesa cada aplicación de forma aislada. Una incidencia no oculta el estado de las demás. Cuando hay al menos un archivo válido, el trabajo produce un ZIP parcial acompañado de errores legibles. Si no se incluye ningún archivo ni alternativa manual, el estado es \emph{FAILED}. La cancelación es idempotente y la limpieza elimina staging al terminar o fallar una fase. Core reserva almacenamiento antes de despachar el trabajo; cuando no cabe, lo mantiene en una cola FIFO sin bloquear la petición HTTP.
 
 \imagen{download_job_states.pdf}{Máquina de estados de un trabajo de descarga.}{0.80}
 
@@ -85,18 +83,18 @@ El worker procesa cada aplicación de forma aislada. Una incidencia no oculta el
 Cada fuente combina datos declarativos y una estrategia:
 
 \begin{itemize}
-	\item sistema operativo, arquitectura, región y país;
-	\item página oficial de partida;
-	\item página oficial, sistema, arquitectura y evidencia de validación;
-	\item tipo de resolver y configuración;
-	\item extensiones y tipos de contenido esperados;
-	\item tiempo máximo, reintentos y número de redirecciones;
-	\item fecha y resultado de la última comprobación.
+	\item Sistema operativo, arquitectura, región y país.
+	\item Página oficial de partida (Winstall).
+	\item Página oficial, sistema, arquitectura y evidencia de validación.
+	\item Tipo de resolver y configuración.
+	\item Extensiones y tipos de contenido esperados.
+	\item Tiempo máximo, reintentos y número de redirecciones.
+	\item Fecha y resultado de la última comprobación.
 \end{itemize}
 
 El registro de \emph{ResolverStrategy} consulta primero información estructurada de Winstall, endpoints conocidos, GitHub Releases y análisis HTML; Playwright actúa como respaldo. La arquitectura de candidatos encadena descubrimiento, transformación, clasificación de formato y validación.
 
-El resultado del navegador no es suficiente. Un validador independiente repite las comprobaciones de HTTPS y red pública, realiza una petición controlada y verifica tamaño, MIME y hash cuando existe. Una fuente validada pero caducada continúa visible y seleccionable; al preparar el ZIP, el worker pide su resolución interna y el scraper la revalida antes de revelar la URL. Un fallo terminal invalida solo ese candidato y los triggers reclasifican la aplicación; un fallo transitorio conserva el estado y permite reintentar.
+El resultado del navegador no es suficiente. Un validador independiente repite las comprobaciones de HTTPS y red pública, realiza una petición controlada y verifica tamaño, MIME y hash cuando existe. Cada resolución de instalador es válida durante 24 horas desde su última comprobación correcta. Al caducar, la fuente continúa visible y seleccionable, pues la fecha por sí sola no cambia su estado público. Al preparar el ZIP, el worker solicita su resolución interna y el scraper la revalida antes de revelar la URL; si la comprobación es correcta, renueva la vigencia otras 24 horas. Un fallo terminal invalida solo ese candidato y los triggers reclasifican la aplicación; un fallo transitorio conserva el estado y permite reintentar.
 
 \section{Generación y contenido del ZIP}
 
@@ -110,7 +108,7 @@ manifest.json
 
 El manifiesto indica la fecha de creación y el resultado de cada elemento. No incluye credenciales ni URL resueltas; las incidencias se representan mediante códigos estables. El nombre de la aplicación y los metadatos necesarios permiten relacionar cada instalador con la selección.
 
-El resultado conserva una retención configurada de veinticuatro horas. Core no expone directamente MinIO: responde con un \ruta{303} hacia una URL firmada de cinco minutos. Las cuotas de objetos y la admisión por capacidad comprueban espacio libre antes de aceptar un trabajo. Una tarea periódica limpia trabajos abandonados, archivos incompletos y objetos vencidos.
+Core no expone MinIO directamente al navegador: la ruta autorizada transmite el ZIP mediante streaming y admite \ruta{HEAD} y un rango HTTP para reanudar una descarga. El coordinador registra actividad y recibos de guardado, mantiene reservas de capacidad y elimina el resultado al confirmarse su guardado, cancelarse o agotarse los controles de inactividad. Una tarea periódica limpia estados residuales; el ciclo de vida del objeto no se basa en una expiración fija de veinticuatro horas. La lógica de entrega y reintento queda cubierta por pruebas focalizadas.
 
 \section{Bundles}
 
@@ -120,7 +118,7 @@ La figura~\ref{fig:secuencia-bundles} muestra la consulta pública, el mantenimi
 
 La API pública lista bundles activos, consulta su detalle y crea un trabajo de descarga a partir de su composición completa. La administración crea, actualiza y borra bundles oficiales; una cuenta autenticada crea, actualiza y borra sus propios bundles públicos o privados desde el panel personal, con comprobación de propietario y versión esperada. La clonación, personalización de bundles ajenos y las estrellas no forman parte de la entrega.
 
-Los bundles descargables no superan cien aplicaciones. Los bundles históricos que exceden el máximo se conservan para corregirlos, pero el servidor no los trunca ni permite descargarlos o editarlos hasta que vuelven al límite.
+Los bundles descargables no superan cien aplicaciones.
 
 El contador de aplicaciones del bundle se mantiene junto a la entidad y se repara después de cambios autorizados. La descarga vuelve a consultar las aplicaciones, aplica el máximo y omite de forma explícita cualquier elemento no seleccionable.
 
@@ -136,9 +134,9 @@ La figura~\ref{fig:secuencia-descripciones} refleja el flujo de generación de u
 
 El supervisor selecciona aplicaciones sin descripción larga, calcula un hash de la entrada y encola el trabajo de forma idempotente. El descriptor reúne únicamente metadatos persistidos y llama al proveedor configurado con límites de concurrencia y tiempo.
 
-La respuesta se valida antes de persistirla junto con idioma, proveedor, modelo, fecha y hash. Los fallos quedan registrados y pueden reintentarse; una descripción manual no se sobrescribe. Groq y DeepSeek son intercambiables mediante configuración.
+La respuesta se valida antes de persistirla junto con idioma, proveedor, modelo, fecha y hash. El corte final permite completar por separado la descripción en español y en inglés; la falta de una de ellas no se presenta como enriquecimiento bilingüe completo. La procedencia se guarda en \ruta{long\_description\_source}: se asigna \ruta{admin\_manual} cuando el texto revisado difiere de la propuesta de IA; si coincide, se conservan el proveedor y el modelo. Esta marca clasifica el contenido, no registra las acciones de edición, por lo que un texto idéntico a la propuesta mantiene la atribución al proveedor. La respuesta normal del catálogo no expone la procedencia, aunque la previsualización administrativa muestra el origen de las sugerencias antes de publicar. El enriquecimiento automático no sobrescribe una descripción manual. Los fallos quedan registrados y pueden reintentarse. Groq y DeepSeek son intercambiables mediante configuración.
 
-Este flujo no genera embeddings, no consulta pgvector y no interviene en la clasificación de fuentes. El indexador semántico reutiliza después la descripción persistida junto con el resto de metadatos autorizados. La creación asistida de bundles y las recomendaciones generativas permanecen fuera del alcance.
+Este flujo no genera embeddings, no consulta pgvector y no interviene en la clasificación de fuentes. El indexador semántico reutiliza después la descripción persistida junto con el resto de metadatos autorizados.
 
 \section{Búsqueda semántica y degradación segura}
 
@@ -148,7 +146,7 @@ El endpoint semántico carga solo la versión activa y enumera mediante similitu
 
 Cuando el alcance es válido, Core entrega la colección de candidatos a MySQL mediante \ruta{JSON\_TABLE}. La consulta incorpora estado, sistemas, etiquetas, editor, desempates, límite y desplazamiento sobre la tabla autoritativa. Los IDs semánticos huérfanos no producen filas porque la unión conserva la aplicación MySQL como requisito.
 
-La interfaz presenta \emph{Literal} y \emph{Semántica}. El modo de la URL tiene prioridad sobre \ruta{localStorage}; una primera visita selecciona semántica. El fallback no modifica la preferencia guardada y muestra un aviso breve. Las respuestas públicas exponen modo solicitado y aplicado, versiones de modelo e índice y una causa opcional de degradación.
+La interfaz presenta \emph{Literal} y \emph{Semántica}. El modo de la URL tiene prioridad sobre \ruta{localStorage}; por defecto, se elige el modo de búsqueda semántico. El fallback no modifica la preferencia guardada y muestra un aviso breve. Las respuestas públicas exponen modo solicitado y aplicado, versiones de modelo e índice y una causa opcional de degradación.
 
 \section{Seguridad}
 
@@ -162,9 +160,9 @@ No se confía en una allowlist de dominios como único control. La fuente aporta
 
 \subsection{Límites y protección frente a abuso}
 
-Se configuran máximos de 100 aplicaciones, 4 GiB por archivo, 20 GiB por trabajo, ocho descargas paralelas por worker, redirecciones, reintentos y trabajos activos. Los límites anónimos se aplican por navegador y dirección IP anonimizada: dos trabajos no terminales, diez creaciones por hora y navegador y treinta por hora e IP.
+El perfil de producción versionado admite hasta 100 aplicaciones por trabajo, archivos de hasta 4 GB, cinco redirecciones y, ante fallos temporales, hasta dos reintentos de descarga (tres intentos en total). Cada trabajo descarga como máximo dos archivos en paralelo y el worker puede empaquetar dos trabajos simultáneamente. Para usuarios anónimos se configuran diez creaciones por hora y navegador y treinta por hora e IP. No se fija un máximo de 20 GiB por trabajo ni un tope de trabajos no terminales por navegador: Core reserva un máximo global de 10 GiB para temporales, ZIP y transferencias multipart, y los trabajos que no caben esperan en FIFO. El worker mantiene 8 GB libres en el host y el bucket de ZIP tiene una cuota de 10 GB. Estos valores describen la configuración versionada; no acreditan por sí solos las variables efectivas del contenedor en producción.
 
-Los usuarios anónimos conservan la funcionalidad básica mediante una cookie de propiedad y cuotas inferiores. La entrega no integra CAPTCHA; una protección adicional de este tipo requeriría una decisión de despliegue y privacidad posterior.
+Los usuarios anónimos conservan la funcionalidad básica mediante una cookie de propiedad y cuotas inferiores.
 
 \subsection{Archivos y ZIP}
 
@@ -172,7 +170,7 @@ La plataforma no ejecutará los instaladores. Los nombres se sanitizarán para i
 
 \subsection{Autenticación y autorización}
 
-Spring Security protege las operaciones por rol y propietario. Las sesiones se guardan con Spring Session JDBC y aplican cookies \emph{Secure}, \emph{HttpOnly} y \emph{SameSite}, además de CSRF. Los trabajos anónimos se protegen con una cookie aleatoria de veinticuatro horas cuyo HMAC es el único valor persistido. Los permisos no dependen de botones ocultos en el frontend. Cada modificación de catálogo, resolver o bundle oficial se verifica en el backend y se registra con usuario, fecha, objetivo y datos relevantes.
+Spring Security protege las operaciones por rol y propietario. El usuario solicita un enlace de un solo uso por correo; el token tiene una vigencia limitada y se consume al autenticar o crear la cuenta. El administrador conserva un acceso con contraseña almacenada como hash. Las sesiones se guardan con Spring Session JDBC y aplican cookies \emph{Secure}, \emph{HttpOnly} y \emph{SameSite}, además de CSRF. Los trabajos anónimos se protegen con una cookie aleatoria cuyo HMAC se persiste.
 
 \section{Gestión de errores}
 
@@ -186,38 +184,40 @@ Los errores se clasificarán por fase:
 	\item[Enriquecimiento:] proveedor no disponible, cuota agotada, respuesta inválida o contexto insuficiente.
 \end{description}
 
-El usuario recibirá una explicación comprensible y un identificador de incidencia, mientras que el registro técnico conservará detalles para el administrador sin exponer secretos ni trazas internas.
+El usuario recibirá una explicación comprensible y un identificador de incidencia, mientras que el registro técnico conservará detalles para el administrador en caso de que se requiera una revisión.
 
 \section{Observabilidad}
 
 Spring Actuator, los eventos de progreso y las métricas persistidas del scraper permiten observar:
 
 \begin{itemize}
-	\item trabajos creados, completados, parciales, fallidos y expirados;
-	\item duración de resolución, descarga y compresión;
-	\item longitud de las colas y número de consumidores;
-	\item aplicaciones con más fallos y dominios que cambian;
-	\item espacio temporal utilizado y objetos pendientes de limpieza;
-	\item enriquecimientos de descripción, fallos del proveedor y validaciones rechazadas.
+	\item Trabajos creados, completados, parciales, fallidos y expirados.
+	\item Duración de resolución, descarga y compresión.
+	\item Longitud de las colas y número de consumidores.
+	\item Aplicaciones con más fallos y dominios que cambian.
+	\item Espacio temporal utilizado y objetos pendientes de limpieza.
+	\item Enriquecimientos de descripción, fallos del proveedor y validaciones rechazadas.
 \end{itemize}
 
 Los servicios Java exponen salud mediante Actuator y métricas compatibles, y el despliegue publica healthchecks y monitorización diaria. El scraper guarda instantáneas de colas, trabajadores y evolución; el panel recibe cambios por WebSocket y los trabajos por SSE. Estas señales permiten observar reintentos, leases y límites. No se afirma que exista un servidor Prometheus central ni una capacidad de producción medida.
 
-\section{Estrategia de pruebas}
+\section{Riesgos y estrategia de pruebas}
 
-La calidad se verifica en varios niveles:
+El anexo de planificación evalúa riesgos inherentes y residuales en los dos cortes mediante probabilidad e impacto de 1 a 5. Se priorizan los riesgos con puntuación alta y los controles que protegen datos, integridad y disponibilidad.
+
+La selección de casos se relaciona con requisitos funcionales y no funcionales y con características de seguridad, fiabilidad, adecuación funcional y mantenibilidad del modelo de calidad ISO/IEC 25010:2023~\cite{iso25010}. ISO/IEC 25002:2024 aporta el marco de uso de modelos de calidad~\cite{iso25002}; no se afirma conformidad certificada con esas normas. Las comprobaciones disponibles abarcan:
 
 \begin{itemize}
-	\item pruebas unitarias de URL, dominios, IP privadas, nombres, permisos y estados;
-	\item pruebas MySQL~8.4 mediante Testcontainers para columnas generadas, triggers, rollback, concurrencia y reconciliación~\cite{testcontainers};
-	\item páginas controladas para probar resolvers, redirecciones y descargas;
-	\item pruebas de ZIP correcto, parcial, cancelado y expirado;
-	\item pruebas de seguridad para SSRF, cuotas, autorización y datos maliciosos;
-	\item pruebas de extremo a extremo del catálogo, selección, progreso, bundles y administración;
-	\item pruebas PostgreSQL/pgvector de migraciones, dimensiones, sincronización, leases, cobertura, promoción y rollback;
-	\item pruebas de filtros, totales, facetas, páginas y fallback íntegro del modo semántico;
-	\item verificación de CPython 3.14t, imports sin reactivación del GIL, Chromium y concurrencia repetida;
-	\item compilación de contratos, imágenes y documentos reproducibles.
+	\item Pruebas unitarias de URL, dominios, IPs privadas, nombres, permisos y estados.
+	\item Pruebas MySQL mediante Testcontainers para columnas generadas, triggers, rollback, concurrencia y reconciliación~\cite{testcontainers}.
+	\item Páginas controladas para probar resolvers, redirecciones y descargas.
+	\item Pruebas de ZIP correcto, parcial, cancelado y expirado.
+	\item Pruebas de seguridad para SSRF, cuotas, autorización y datos maliciosos.
+	\item Pruebas de extremo a extremo del catálogo, selección, progreso, bundles y administración.
+	\item Pruebas PostgreSQL/pgvector de migraciones, dimensiones, sincronización, leases, cobertura, promoción y rollback.
+	\item Pruebas de filtros, totales, facetas, páginas y fallback íntegro del modo semántico.
+	\item Verificación de CPython, imports sin reactivación del GIL, Chromium y concurrencia repetida.
+	\item Compilación de contratos, imágenes y documentos reproducibles.
 \end{itemize}
 
-La aceptación técnica demuestra que se rechazan destinos internos, que un fallo individual no produce estados incoherentes, que las categorías forman una partición del catálogo y que la interfaz coincide con la API. La aplicación está desplegada en Oracle mediante Coolify y se comprueba con smoke tests externos; la medición de carga sostenida permanece fuera del alcance de esta entrega. La configuración reproducible, los dominios y las compuertas de rollback se detallan en el documento independiente \href{run:coolify-oracle.pdf}{\ruta{coolify-oracle.pdf}}, que debe conservarse junto a los otros PDF.
+Las pruebas locales verifican comportamientos acotados; el acceso público se observa sin lanzar ataques ni carga contra producción. La restauración completa de una copia, la purga uniforme de ciertos registros y la campaña de carga sostenida no quedan acreditadas por estas ejecuciones.

@@ -14,6 +14,10 @@ Su propuesta está especialmente centrada en el mantenimiento continuo del equip
 
 La principal diferencia respecto a Batch Downloader es la necesidad de ejecutar un agente local. Patch My PC administra directamente el software instalado en el equipo y automatiza operaciones que pueden requerir el cierre de aplicaciones o permisos de instalación. Batch Downloader, por el contrario, se limita a localizar y agrupar instaladores oficiales en un archivo ZIP, sin instalar, actualizar ni desinstalar programas.
 
+\section{Windows Toolbox}
+
+Windows Toolbox se presenta como una herramienta para Windows que instala varios programas con un clic, aplica ajustes de optimización automáticamente y genera una ISO MicroWin personalizada para instalaciones limpias~\cite{windows-toolbox}. Su alcance combina la instalación de software con la configuración del sistema; Batch Downloader se limita a reunir instaladores oficiales en un ZIP y deja su ejecución al usuario.
+
 \section{UBULabs}
 
 UBULabs es un servicio de la Universidad de Burgos que proporciona a la comunidad universitaria acceso a las aplicaciones necesarias para prácticas docentes y laboratorios. El usuario accede al portal mediante sus credenciales institucionales y el catálogo disponible depende de su cuenta, del sistema operativo y de la red desde la que se conecta~\cite{ubulabs}. Algunas aplicaciones solo están disponibles desde la red de la Universidad debido a las condiciones de sus licencias.
@@ -24,24 +28,26 @@ UBULabs comparte con Batch Downloader la idea de ofrecer un punto de acceso cent
 
 \section{Comparación funcional}
 
+En la tabla, «No indicado» significa que la ficha consultada no permite confirmar esa capacidad.
+
 \begin{table}[H]
 \centering
 \scriptsize
-\begin{tabularx}{\textwidth}{p{0.20\textwidth}XXX}
+\begin{tabularx}{\textwidth}{p{0.17\textwidth}XXXX}
 \toprule
-\textbf{Característica} & \textbf{Ninite / Patch My PC} & \textbf{UBULabs} & \textbf{Batch Downloader}\\
+\textbf{Característica} & \textbf{Ninite / Patch My PC} & \textbf{Windows Toolbox~\cite{windows-toolbox}} & \textbf{UBULabs} & \textbf{Batch Downloader}\\
 \midrule
-Finalidad principal & Instalación y mantenimiento automatizados & Acceso académico a software con licencia & Descarga conjunta de instaladores oficiales\\
-Selección múltiple & Sí & No & Sí\\
-Forma de entrega & Instalador o agente local & \emph{Streaming}, descarga o escritorio virtual & ZIP temporal con instaladores y manifiesto\\
-Ejecución automática & Sí & Sí, local o remota según la aplicación & No; el usuario decide qué ejecutar\\
-Control de acceso & Servicio general, con oferta profesional & Credenciales, permisos y condiciones de red & Catálogo público y funciones asociadas a cuentas\\
-Persistencia de binarios & Gestionada por cada servicio & Aplicaciones alojadas o desplegadas por la Universidad & Prohibida por diseño para instaladores\\
-Colecciones compartibles & Selección de aplicaciones & No es su objetivo & Bundles oficiales y públicos consultables y descargables\\
-Participación comunitaria & Sugerencia de aplicaciones & Catálogo institucional mantenido & Bundles propios públicos o privados y mantenimiento de bundles oficiales\\
-Sistemas operativos & Principalmente Windows & Depende de la aplicación y del método de acceso & Windows, Linux y macOS cuando exista instalador validado\\
-Búsqueda semántica & No & No & Sí; modo semántico local con fallback literal\\
-Uso de LLM & No es central & No & Solo enriquecimiento de descripciones; el ranking usa embeddings locales\\
+Finalidad principal & Instalación y mantenimiento automatizados & Instalación de programas, optimización de Windows y creación de ISO & Acceso académico a software con licencia & Descarga conjunta de instaladores oficiales\\
+Selección múltiple & Sí & Sí; varios programas con un clic & No & Sí\\
+Forma de entrega & Instalador o agente local & Herramienta para Windows e ISO MicroWin personalizada & \emph{Streaming}, descarga o escritorio virtual & ZIP temporal con instaladores y manifiesto\\
+Ejecución automática & Sí & Instala programas y aplica ajustes automáticamente & Sí, local o remota según la aplicación & No; el usuario decide qué ejecutar\\
+Control de acceso & Servicio general, con oferta profesional & No indicado & Credenciales, permisos y condiciones de red & Catálogo público y funciones asociadas a cuentas\\
+Persistencia de binarios & Gestionada por cada servicio & No indicado & Aplicaciones alojadas o desplegadas por la Universidad & Prohibida por diseño para instaladores\\
+Colecciones compartibles & Selección de aplicaciones & No indicado & No es su objetivo & Bundles oficiales y públicos consultables y descargables\\
+Participación comunitaria & Sugerencia de aplicaciones & No indicado & Catálogo institucional mantenido & Bundles propios públicos o privados y mantenimiento de bundles oficiales\\
+Sistemas operativos & Principalmente Windows & Windows & Depende de la aplicación y del método de acceso & Windows, Linux y macOS cuando exista instalador validado\\
+Búsqueda semántica & No & No indicado & No & Sí; modo semántico local con fallback literal\\
+Uso de LLM & No es central & No indicado & No & Solo enriquecimiento de descripciones; el ranking usa embeddings locales\\
 \bottomrule
 \end{tabularx}
 \caption{Comparación conceptual de las soluciones relacionadas con Batch Downloader.}
@@ -50,7 +56,7 @@ Uso de LLM & No es central & No & Solo enriquecimiento de descripciones; el rank
 
 \section{Diferencias de enfoque}
 
-Ninite y Patch My PC buscan que la instalación o actualización sea automática y silenciosa. Batch Downloader reúne archivos y conserva trazabilidad, sin ejecutar software en el equipo del usuario. Esta decisión reduce el alcance y evita desarrollar un agente local con privilegios de instalación, aunque traslada al usuario la ejecución posterior.
+Ninite y Patch My PC buscan que la instalación o actualización sea automática y silenciosa. Windows Toolbox añade optimización de Windows y creación de una ISO MicroWin. Batch Downloader reúne archivos y conserva trazabilidad, sin ejecutar software en el equipo del usuario. Esta decisión reduce el alcance y evita desarrollar un agente local con privilegios de instalación, aunque traslada al usuario la ejecución posterior.
 
 UBULabs resuelve un problema diferente: garantizar que una comunidad concreta pueda utilizar software sujeto a licencias institucionales. Su combinación de despliegue y virtualización permite ejecutar aplicaciones incluso cuando no pueden instalarse libremente en el equipo del usuario. Batch Downloader no cubre este escenario: incorpora software cuyos instaladores pueden obtenerse desde fuentes oficiales y no gestiona licencias de uso.
 
