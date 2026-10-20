@@ -19,11 +19,14 @@ sequenceDiagram
     else resolución vigente
         S-->>W: URL validada desde el candidato existente
     end
-    S-->>W: URL validada solo por canal interno
     W->>M: ZIP temporal: instaladores + manifest.json
     W->>Q: Progreso y READY / PARTIAL / MANUAL_ONLY / FAILED
     Q->>C: Evento de estado con failureCode
     B->>C: GET /api/v1/download-jobs/{id}/events
     C-->>B: SSE o sondeo
     B->>C: GET /api/v1/download-jobs/{id}/file
-    C-->>B: 303 si READY, PARTIAL o MANUAL_ONLY
+    C->>M: Leer ZIP o rango autorizado
+    M-->>C: Bytes del objeto temporal
+    C-->>B: 200 / 206 por streaming
+    B->>C: POST /api/v1/download-jobs/{id}/complete
+    C->>M: Limpiar tras confirmar guardado
