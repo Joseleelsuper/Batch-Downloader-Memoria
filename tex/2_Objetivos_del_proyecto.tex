@@ -50,7 +50,7 @@ La descarga funciona tanto para selecciones como para bundles. El servidor resue
 
 \begin{itemize}
 	\item Desarrollar un cliente con React, React Router, Vite, HTML, CSS y TypeScript, con las versiones de Vite/Vitest fijadas por el lockfile.
-	\item Ejecutar los servicios Java con JDK 26 y generar bytecode Java 25, manteniendo una separación explícita entre Core API, worker de descarga, notificaciones y traducciones.
+	\item Compilar y ejecutar los servicios con Java 25 LTS, manteniendo una separación explícita entre Core API, worker de descarga, notificaciones y traducciones.
 	\item Documentar la API HTTP mediante OpenAPI, cuyo propósito es describir de forma independiente del lenguaje las capacidades de una API~\cite{openapi}.
 	\item Utilizar MySQL para la información transaccional y su proyección incremental del catálogo; mantener PostgreSQL con pgvector como proyección semántica reconstruible.
 	\item Ejecutar el scraper sobre CPython 3.14.6 \emph{free-threaded}, comprobar que el GIL continúa deshabilitado tras importar extensiones y reservar los hilos para funciones puras de CPU.

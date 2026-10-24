@@ -453,7 +453,7 @@ La plataforma no mantiene ejecutables de forma permanente. Cada solicitud crea u
 
 La búsqueda ofrece modos literal y semántico. El servicio semántico usa un modelo local aprovisionado en la imagen o en el volumen persistente, sin descargar pesos dinámicamente; PostgreSQL con pgvector mantiene una proyección reconstruible, mientras MySQL conserva la autoridad sobre filtros, estados, facetas y paginación. Ante un índice incompleto, una consulta no elegible o un fallo, la petición completa se degrada a modo literal. Esta ampliación no introduce recomendaciones generativas ni creación automática de bundles.
 
-La arquitectura utiliza Vite y TypeScript en el cliente, Java 26 y Spring Boot en el servidor, MySQL para los datos transaccionales, PostgreSQL con pgvector para la proyección semántica, RabbitMQ para el procesamiento asíncrono, Playwright para la resolución dinámica de páginas y contenedores Docker. La evaluación relaciona requisitos, riesgos y pruebas en dos cortes identificados de Git; los resultados no ejecutados se distinguen de los verificados.
+La arquitectura utiliza Vite y TypeScript en el cliente, Java 25 y Spring Boot en el servidor, MySQL para los datos transaccionales, PostgreSQL con pgvector para la proyección semántica, RabbitMQ para el procesamiento asíncrono, Playwright para la resolución dinámica de páginas y contenedores Docker. La evaluación relaciona requisitos, riesgos y pruebas en dos cortes identificados de Git; los resultados no ejecutados se distinguen de los verificados.
 \end{abstract}
 
 \renewcommand*\abstractname{Descriptores}
@@ -472,7 +472,7 @@ The platform does not store executable files permanently. Each request creates a
 
 Search supports lexical and semantic modes. A locally provisioned embedding model runs without dynamic weight downloads; PostgreSQL with pgvector stores a rebuildable projection, while MySQL remains authoritative for filters, status, facets, and pagination. An incomplete or unavailable semantic index, an ineligible query, or a service failure causes the entire request to fall back to lexical search. This extension does not add generative recommendations or automatic bundle creation.
 
-The architecture uses Vite and TypeScript for the client, Java 26 and Spring Boot for the server, MySQL for transactional data, PostgreSQL with pgvector for the semantic projection, RabbitMQ for asynchronous processing, Playwright for dynamic page resolution, and Docker containers. The evaluation links requirements, risks, and tests across two identified Git revisions and distinguishes executed results from unverified claims.
+The architecture uses Vite and TypeScript for the client, Java 25 and Spring Boot for the server, MySQL for transactional data, PostgreSQL with pgvector for the semantic projection, RabbitMQ for asynchronous processing, Playwright for dynamic page resolution, and Docker containers. The evaluation links requirements, risks, and tests across two identified Git revisions and distinguishes executed results from unverified claims.
 \end{abstract}
 
 \renewcommand*\abstractname{Keywords}
