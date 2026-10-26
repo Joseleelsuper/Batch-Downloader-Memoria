@@ -103,60 +103,60 @@ Se adopta la secuencia requisito--riesgo--caso--resultado del material de análi
 
 En la tabla~\ref{tabla:riesgos}, \emph{producto} indica un efecto sobre el servicio o sus usuarios y \emph{proyecto} una amenaza para la entrega u operación. Cada celda de evaluación expresa probabilidad, impacto y puntuación. La tabla~\ref{tabla:matriz-riesgos-c2} coloca todos los identificadores por sus parejas (P,I) de C2; R-07 y R-09 ocupan la celda (3,5), de nivel alto.
 
-	{\footnotesize
-		\setlength{\tabcolsep}{3pt}
-		\begin{longtable}{p{0.07\textwidth}p{0.32\textwidth}p{0.15\textwidth}p{0.12\textwidth}p{0.12\textwidth}p{0.12\textwidth}}
-			\caption{Registro de riesgos: causa, efecto y evolución de la exposición.}\label{tabla:riesgos}                                                                                                      \\
-			\toprule
-			\textbf{ID} & \textbf{Causa y consecuencia}                                            & \textbf{Categoría}   & \textbf{Inicial}           & \textbf{C1}                & \textbf{C2}                \\
-			\midrule
-			\endfirsthead
-			\toprule
-			\textbf{ID} & \textbf{Causa y consecuencia}                                            & \textbf{Categoría}   & \textbf{Inicial}           & \textbf{C1}                & \textbf{C2}                \\
-			\midrule
-			\endhead
-			R-01        & URL o redirección maliciosa: acceso a redes internas (SSRF).             & Producto / seguridad & (4\ensuremath{\times}5=20) & (2\ensuremath{\times}5=10) & (2\ensuremath{\times}5=10) \\
-			R-02        & Nombre o binario no confiable: ZIP inseguro o contenido incorrecto.      & Producto / seguridad & (3\ensuremath{\times}4=12) & (1\ensuremath{\times}4=4)  & (1\ensuremath{\times}4=4)  \\
-			R-03        & Descargas grandes y simultáneas: saturación de disco o servicio.         & Producto / operación & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (2\ensuremath{\times}5=10) \\
-			R-04        & Cambios en páginas oficiales: fuentes rotas o instaladores erróneos.     & Producto / externo   & (5\ensuremath{\times}4=20) & (3\ensuremath{\times}4=12) & (3\ensuremath{\times}4=12) \\
-			R-05        & Enlace o permiso mal gestionado: acceso a cuenta o trabajo ajeno.        & Producto / seguridad & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (2\ensuremath{\times}5=10) \\
-			R-06        & Migración o proyección incoherente: estados y contadores incorrectos.    & Producto / datos     & (4\ensuremath{\times}4=16) & (2\ensuremath{\times}4=8)  & (2\ensuremath{\times}4=8)  \\
-			R-07        & Conservación o terceros mal controlados: exposición de datos personales. & Producto / legal     & (4\ensuremath{\times}5=20) & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) \\
-			R-08        & Índice semántico parcial: resultados, facetas o páginas incoherentes.    & Producto / calidad   & (4\ensuremath{\times}4=16) & (2\ensuremath{\times}4=8)  & (2\ensuremath{\times}4=8)  \\
-			R-09        & Despliegue sin restauración ensayada: recuperación incierta.             & Proyecto / operación & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (3\ensuremath{\times}5=15) \\
-			R-10        & Alcance y documentación crecientes: entrega difícil de revisar.          & Proyecto / plazo     & (5\ensuremath{\times}3=15) & (3\ensuremath{\times}3=9)  & (2\ensuremath{\times}3=6)  \\
-			R-11        & Condiciones de editores diferentes: incorporación no autorizada.         & Producto / legal     & (4\ensuremath{\times}4=16) & (3\ensuremath{\times}4=12) & (3\ensuremath{\times}4=12) \\
-			R-12        & Descripciones solo en un idioma: experiencia desigual ES/EN.             & Producto / calidad   & (4\ensuremath{\times}3=12) & (4\ensuremath{\times}3=12) & (3\ensuremath{\times}3=9)  \\
-			\bottomrule
-		\end{longtable}
-	}
+{\footnotesize
+	\setlength{\tabcolsep}{3pt}
+	\begin{longtable}{p{0.07\textwidth}p{0.32\textwidth}p{0.15\textwidth}p{0.12\textwidth}p{0.12\textwidth}p{0.12\textwidth}}
+		\caption{Registro de riesgos: causa, efecto y evolución de la exposición.}\label{tabla:riesgos}                                                                                                      \\
+		\toprule
+		\textbf{ID} & \textbf{Causa y consecuencia}                                            & \textbf{Categoría}   & \textbf{Inicial}           & \textbf{C1}                & \textbf{C2}                \\
+		\midrule
+		\endfirsthead
+		\toprule
+		\textbf{ID} & \textbf{Causa y consecuencia}                                            & \textbf{Categoría}   & \textbf{Inicial}           & \textbf{C1}                & \textbf{C2}                \\
+		\midrule
+		\endhead
+		R-01        & URL o redirección maliciosa: acceso a redes internas (SSRF).             & Producto / seguridad & (4\ensuremath{\times}5=20) & (2\ensuremath{\times}5=10) & (2\ensuremath{\times}5=10) \\
+		R-02        & Nombre o binario no confiable: ZIP inseguro o contenido incorrecto.      & Producto / seguridad & (3\ensuremath{\times}4=12) & (1\ensuremath{\times}4=4)  & (1\ensuremath{\times}4=4)  \\
+		R-03        & Descargas grandes y simultáneas: saturación de disco o servicio.         & Producto / operación & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (2\ensuremath{\times}5=10) \\
+		R-04        & Cambios en páginas oficiales: fuentes rotas o instaladores erróneos.     & Producto / externo   & (5\ensuremath{\times}4=20) & (3\ensuremath{\times}4=12) & (3\ensuremath{\times}4=12) \\
+		R-05        & Enlace o permiso mal gestionado: acceso a cuenta o trabajo ajeno.        & Producto / seguridad & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (2\ensuremath{\times}5=10) \\
+		R-06        & Migración o proyección incoherente: estados y contadores incorrectos.    & Producto / datos     & (4\ensuremath{\times}4=16) & (2\ensuremath{\times}4=8)  & (2\ensuremath{\times}4=8)  \\
+		R-07        & Conservación o terceros mal controlados: exposición de datos personales. & Producto / legal     & (4\ensuremath{\times}5=20) & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) \\
+		R-08        & Índice semántico parcial: resultados, facetas o páginas incoherentes.    & Producto / calidad   & (4\ensuremath{\times}4=16) & (2\ensuremath{\times}4=8)  & (2\ensuremath{\times}4=8)  \\
+		R-09        & Despliegue sin restauración ensayada: recuperación incierta.             & Proyecto / operación & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (3\ensuremath{\times}5=15) \\
+		R-10        & Alcance y documentación crecientes: entrega difícil de revisar.          & Proyecto / plazo     & (5\ensuremath{\times}3=15) & (3\ensuremath{\times}3=9)  & (2\ensuremath{\times}3=6)  \\
+		R-11        & Condiciones de editores diferentes: incorporación no autorizada.         & Producto / legal     & (4\ensuremath{\times}4=16) & (3\ensuremath{\times}4=12) & (3\ensuremath{\times}4=12) \\
+		R-12        & Descripciones solo en un idioma: experiencia desigual ES/EN.             & Producto / calidad   & (4\ensuremath{\times}3=12) & (4\ensuremath{\times}3=12) & (3\ensuremath{\times}3=9)  \\
+		\bottomrule
+	\end{longtable}
+}
 
-	{\small
-		\begin{longtable}{p{0.07\textwidth}p{0.50\textwidth}p{0.13\textwidth}p{0.17\textwidth}}
-			\caption{Respuesta, estado residual y vínculo con la evidencia.}\label{tabla:respuestas-riesgos}                                                     \\
-			\toprule
-			\textbf{ID} & \textbf{Medida o decisión}                                                        & \textbf{Estado C2} & \textbf{Evidencia / caso}     \\
-			\midrule
-			\endfirsthead
-			\toprule
-			\textbf{ID} & \textbf{Medida o decisión}                                                        & \textbf{Estado C2} & \textbf{Evidencia / caso}     \\
-			\midrule
-			\endhead
-			R-01        & Validar HTTPS, DNS, IP efectiva y cada redirección con entradas controladas.      & Mitigado           & CP-01                         \\
-			R-02        & Sanitizar nombres, límites, MIME y firma; validar ZIP y resultado parcial.        & Mitigado           & CP-03                         \\
-			R-03        & Cuotas, reserva global, cola FIFO, streaming y limpieza por actividad.            & Parcial            & CP-04; carga pendiente        \\
-			R-04        & Resolvers específicos, revalidación JIT y revisión manual cuando falte evidencia. & Aceptado           & CP-02; fuente real variable   \\
-			R-05        & Enlace de un uso, sesión, CSRF y autorización por propietario o HMAC.             & Mitigado           & CP-05                         \\
-			R-06        & Proyección incremental, migraciones y pruebas con MySQL real.                     & Parcial            & CP-06; restauración pendiente \\
-			R-07        & Política publicada y minimización; definir purga uniforme y revisar terceros.     & Pendiente          & CP-07; brecha explícita       \\
-			R-08        & Verificar cobertura del índice y degradar la petición completa a literal.         & Mitigado           & CP-08                         \\
-			R-09        & Tags inmutables, objetivos de migración y copias; ensayar restauración completa.  & Pendiente          & CP-09; sin ensayo             \\
-			R-10        & Dos cortes fijos y separación de síntesis y evidencias en anexos.                 & Mitigado           & CP-10                         \\
-			R-11        & Revisar términos y licencias por editor antes de incorporar fuentes.              & Pendiente          & CP-11; revisión por fuente    \\
-			R-12        & Catálogos ES/EN y detección de descripciones faltantes por idioma.                & Parcial            & CP-12; backfill pendiente     \\
-			\bottomrule
-		\end{longtable}
-	}
+{\small
+	\begin{longtable}{p{0.07\textwidth}p{0.50\textwidth}p{0.13\textwidth}p{0.17\textwidth}}
+		\caption{Respuesta, estado residual y vínculo con la evidencia.}\label{tabla:respuestas-riesgos}                                                     \\
+		\toprule
+		\textbf{ID} & \textbf{Medida o decisión}                                                        & \textbf{Estado C2} & \textbf{Evidencia / caso}     \\
+		\midrule
+		\endfirsthead
+		\toprule
+		\textbf{ID} & \textbf{Medida o decisión}                                                        & \textbf{Estado C2} & \textbf{Evidencia / caso}     \\
+		\midrule
+		\endhead
+		R-01        & Validar HTTPS, DNS, IP efectiva y cada redirección con entradas controladas.      & Mitigado           & CP-01                         \\
+		R-02        & Sanitizar nombres, límites, MIME y firma; validar ZIP y resultado parcial.        & Mitigado           & CP-03                         \\
+		R-03        & Cuotas, reserva global, cola FIFO, streaming y limpieza por actividad.            & Parcial            & CP-04; carga pendiente        \\
+		R-04        & Resolvers específicos, revalidación JIT y revisión manual cuando falte evidencia. & Aceptado           & CP-02; fuente real variable   \\
+		R-05        & Enlace de un uso, sesión, CSRF y autorización por propietario o HMAC.             & Mitigado           & CP-05                         \\
+		R-06        & Proyección incremental, migraciones y pruebas con MySQL real.                     & Parcial            & CP-06; restauración pendiente \\
+		R-07        & Política publicada y minimización; definir purga uniforme y revisar terceros.     & Pendiente          & CP-07; brecha explícita       \\
+		R-08        & Verificar cobertura del índice y degradar la petición completa a literal.         & Mitigado           & CP-08                         \\
+		R-09        & Tags inmutables, objetivos de migración y copias; ensayar restauración completa.  & Pendiente          & CP-09; sin ensayo             \\
+		R-10        & Dos cortes fijos y separación de síntesis y evidencias en anexos.                 & Mitigado           & CP-10                         \\
+		R-11        & Revisar términos y licencias por editor antes de incorporar fuentes.              & Pendiente          & CP-11; revisión por fuente    \\
+		R-12        & Catálogos ES/EN y detección de descripciones faltantes por idioma.                & Parcial            & CP-12; backfill pendiente     \\
+		\bottomrule
+	\end{longtable}
+}
 
 Se acepta la exposición residual de R-04 porque las páginas de terceros pueden cambiar sin aviso .R-03, R-06 y R-12 siguen parcialmente mitigados, con las comprobaciones indicadas aún abiertas. Los riesgos R-07 y R-09 permanecen altos y pendientes en C2. Ninguna prueba focalizada ni observación de la web los convierte en riesgos cerrados. La tabla~\ref{tabla:respuestas-riesgos} enlaza cada respuesta con un caso del anexo~\ref{anexo:pruebas}, donde se distingue resultado ejecutado de comprobación documental o pendiente.
 
@@ -184,12 +184,12 @@ El RGPD~\cite{rgpd} y la Ley Orgánica 3/2018~\cite{lopdgdd} son el marco para e
 	\centering\small
 	\begin{tabularx}{\textwidth}{p{0.22\textwidth}p{0.38\textwidth}X}
 		\toprule
-		\textbf{Ámbito}   & \textbf{Tratamiento o medida observada}                                                                  & \textbf{Límite o comprobación pendiente}                                                        \\
+		\textbf{Ámbito}   & \textbf{Tratamiento o medida observada}                                                                  & \textbf{Límite o comprobación pendiente}                                                               \\
 		\midrule
 		Cuenta y acceso   & Correo y enlace de un solo uso para USER; hash de contraseña para ADMIN; sesiones y registros de acceso. & Limpieza automática de enlaces consumidos o caducados y sesiones caducadas, con cadencia de un minuto. \\
-		Descargas y abuso & Trabajos, recibos, cookies funcionales y huellas HMAC de cookie e IP; ZIP temporal.                      & Las huellas no son necesariamente datos anónimos; verificar plazos de logs, copias y auditoría. \\
-		Terceros          & Oracle Cloud, Resend, fuentes de iconos y recursos del navegador descritos en la política.               & Revisar encargos, transferencias internacionales y cambios de proveedor efectivos.              \\
-		Derechos          & Perfil editable, eliminación de cuenta desde el perfil y solicitudes por correo para ejercer derechos. & Verificar la purga y los plazos de conservación de logs, copias y auditoría.                     \\
+		Descargas y abuso & Trabajos, recibos, cookies funcionales y huellas HMAC de cookie e IP; ZIP temporal.                      & Las huellas no son necesariamente datos anónimos; verificar plazos de logs, copias y auditoría.        \\
+		Terceros          & Oracle Cloud, Resend, fuentes de iconos y recursos del navegador descritos en la política.               & Revisar encargos, transferencias internacionales y cambios de proveedor efectivos.                     \\
+		Derechos          & Perfil editable, eliminación de cuenta desde el perfil y solicitudes por correo para ejercer derechos.   & Verificar la purga y los plazos de conservación de logs, copias y auditoría.                           \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Tratamientos declarados y límites observados en el corte final.}
