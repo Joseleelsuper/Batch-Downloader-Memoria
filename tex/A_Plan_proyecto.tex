@@ -160,6 +160,116 @@ En la tabla~\ref{tabla:riesgos}, \emph{producto} indica un efecto sobre el servi
 
 Se acepta la exposición residual de R-04 porque las páginas de terceros pueden cambiar sin aviso .R-03, R-06 y R-12 siguen parcialmente mitigados, con las comprobaciones indicadas aún abiertas. Los riesgos R-07 y R-09 permanecen altos y pendientes en C2. Ninguna prueba focalizada ni observación de la web los convierte en riesgos cerrados. La tabla~\ref{tabla:respuestas-riesgos} enlaza cada respuesta con un caso del anexo~\ref{anexo:pruebas}, donde se distingue resultado ejecutado de comprobación documental o pendiente.
 
+\subsection{Actualización de seguridad: 27 de octubre de 2026}
+\label{sec:riesgos-seguridad-octubre}
+
+Los informes de Codex Security~\cite{codexSecurity} permiten establecer una nueva línea base específica de seguridad y compararla con las correcciones posteriores. El informe completado del 27 de octubre contiene un total de 10 registros marcados como vulnerabilidades.
+
+Se mantienen las escalas P e I y los umbrales de la tabla~\ref{tabla:matriz-riesgos}. Las puntuaciones siguientes son estimaciones ordinales de esta revisión, no severidades asignadas por el escáner ni probabilidades medidas. El impacto se conserva entre cortes; la reducción de probabilidad se apoya en el bloqueo del recorrido conocido y en pruebas de uso legítimo. Se asigna P=4 a entradas externas repetibles, P=3 a escenarios que requieren interacción o condiciones adicionales y P=2 al acceso previo al broker. En S1 se estima P=1 para recorridos bloqueados en las regresiones y P=2 cuando persisten mayor complejidad de red, concurrencia o dependencia del proveedor. Esta última valoración incorpora incertidumbre residual y no afirma que siga abierto el mismo fallo.
+
+Las condiciones de explotación importan. S-07 requiere abrir el CSV en una hoja de cálculo; S-08 presupone un archivo malicioso y un filtro tar permisivo, como \ruta{fully\_trusted}; S-09 afecta a la instalación de sistema; S-13 requiere poder leer y publicar mensajes en el broker. Los riesgos de sesión S-15 a S-17 dependen de la interacción con enlaces, cambios de cuenta o fallos del cierre de sesión. La matriz conserva esas diferencias de exposición.
+
+\begin{table}[H]
+	\centering\small
+	\begin{minipage}[t]{0.48\textwidth}
+		\centering
+		\textbf{S0: antes de corregir}\par
+		\ruta{cf97d2d}\par\medskip
+		\begin{tabular}{c|ccccc}
+			\toprule
+			\textbf{P/I} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} \\
+			\midrule
+			5 & --- & --- & --- & --- & --- \\
+			4 & --- & --- & 2 & 5 & 3 \\
+			3 & --- & --- & 1 & 8 & 4 \\
+			2 & --- & --- & --- & --- & 1 \\
+			1 & --- & --- & --- & --- & --- \\
+			\bottomrule
+		\end{tabular}
+	\end{minipage}\hfill
+	\begin{minipage}[t]{0.48\textwidth}
+		\centering
+		\textbf{S1: residual local}\par
+		\ruta{7f5b71c}\par\medskip
+		\begin{tabular}{c|ccccc}
+			\toprule
+			\textbf{P/I} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} \\
+			\midrule
+			5 & --- & --- & --- & --- & --- \\
+			4 & --- & --- & --- & --- & --- \\
+			3 & --- & --- & --- & --- & --- \\
+			2 & --- & --- & --- & 1 & 5 \\
+			1 & --- & --- & 3 & 12 & 3 \\
+			\bottomrule
+		\end{tabular}
+	\end{minipage}
+	\caption{Nueva matriz comparativa de seguridad. Cada celda indica el número de grupos con esa pareja (P,I); un guion indica ninguno. Cada corte contiene 24 grupos.}
+	\label{tabla:matriz-seguridad-s0-s1}
+\end{table}
+
+El registro de la tabla~\ref{tabla:riesgos-seguridad-s0-s1} reúne los 24 grupos revalidados de ambos informes e identifica su posición en las matrices. Cada evaluación expresa \emph{(P,I); puntuación}. El nivel se obtiene con los mismos umbrales que en el registro general. Los códigos E-J, E-S, E-W, E-L y E-N remiten a las comprobaciones de la tabla~\ref{tabla:evidencia-seguridad-s1}.
+
+\clearpage
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}p{0.075\textwidth}>{\raggedright\arraybackslash}p{0.48\textwidth}p{0.13\textwidth}p{0.13\textwidth}p{0.12\textwidth}@{}}
+	\caption{Riesgos derivados de los hallazgos revalidados y avance de su mitigación local.}\label{tabla:riesgos-seguridad-s0-s1}\\
+	\toprule
+	\textbf{ID} & \textbf{Causa, efecto y corrección} & \textbf{S0} & \textbf{S1} & \textbf{Evid.}\\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{Causa, efecto y corrección} & \textbf{S0} & \textbf{S1} & \textbf{Evid.}\\
+	\midrule
+	\endhead
+	S-01 & Cabeceras de IP falsas eluden cuotas. Tomcat determina la dirección del cliente mediante la cadena de proxies de confianza. & $(4,4);16$ & $(1,4);4$ & E-J\\
+	S-02 & Páginas y redirecciones permiten acceso a la red interna. Se autoriza el destino público de cada conexión y cada salto. & $(4,5);20$ & $(2,5);10$ & E-S\\
+	S-03 & El navegador abre conexiones privadas desde páginas externas. Un proxy valida y fija las IP; se bloquean vías de salida que lo evitan. & $(4,5);20$ & $(2,5);10$ & E-S, E-N\\
+	S-04 & Cuerpos HTML y metadatos excesivos agotan memoria. Se leen en streaming con un presupuesto de bytes. & $(4,4);16$ & $(1,4);4$ & E-S\\
+	S-05 & Los reintentos escriben sin descontar reserva y saturan disco. El consumo se autoriza antes de escribir y solo se devuelve tras borrar. & $(4,5);20$ & $(2,5);10$ & E-J\\
+	S-06 & Un cuerpo de descarga bloqueado retiene capacidad. Un plazo total cierra la lectura y devuelve un error de tiempo agotado. & $(4,4);16$ & $(1,4);4$ & E-J\\
+	S-07 & Metadatos exportados se ejecutan como fórmulas CSV. Los campos peligrosos se marcan como texto antes del escape. & $(3,4);12$ & $(1,4);4$ & E-J\\
+	S-08 & Los enlaces tar afectan a archivos externos. Los enlaces duros solo copian miembros regulares internos y se valida el grafo final. & $(3,5);15$ & $(1,5);5$ & E-L\\
+	S-09 & Permisos escribibles permiten alterar una instalación de sistema. Se normalizan archivos y directorios, incluidos padres implícitos. & $(3,5);15$ & $(1,5);5$ & E-L\\
+	S-10 & Las cabeceras tar consumen recursos antes de los límites. Se acotan metadatos y miembros desde la primera cabecera. & $(3,4);12$ & $(1,4);4$ & E-L\\
+	S-11 & Una nueva resolución DNS evade la validación previa. La conexión utiliza la IP numérica aprobada y conserva la verificación TLS del origen. & $(3,5);15$ & $(2,5);10$ & E-S\\
+	S-12 & Texto largo provoca coste cuadrático al buscar instaladores. La expresión relativa exige el comienzo de un token. & $(4,3);12$ & $(1,3);3$ & E-S\\
+	S-13 & Un token cifrado se reutiliza para otro destinatario. El sobre \ruta{enc:v2} vincula destinatario y finalidad mediante datos autenticados. & $(2,5);10$ & $(1,5);5$ & E-J\\
+	S-14 & Un salto HTTP pierde su marca insegura al terminar en HTTPS. Se conserva la procedencia de toda la navegación. & $(3,4);12$ & $(1,4);4$ & E-S\\
+	S-15 & Un enlace cambia automáticamente la cuenta del navegador. El token se retira de la URL y solo se consume tras confirmación explícita. & $(3,4);12$ & $(1,4);4$ & E-W\\
+	S-16 & Trabajos privados permanecen visibles al cambiar de cuenta. Estado, continuaciones y entrega se vinculan al ámbito de la sesión. & $(3,4);12$ & $(1,4);4$ & E-W\\
+	S-17 & Un cierre fallido aparenta retirar una sesión aún válida. La interfaz conserva la cuenta, informa del error y permite reintentar. & $(3,4);12$ & $(1,4);4$ & E-W\\
+	S-18 & Nombres Unicode exceden el límite del sistema de archivos y provocan reencolado. Se limita su longitud en bytes UTF-8, reservando el sufijo. & $(3,3);9$ & $(1,3);3$ & E-J\\
+	S-19 & Consultas URL anidadas agotan pila o CPU. Se recorren de forma iterativa con límites de profundidad, caracteres, nodos y campos. & $(4,3);12$ & $(1,3);3$ & E-S\\
+	S-20 & Nombres de acceso enormes quedan retenidos en la caché de cuotas. Se guardan huellas de longitud fija, conservando la normalización. & $(4,4);16$ & $(1,4);4$ & E-J\\
+	S-21 & Respuestas lentas evitan el timeout por inactividad del scraper. Un plazo global incluye DNS, saltos y lectura del cuerpo. & $(4,4);16$ & $(1,4);4$ & E-S\\
+	S-22 & La adquisición de Winstall supera el presupuesto antes del límite por ejecución. Se acotan filas, páginas, bytes y plazo; un catálogo incompleto se rechaza. & $(3,4);12$ & $(2,4);8$ & E-S\\
+	S-23 & Respuestas JSON o HTML de Winstall se cargan sin límite. Se aplica lectura acotada con plazo, también al fallback HTML. & $(3,4);12$ & $(1,4);4$ & E-S\\
+	S-24 & Redirecciones del proveedor alcanzan servicios privados. Cada salto pasa por el transporte que autoriza la conexión pública. & $(3,5);15$ & $(2,5);10$ & E-S\\
+	\bottomrule
+\end{longtable}
+\endgroup
+
+\begin{table}[H]
+	\centering\small
+	\begin{tabularx}{\textwidth}{@{}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.18\textwidth}>{\raggedright\arraybackslash}X@{}}
+		\toprule
+		\textbf{Código} & \textbf{Ámbito} & \textbf{Evidencia ejecutada sobre S1}\\
+		\midrule
+		E-J & Java & 460 pruebas superadas: contratos 5, Core 282, worker 113, notificaciones 45 y traducciones 15. Verificación Maven en UTC con JaCoCo, SpotBugs y análisis de dependencias. Incluye cuotas, reservas, cuerpo HTTP bloqueado, CSV y contexto criptográfico.\\
+		E-S & Scraper & 395 pruebas superadas, incluidas las de MySQL real; cobertura del 70,88\,\%. Regresiones de transporte público, DNS, límites de lectura y tiempo, parsing y Winstall; Ruff y mypy correctos.\\
+		E-W & Interfaz & 289 pruebas superadas en 42 archivos; lint, tipos y construcción correctos. Se comprueban confirmación del enlace, sesión inicial diferida, cambio de cuenta, entrega cancelada y reintento de cierre.\\
+		E-L & Instalador Linux & 27 casos unittest: 25 superados y 2 omitidos por requerir Arch/RPM; además, 3 Bats superados y comprobación de ShellCheck/Bash. Los 5 casos tar pasan tanto en Python 3.10 como en 3.14; estas repeticiones no se suman como casos nuevos.\\
+		E-N & Navegador real & Chromium descubre el instalador público de prueba y registra cero conexiones al servidor privado al probar HTTP, TLS, redirecciones, fetch, ventanas emergentes y WebSocket, en un contenedor aislado.\\
+		\bottomrule
+	\end{tabularx}
+	\caption{Evidencias de las correcciones de seguridad, ejecutadas el 27 de octubre de 2026. Estos recuentos corresponden a S1 y no a las selecciones históricas de C1 y C2.}
+	\label{tabla:evidencia-seguridad-s1}
+\end{table}
+
+El avance comprobado es la reparación local de los 24 grupos revalidados, con regresiones de los recorridos afectados. La estimación pasa de 12 riesgos altos y 12 medios en S0 a 18 bajos y 6 medios en S1. Los seis medios residuales son S-02, S-03, S-05, S-11, S-22 y S-24. La comparación muestra una reducción estimada de exposición bajo las condiciones ensayadas; no mide un porcentaje de reducción real del riesgo ni acredita ausencia de nuevas vulnerabilidades. No se ha repetido un análisis completo del repositorio ni completado el análisis cancelado de octubre.
+
+S1 permanece en un commit local: no se ha publicado ni desplegado, por lo que la matriz residual no describe una mejora ya verificada en producción. Su publicación requiere actualizar Core y notificaciones de forma coordinada por el cambio a \ruta{enc:v2}; los sobres \ruta{enc:v1} aún en cola serán rechazados y sus destinatarios deberán solicitar un enlace nuevo. No se ha alterado la cola. Quedan fuera de estas evidencias el ensayo integral de restauración, la carga sostenida y las operaciones nativas omitidas del instalador. Esta actualización complementa el registro general; no cierra los riesgos legales u operativos que seguían pendientes en C2.
+
 \section{Estudio de viabilidad}
 
 \subsection{Viabilidad técnica}
