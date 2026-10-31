@@ -2,7 +2,7 @@
 
 \section{Acceso}
 
-Batch Downloader es una aplicación web; no instala un programa en el equipo del usuario. Basta con abrir la dirección publicada por el administrador en un navegador actual. El catálogo y los bundles públicos pueden consultarse sin cuenta. El registro e inicio de sesión se utilizan para solicitar software, recibir notificaciones y acceder a funciones administrativas cuando el rol lo permite.
+Batch Downloader es una aplicación web la cual no instala un programa en el equipo del usuario, sino su ejecutable. El catálogo, los bundles públicos y las descargas básicas pueden utilizarse sin cuenta. Para acceder al panel personal, introduce tu correo y abre el enlace de un solo uso recibido. La interfaz propone el idioma del navegador y permite elegir español o inglés de forma persistente.
 
 \section{Explorar el catálogo}
 
@@ -12,11 +12,9 @@ El panel lateral de filtros se abre y cierra con el marcapáginas situado en su 
 
 La búsqueda por texto, las etiquetas, el editor y el estado se combinan con el filtro de sistemas. Las cuatro vistas del catálogo son \emph{Todas}, \emph{Disponibles}, \emph{Revisión} y \emph{Sin instalador}; \emph{Pendientes} no es una categoría pública. Una URL antigua con \ruta{status=pending} se normaliza a \emph{Todas}. Los tres estados son disjuntos: una aplicación disponible no puede aparecer simultáneamente en revisión o sin instalador.
 
-Junto al cuadro de búsqueda se puede elegir \emph{Literal} o \emph{Semántica}. La dirección compartida tiene prioridad; si no especifica el modo se recupera la última elección del navegador y, en la primera visita, se utiliza \emph{Semántica}. El modo literal busca coincidencias de texto. El semántico consulta embeddings locales, pero conserva exactamente los mismos filtros, estados y páginas.
+Junto al cuadro de búsqueda se puede elegir \emph{Literal} o \emph{Semántica}. La dirección compartida tiene prioridad; si no especifica el modo se recupera la última elección del navegador y, en la primera visita, se utiliza \emph{Semántica}. El modo literal busca coincidencias de texto. El semántico consulta embeddings locales.
 
-Si el modelo o el índice semántico no están disponibles, la consulta no cumple el mínimo o la enumeración no puede completarse, la petición se ejecuta completa como literal y aparece un aviso breve. Esta degradación no cambia la elección guardada: una consulta posterior volverá a intentar el modo semántico.
-
-La antigüedad de la última comprobación no retira por sí sola una aplicación disponible. Si la resolución ha caducado, el sistema la revalida al preparar la descarga. Un fallo transitorio permite reintentar sin alterar la categoría; un fallo terminal invalida el candidato y la aplicación cambia de estado solo si no queda otra fuente válida.
+Si el modelo o el índice semántico no están disponibles, la consulta no cumple el mínimo o la enumeración no puede completarse, la petición se ejecuta completa como literal y aparece un aviso breve. Esta degradación no cambia la elección guardada ya que una consulta posterior volverá a intentar el modo semántico.
 
 \section{Crear una descarga}
 
@@ -24,15 +22,17 @@ Marque las aplicaciones de la tabla y use la acción de descarga de la selecció
 
 El servidor valida el conjunto completo. Un bundle de más de cien aplicaciones no se puede descargar ni editar hasta reducirlo; nunca se trunca silenciosamente. Si algunas aplicaciones no tienen una fuente verificable, el trabajo indica cuántas se solicitaron, aceptaron y omitieron. Si ninguna es descargable, se informa del error sin crear un ZIP vacío.
 
-Tras crear el trabajo aparece un panel con su estado, progreso y elementos. Puede cancelarlo mientras no sea terminal. Cuando se completa, el resultado puede ser total o parcial: un ZIP parcial contiene al menos un instalador válido y detalla los elementos omitidos. El botón de archivo obtiene una redirección temporal a MinIO; la dirección de descarga tiene una validez limitada y el ZIP se elimina al vencer la retención de veinticuatro horas.
+Tras crear el trabajo aparece un panel con su estado, progreso y elementos. Puede cancelarlo mientras no sea terminal. Cuando se completa, el resultado puede ser total o parcial: un ZIP parcial contiene al menos un instalador válido y detalla los elementos omitidos. La descarga se guarda a través de Core, que muestra su progreso y puede reanudar una transferencia interrumpida. Mantén abierta la sesión de guardado hasta que termine: el archivo temporal se limpia tras confirmarse el guardado, cancelar el trabajo o agotarse la actividad, sin un plazo fijo de veinticuatro horas para el ZIP.
 
 \section{Bundles, cuenta e historial}
 
-Un visitante puede crear trabajos desde una selección o un bundle público u oficial. El navegador recibe una cookie segura de propiedad para consultar, cancelar o descargar únicamente sus trabajos. No borre las cookies del sitio hasta recuperar el ZIP; si se eliminan, el trabajo anónimo deja de ser accesible desde ese navegador. Esta cookie no se muestra ni se añade a enlaces compartidos.
+Un visitante puede crear trabajos desde una selección o un bundle público u oficial. El navegador recibe una cookie segura de propiedad para consultar, cancelar o descargar únicamente sus trabajos. No borre las cookies del sitio hasta recuperar el ZIP ya que, si se eliminan, el trabajo anónimo deja de ser accesible desde ese navegador. Esta cookie no se muestra ni se añade a enlaces compartidos.
 
-Los usuarios autenticados conservan los mismos flujos, verifican el correo y pueden recuperar la cuenta mediante el flujo de restablecimiento de contraseña. El panel personal muestra el perfil, las descargas recientes y el historial paginado. Desde \emph{Mis bundles} se pueden crear, editar y eliminar bundles propios; cada uno puede ser privado o público. Los bundles públicos aparecen en el catálogo y los privados solo se muestran a su propietario. Los bundles oficiales continúan bajo mantenimiento administrativo. Las notificaciones de finalización se envían solo cuando el correo está verificado.
+El enlace de acceso confirma el control del correo y crea o recupera la sesión sin contraseña de usuario. Si el enlace caduca o ya se ha consumido, solicita otro desde la pantalla de acceso. El panel personal muestra el perfil, las descargas recientes y el historial paginado. Desde \emph{Mis bundles} se pueden crear, editar y eliminar bundles propios; cada uno puede ser privado o público. Los bundles públicos aparecen en el catálogo y los privados solo se muestran a su propietario. Los bundles oficiales continúan bajo mantenimiento administrativo. La disponibilidad de avisos de finalización depende de la configuración del servicio; la política del despliegue público describe Resend para el correo de acceso.
 
-Las solicitudes públicas de incorporación de aplicaciones y el acceso mediante Google OAuth no forman parte de la versión actual.
+\subsection{Conservación de datos y eliminación de cuenta}
+
+La cuenta, sus bundles y el historial de descargas se conservan mientras exista la cuenta. Desde el perfil puedes solicitar \emph{Eliminar cuenta}, previa confirmación. La solicitud deshabilita el acceso, invalida las sesiones y elimina los bundles, el historial y los enlaces de acceso asociados. El borrado definitivo termina cuando se han cancelado y limpiado los trabajos y ZIP pendientes.
 
 \section{Administración del contenido}
 
@@ -46,4 +46,4 @@ Tampoco existe una pantalla administrativa de entrenamiento. La indexación vali
 
 Los estados \emph{En cola}, \emph{Resolviendo}, \emph{Descargando}, \emph{Empaquetando}, \emph{Listo}, \emph{Parcial}, \emph{Solo manual}, \emph{Fallido}, \emph{Cancelado} y \emph{Expirado} explican el ciclo de vida del trabajo. Ante un resultado parcial o fallido revise el código de fallo y el detalle de cada aplicación. Un resultado \emph{Parcial} conserva su ZIP con los instaladores correctos; \emph{Solo manual} contiene accesos \ruta{.url} a páginas oficiales HTTPS. Si fallan todos los elementos, el trabajo termina como \emph{Fallido} y no ofrece un archivo vacío. Para Linux se elige el perfil APT, DNF, Pacman o Zypper y se muestran las comprobaciones SHA-256/GPG disponibles.
 
-La interfaz es navegable por teclado. Los controles de filtro indican su estado con \ruta{aria-pressed} y el marcapáginas informa si el panel está expandido. Si el servicio de traducciones no está disponible, el cliente conserva el catálogo español empaquetado para no bloquear el uso básico del catálogo.
+La interfaz ofrece textos en español e inglés y un selector persistente. Los controles de filtro indican su estado con \ruta{aria-pressed} y el marcapáginas informa si el panel está expandido. Si el servicio de traducciones no está disponible, el cliente recurre al catálogo local de referencia para no bloquear el uso básico.
