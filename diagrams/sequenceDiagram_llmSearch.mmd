@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    participant A as Administrador o scheduler
+    participant S as Supervisor de descripciones
+    participant Q as so_filter_descriptor
+    participant G as Groq
+    participant D as DeepSeek opcional
+    participant C as Catálogo MySQL
+
+    A->>S: Encolar descripciones ausentes
+    S->>Q: Adquirir lease y aplicar cooldown
+    S->>G: Generar descripción con modelo configurado
+    alt Cuota o fallo transitorio
+        S->>G: Rotar modelo de respaldo
+    end
+    alt Groq no disponible y DeepSeek configurado
+        S->>D: Último respaldo
+        D-->>S: Texto
+    else Groq responde
+        G-->>S: Texto
+    end
+    S->>S: Validar contenido
+    S->>C: Guardar descripción
+    S->>Q: Completar elemento
+    Note over A,C: No hay embeddings, búsqueda semántica ni decisión de descarga

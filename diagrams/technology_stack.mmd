@@ -1,0 +1,99 @@
+%%{init: {"theme": "default", "themeVariables": {"fontFamily": "Arial, sans-serif", "fontSize": "22px"}, "themeCSS": ".cluster-label { font-family: Arial, sans-serif !important; font-size: 26px !important; font-weight: 700 !important; } .nodeLabel { font-family: Arial, sans-serif !important; }", "flowchart": {"subGraphTitleMargin": {"top": 14, "bottom": 16}}}}%%
+flowchart TB
+    %% Inventario complementario: nombre de cada tecnología bajo su logotipo.
+    %% Iconos de @iconify-json/logos@1.2.16 y @iconify-json/simple-icons@1.2.100.
+    %% Mermaid CLI: --iconPacksNamesAndUrls logos#https://unpkg.com/@iconify-json/logos@1.2.16/icons.json simple-icons#https://unpkg.com/@iconify-json/simple-icons@1.2.100/icons.json
+
+    %% Cliente web y entrega.
+    subgraph WEB["Cliente web"]
+        direction LR
+        HTML@{ icon: "logos:html-5", label: "HTML5", pos: "b", h: 76 }
+        CSS@{ icon: "logos:css-3", label: "CSS3", pos: "b", h: 76 }
+        REACT@{ icon: "logos:react", label: "React", pos: "b", h: 76 }
+        ROUTER@{ icon: "logos:react-router", label: "React Router", pos: "b", h: 76 }
+        TYPESCRIPT@{ icon: "logos:typescript-icon", label: "TypeScript", pos: "b", h: 76 }
+        LUCIDE@{ icon: "simple-icons:lucide", label: "Lucide", pos: "b", h: 76 }
+        VITE@{ icon: "logos:vite-icon", label: "Vite", pos: "b", h: 76 }
+        NODE@{ icon: "logos:nodejs-icon", label: "Node.js", pos: "b", h: 76 }
+        NGINX@{ icon: "logos:nginx", label: "Nginx", pos: "b", h: 76 }
+        WEBSOCKET@{ icon: "logos:websocket", label: "WebSocket / SSE", pos: "b", h: 76 }
+        HTML ~~~ CSS ~~~ REACT ~~~ ROUTER ~~~ TYPESCRIPT ~~~ LUCIDE ~~~ VITE ~~~ NODE ~~~ NGINX ~~~ WEBSOCKET
+    end
+
+    %% Servicios Java y Python; las bibliotecas sin marca propia quedan representadas por su ecosistema.
+    subgraph SERVICES["Servicios y bibliotecas"]
+        direction LR
+        JAVA@{ icon: "logos:java", label: "Java", pos: "b", h: 76 }
+        SPRING@{ icon: "logos:spring-icon", label: "Spring", pos: "b", h: 76 }
+        BOOT@{ icon: "simple-icons:springboot", label: "Spring Boot", pos: "b", h: 76 }
+        SECURITY@{ icon: "simple-icons:springsecurity", label: "Spring Security", pos: "b", h: 76 }
+        PYTHON@{ icon: "logos:python", label: "Python", pos: "b", h: 76 }
+        FASTAPI@{ icon: "logos:fastapi-icon", label: "FastAPI", pos: "b", h: 76 }
+        PYDANTIC@{ icon: "simple-icons:pydantic", label: "Pydantic", pos: "b", h: 76 }
+        SQLALCHEMY@{ icon: "simple-icons:sqlalchemy", label: "SQLAlchemy", pos: "b", h: 76 }
+        JAVA ~~~ SPRING ~~~ BOOT ~~~ SECURITY ~~~ PYTHON ~~~ FASTAPI ~~~ PYDANTIC ~~~ SQLALCHEMY
+    end
+
+    %% Scraping, búsqueda semántica y generación externa.
+    subgraph ENRICHMENT["Scraping, búsqueda e IA"]
+        direction LR
+        PLAYWRIGHT@{ icon: "logos:playwright", label: "Playwright", pos: "b", h: 76 }
+        NUMPY@{ icon: "logos:numpy", label: "NumPy", pos: "b", h: 76 }
+        PYTORCH@{ icon: "logos:pytorch-icon", label: "PyTorch", pos: "b", h: 76 }
+        HUGGINGFACE@{ icon: "logos:hugging-face-icon", label: "Transformers", pos: "b", h: 76 }
+        GITHUB@{ icon: "logos:github-icon", label: "GitHub Releases", pos: "b", h: 76 }
+        GROQ@{ icon: "logos:groq", label: "Groq", pos: "b", h: 76 }
+        DEEPSEEK@{ icon: "logos:deepseek-icon", label: "DeepSeek", pos: "b", h: 76 }
+        PLAYWRIGHT ~~~ NUMPY ~~~ PYTORCH ~~~ HUGGINGFACE ~~~ GITHUB ~~~ GROQ ~~~ DEEPSEEK
+    end
+
+    %% Bases de datos, colas, objetos y servicios externos.
+    subgraph INTEGRATIONS["Datos e integraciones"]
+        direction LR
+        MYSQL@{ icon: "logos:mysql-icon", label: "MySQL", pos: "b", h: 76 }
+        FLYWAY@{ icon: "simple-icons:flyway", label: "Flyway", pos: "b", h: 76 }
+        H2@{ icon: "simple-icons:h2database", label: "H2", pos: "b", h: 76 }
+        POSTGRES@{ icon: "logos:postgresql", label: "PostgreSQL / pgvector", pos: "b", h: 76 }
+        RABBIT@{ icon: "logos:rabbitmq-icon", label: "RabbitMQ", pos: "b", h: 76 }
+        MINIO@{ icon: "simple-icons:minio", label: "MinIO", pos: "b", h: 76 }
+        RESEND@{ icon: "logos:resend-icon", label: "Resend", pos: "b", h: 76 }
+        MYSQL ~~~ FLYWAY ~~~ H2 ~~~ POSTGRES ~~~ RABBIT ~~~ MINIO ~~~ RESEND
+    end
+
+    %% Contratos y comprobación de calidad.
+    subgraph QUALITY["Contratos y calidad"]
+        direction LR
+        OPENAPI@{ icon: "logos:openapi-icon", label: "OpenAPI", pos: "b", h: 76 }
+        JSONSCHEMA@{ icon: "logos:json-schema-icon", label: "JSON Schema", pos: "b", h: 76 }
+        VITEST@{ icon: "logos:vitest", label: "Vitest", pos: "b", h: 76 }
+        TESTINGLIBRARY@{ icon: "simple-icons:testinglibrary", label: "Testing Library", pos: "b", h: 76 }
+        JEST@{ icon: "logos:jest", label: "jest-dom", pos: "b", h: 76 }
+        PYTEST@{ icon: "simple-icons:pytest", label: "pytest", pos: "b", h: 76 }
+        JUNIT@{ icon: "simple-icons:junit5", label: "JUnit 5", pos: "b", h: 76 }
+        ESLINT@{ icon: "logos:eslint", label: "ESLint", pos: "b", h: 76 }
+        RUFF@{ icon: "simple-icons:ruff", label: "Ruff", pos: "b", h: 76 }
+        SONAR@{ icon: "logos:sonarqube", label: "SonarQube", pos: "b", h: 76 }
+        OPENAPI ~~~ JSONSCHEMA ~~~ VITEST ~~~ TESTINGLIBRARY ~~~ JEST ~~~ PYTEST ~~~ JUNIT ~~~ ESLINT ~~~ RUFF ~~~ SONAR
+    end
+
+    %% Construcción y despliegue.
+    subgraph DELIVERY["Construcción y despliegue"]
+        direction LR
+        GIT@{ icon: "logos:git-icon", label: "Git", pos: "b", h: 76 }
+        MAVEN@{ icon: "logos:maven", label: "Maven", pos: "b", h: 76 }
+        NPM@{ icon: "logos:npm-icon", label: "npm", pos: "b", h: 76 }
+        DOCKER@{ icon: "logos:docker-icon", label: "Docker Compose", pos: "b", h: 76 }
+        ACTIONS@{ icon: "logos:github-actions", label: "GitHub Actions / GHCR", pos: "b", h: 76 }
+        COOLIFY@{ icon: "simple-icons:coolify", label: "Coolify", pos: "b", h: 76 }
+        ORACLE@{ icon: "logos:oracle", label: "Oracle VPS", pos: "b", h: 76 }
+        GIT ~~~ MAVEN ~~~ NPM ~~~ DOCKER ~~~ ACTIONS ~~~ COOLIFY ~~~ ORACLE
+    end
+
+    WEB ~~~ SERVICES ~~~ ENRICHMENT ~~~ INTEGRATIONS ~~~ QUALITY ~~~ DELIVERY
+
+    style WEB fill:#e8f3fb,stroke:#4d81aa,stroke-width:2px
+    style SERVICES fill:#eaf4ef,stroke:#538a70,stroke-width:2px
+    style ENRICHMENT fill:#e9f7f7,stroke:#4f9294,stroke-width:2px
+    style INTEGRATIONS fill:#fff0e8,stroke:#b87659,stroke-width:2px
+    style QUALITY fill:#f2ecfa,stroke:#8770ab,stroke-width:2px,stroke-dasharray:5 3
+    style DELIVERY fill:#fff5df,stroke:#ac8b43,stroke-width:2px,stroke-dasharray:5 3

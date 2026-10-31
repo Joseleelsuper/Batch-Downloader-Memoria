@@ -2,81 +2,273 @@
 
 \section{Introducción}
 
-TODO: Este anexo establece una planificación provisional para transformar el diseño de Batch Downloader en una aplicación verificable. Las semanas son relativas al inicio de la implementación, por lo que pueden adaptarse al calendario académico sin alterar las dependencias entre fases.
+Este anexo registra la planificación aplicada para transformar el diseño de Batch Downloader en la aplicación que es a día de hoy.
 
-El trabajo seguirá un enfoque iterativo. Cada fase terminará con una demostración, pruebas automatizadas y actualización de la documentación. Las funcionalidades de inteligencia artificial y despliegue distribuido se abordarán después de validar el núcleo de descarga.
+El trabajo sigue un enfoque iterativo. Cada fase concluye con pruebas automatizadas y con la actualización de la documentación. Tanto el descubrimiento automatizado de instaladores como la búsqueda semántica se revisan con la misma atención que la seguridad y la limpieza temporal.
 
 \section{Metodología}
 
 Se utilizará un tablero de tareas con una lista priorizada y ciclos semanales. Cada elemento deberá incluir descripción, criterios de aceptación, riesgos y pruebas. Una tarea se considerará terminada cuando:
 
 \begin{itemize}
-	\item el código esté integrado en la rama principal del proyecto;
-	\item las pruebas relacionadas sean reproducibles;
-	\item no exponga secretos ni datos personales;
-	\item la documentación afectada esté actualizada;
-	\item el flujo pueda demostrarse en el entorno de desarrollo.
+	\item Las pruebas relacionadas sean reproducibles.
+	\item La documentación afectada esté actualizada.
+	\item El código esté integrado en la rama principal del proyecto.
+	\item El flujo pueda demostrarse en el ambos entornos, local y producción.
 \end{itemize}
 
-Las revisiones con los tutores se utilizarán para confirmar alcance, arquitectura y presentación de resultados. Los cambios relevantes se registrarán como decisiones de arquitectura para evitar que la memoria y la implementación evolucionen de forma contradictoria.
-
-\section{Planificación temporal}
+\section{Planificación inicial}
 
 \begin{longtable}{p{0.14\textwidth}p{0.25\textwidth}p{0.51\textwidth}}
-\caption{Planificación provisional por fases.}\label{tabla:planificacion}\\
-\toprule
-\textbf{Semanas} & \textbf{Fase} & \textbf{Resultados esperados}\\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Semanas} & \textbf{Fase} & \textbf{Resultados esperados}\\
-\midrule
-\endhead
-1--2 & Preparación & Repositorios, convenciones, entornos Docker, integración continua, modelos iniciales y contrato OpenAPI.\\
-3--4 & Catálogo y seguridad base & Usuarios, roles, aplicaciones, fuentes, etiquetas, validación de entradas y panel administrativo mínimo.\\
-5--7 & Resolución y descargas & Playwright, dominios permitidos, protección SSRF, RabbitMQ, workers y estados de trabajos.\\
-8--9 & ZIP y temporales & Descarga controlada, manifiesto, resultado parcial, MinIO temporal, cancelación y limpieza automática.\\
-10--11 & Bundles y estrellas & Bundles públicos, privados y oficiales, personalización temporal, enlaces, clonación y estrella binaria.\\
-12 & Solicitudes y avisos & Peticiones de nuevo software, revisión administrativa y notificaciones configurables.\\
-13--14 & Búsqueda semántica & Embeddings, PostgreSQL con pgvector, consultas por intención y filtros de negocio.\\
-15 & Asistencia con LLM & Recomendaciones explicables, borradores de bundles, validación de esquemas y resumen de errores.\\
-16--17 & Pruebas y rendimiento & Integración, extremo a extremo, seguridad, carga, concurrencia y consumo de almacenamiento.\\
-18 & Despliegue y cierre & Imágenes definitivas, demostración, documentación, manuales y preparación de defensa.\\
-\bottomrule
+	\caption{Planificación provisional por fases.}\label{tabla:planificacion}                                                                                                        \\
+	\toprule
+	\textbf{Semanas} & \textbf{Fase}             & \textbf{Resultados esperados}                                                                                                     \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Semanas} & \textbf{Fase}             & \textbf{Resultados esperados}                                                                                                     \\
+	\midrule
+	\endhead
+	1--2             & Preparación               & Repositorios, convenciones, entornos Docker, integración continua, modelos iniciales y contrato OpenAPI.                          \\
+	3--4             & Catálogo y seguridad base & Usuarios, roles, aplicaciones, fuentes, etiquetas, validación de entradas y panel administrativo mínimo.                          \\
+	5--7             & Resolución y descargas    & Playwright, validación HTTPS y de red pública, RabbitMQ, workers y estados de trabajos.                                           \\
+	8--9             & ZIP y temporales          & Descarga controlada, manifiesto, resultado parcial, MinIO temporal, cancelación y limpieza automática.                            \\
+	10--11           & Bundles y cuenta          & Bundles oficiales y propios públicos o privados, panel personal e historial de descargas; clonación y estrellas quedan diferidas. \\
+	12               & Instaladores y avisos     & Selección de versiones, perfiles Linux, accesos manuales \ruta{.url}, verificación y notificaciones configurables.                \\
+	13--14           & Búsqueda semántica        & Feed canónico, PostgreSQL/pgvector, modelo local aprovisionado, indexación y degradación segura a literal.                        \\
+	15               & Asistencia con LLM        & Enriquecimiento validado de descripciones con Groq y DeepSeek; no se implementan recomendaciones ni borradores.                   \\
+	16--17           & Pruebas y rendimiento     & Integración, seguridad y consumo de almacenamiento; la carga sostenida queda pendiente si no existe un entorno controlado.        \\
+	18               & Despliegue y cierre       & Imágenes definitivas, demostración, documentación, manuales y preparación de defensa.                                             \\
+	\bottomrule
 \end{longtable}
+
+\section{Planificación final}
+
+TODO: Por hacer
+
+\section{Estado de ejecución}
+
+El corte final incluye catálogo, filtros por sistema operativo, acceso de usuarios mediante enlace de un solo uso, roles, trabajos asíncronos, almacenamiento temporal, bundles con propiedad explícita, panel personal, historial, contratos y el pipeline persistente del scraper. La clasificación del catálogo se materializa en MySQL. La búsqueda semántica utiliza un modelo local y una proyección pgvector, el cual vuelve a literal ante incoherencias. Groq y DeepSeek solo enriquecen descripciones. La interfaz dispone de catálogos español e inglés.
+
+Las pruebas locales focalizadas de ambos cortes se detallan en el anexo~\ref{anexo:pruebas}; incluyen MySQL real para la proyección y PostgreSQL/pgvector real para el servicio semántico.
 
 \section{Hitos}
 
 \begin{description}
 	\item[H1 - Catálogo utilizable:] un administrador puede registrar aplicaciones y un usuario puede buscarlas.
-	\item[H2 - Descarga segura:] una selección genera un ZIP desde dominios autorizados y elimina los temporales.
-	\item[H3 - Comunidad:] los usuarios pueden crear, publicar, personalizar y valorar bundles.
-	\item[H4 - Búsqueda semántica:] una consulta por intención devuelve aplicaciones válidas del catálogo.
+	\item[H2 - Descarga segura:] una selección genera un ZIP desde fuentes validadas y elimina los temporales.
+	\item[H3 - Bundles y cuenta:] los usuarios consultan bundles visibles, mantienen sus bundles públicos o privados y disponen de panel e historial; la administración conserva los bundles oficiales.
+	\item[H4 - Búsqueda semántica:] el catálogo ofrece modos literal y semántico, con modelo local aprovisionado, cobertura controlada y fallback seguro.
 	\item[H5 - Entrega:] el sistema se despliega, se prueba y los manuales reflejan el comportamiento real.
 \end{description}
 
 \section{Gestión de riesgos}
 
-\begin{longtable}{p{0.27\textwidth}p{0.13\textwidth}p{0.13\textwidth}p{0.37\textwidth}}
-\caption{Riesgos principales y mitigaciones.}\label{tabla:riesgos}\\
-\toprule
-\textbf{Riesgo} & \textbf{Prob.} & \textbf{Impacto} & \textbf{Mitigación}\\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Riesgo} & \textbf{Prob.} & \textbf{Impacto} & \textbf{Mitigación}\\
-\midrule
-\endhead
-Cambios frecuentes en páginas oficiales & Alta & Alta & Resolver genérico, resolvers específicos, pruebas programadas y revisión manual.\\
-Uso del servidor como proxy de descargas & Media & Alta & Cuotas, rate limiting, límites por IP y usuario, CAPTCHA opcional y auditoría.\\
-Ataques SSRF & Media & Crítico & Allowlist, validación DNS e IP tras cada redirección, HTTPS y bloqueo de redes internas.\\
-Consumo excesivo de disco o red & Media & Alta & Límites, streaming futuro, expiración, limpieza periódica y métricas.\\
-Incompatibilidad entre Java y dependencias & Baja & Media & Prototipo inicial y posibilidad de adoptar una versión LTS compatible.\\
-Respuestas incorrectas del LLM & Alta & Media & Recuperación cerrada, esquemas, filtros deterministas y degradación sin LLM.\\
-Alcance excesivo & Alta & Alta & Priorizar el núcleo, resolvers avanzados y modelo local después del producto mínimo.\\
-Falta de tiempo para manuales & Media & Media & Mantener esqueletos y completarlos durante las pruebas de aceptación.\\
-\bottomrule
+Se adopta la secuencia requisito--riesgo--caso--resultado del material de análisis de riesgos y pruebas~\cite{riskTestingGuide}. La probabilidad (P) y el impacto (I) se estiman de 1 (raro o leve) a 5 (frecuente o crítico), donde el nivel es el producto de ambas escalas. Las puntuaciones de 1 a 5 son bajas, las de 6 a 12 medias y las de 15 a 25 altas.
+
+\begin{table}[H]
+	\centering\small
+	\begin{tabular}{c|ccccc}
+		\toprule
+		\textbf{P/I} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} \\
+		\midrule
+		5            & 5 B        & 10 M       & 15 A       & 20 A       & 25 A       \\
+		4            & 4 B        & 8 M        & 12 M       & 16 A       & 20 A       \\
+		3            & 3 B        & 6 M        & 9 M        & 12 M       & 15 A       \\
+		2            & 2 B        & 4 B        & 6 M        & 8 M        & 10 M       \\
+		1            & 1 B        & 2 B        & 3 B        & 4 B        & 5 B        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Matriz (5\ensuremath{\times}5): puntuación y nivel bajo (B), medio (M) o alto (A).}
+	\label{tabla:matriz-riesgos}
+\end{table}
+
+\begin{table}[H]
+	\centering\small
+	\setlength{\tabcolsep}{5pt}
+	\begin{tabular}{c|ccccc}
+		\toprule
+		\textbf{P/I} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5}       \\
+		\midrule
+		5            & ---        & ---        & ---        & ---        & ---              \\
+		4            & ---        & ---        & ---        & ---        & ---              \\
+		3            & ---        & ---        & R-12       & R-04, R-11 & R-07, R-09       \\
+		2            & ---        & ---        & R-10       & R-06, R-08 & R-01, R-03, R-05 \\
+		1            & ---        & ---        & ---        & R-02       & ---              \\
+		\bottomrule
+	\end{tabular}
+	\caption{Ubicación de los riesgos residuales del corte C2 en la matriz de probabilidad e impacto.}
+	\label{tabla:matriz-riesgos-c2}
+\end{table}
+
+En la tabla~\ref{tabla:riesgos}, \emph{producto} indica un efecto sobre el servicio o sus usuarios y \emph{proyecto} una amenaza para la entrega u operación. Cada celda de evaluación expresa probabilidad, impacto y puntuación. La tabla~\ref{tabla:matriz-riesgos-c2} coloca todos los identificadores por sus parejas (P,I) de C2; R-07 y R-09 ocupan la celda (3,5), de nivel alto.
+
+{\footnotesize
+	\setlength{\tabcolsep}{3pt}
+	\begin{longtable}{p{0.07\textwidth}p{0.32\textwidth}p{0.15\textwidth}p{0.12\textwidth}p{0.12\textwidth}p{0.12\textwidth}}
+		\caption{Registro de riesgos: causa, efecto y evolución de la exposición.}\label{tabla:riesgos}                                                                                                      \\
+		\toprule
+		\textbf{ID} & \textbf{Causa y consecuencia}                                            & \textbf{Categoría}   & \textbf{Inicial}           & \textbf{C1}                & \textbf{C2}                \\
+		\midrule
+		\endfirsthead
+		\toprule
+		\textbf{ID} & \textbf{Causa y consecuencia}                                            & \textbf{Categoría}   & \textbf{Inicial}           & \textbf{C1}                & \textbf{C2}                \\
+		\midrule
+		\endhead
+		R-01        & URL o redirección maliciosa: acceso a redes internas (SSRF).             & Producto / seguridad & (4\ensuremath{\times}5=20) & (2\ensuremath{\times}5=10) & (2\ensuremath{\times}5=10) \\
+		R-02        & Nombre o binario no confiable: ZIP inseguro o contenido incorrecto.      & Producto / seguridad & (3\ensuremath{\times}4=12) & (1\ensuremath{\times}4=4)  & (1\ensuremath{\times}4=4)  \\
+		R-03        & Descargas grandes y simultáneas: saturación de disco o servicio.         & Producto / operación & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (2\ensuremath{\times}5=10) \\
+		R-04        & Cambios en páginas oficiales: fuentes rotas o instaladores erróneos.     & Producto / externo   & (5\ensuremath{\times}4=20) & (3\ensuremath{\times}4=12) & (3\ensuremath{\times}4=12) \\
+		R-05        & Enlace o permiso mal gestionado: acceso a cuenta o trabajo ajeno.        & Producto / seguridad & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (2\ensuremath{\times}5=10) \\
+		R-06        & Migración o proyección incoherente: estados y contadores incorrectos.    & Producto / datos     & (4\ensuremath{\times}4=16) & (2\ensuremath{\times}4=8)  & (2\ensuremath{\times}4=8)  \\
+		R-07        & Conservación o terceros mal controlados: exposición de datos personales. & Producto / legal     & (4\ensuremath{\times}5=20) & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) \\
+		R-08        & Índice semántico parcial: resultados, facetas o páginas incoherentes.    & Producto / calidad   & (4\ensuremath{\times}4=16) & (2\ensuremath{\times}4=8)  & (2\ensuremath{\times}4=8)  \\
+		R-09        & Despliegue sin restauración ensayada: recuperación incierta.             & Proyecto / operación & (4\ensuremath{\times}5=20) & (3\ensuremath{\times}5=15) & (3\ensuremath{\times}5=15) \\
+		R-10        & Alcance y documentación crecientes: entrega difícil de revisar.          & Proyecto / plazo     & (5\ensuremath{\times}3=15) & (3\ensuremath{\times}3=9)  & (2\ensuremath{\times}3=6)  \\
+		R-11        & Condiciones de editores diferentes: incorporación no autorizada.         & Producto / legal     & (4\ensuremath{\times}4=16) & (3\ensuremath{\times}4=12) & (3\ensuremath{\times}4=12) \\
+		R-12        & Descripciones solo en un idioma: experiencia desigual ES/EN.             & Producto / calidad   & (4\ensuremath{\times}3=12) & (4\ensuremath{\times}3=12) & (3\ensuremath{\times}3=9)  \\
+		\bottomrule
+	\end{longtable}
+}
+
+{\small
+	\begin{longtable}{p{0.07\textwidth}p{0.50\textwidth}p{0.13\textwidth}p{0.17\textwidth}}
+		\caption{Respuesta, estado residual y vínculo con la evidencia.}\label{tabla:respuestas-riesgos}                                                     \\
+		\toprule
+		\textbf{ID} & \textbf{Medida o decisión}                                                        & \textbf{Estado C2} & \textbf{Evidencia / caso}     \\
+		\midrule
+		\endfirsthead
+		\toprule
+		\textbf{ID} & \textbf{Medida o decisión}                                                        & \textbf{Estado C2} & \textbf{Evidencia / caso}     \\
+		\midrule
+		\endhead
+		R-01        & Validar HTTPS, DNS, IP efectiva y cada redirección con entradas controladas.      & Mitigado           & CP-01                         \\
+		R-02        & Sanitizar nombres, límites, MIME y firma; validar ZIP y resultado parcial.        & Mitigado           & CP-03                         \\
+		R-03        & Cuotas, reserva global, cola FIFO, streaming y limpieza por actividad.            & Parcial            & CP-04; carga pendiente        \\
+		R-04        & Resolvers específicos, revalidación JIT y revisión manual cuando falte evidencia. & Aceptado           & CP-02; fuente real variable   \\
+		R-05        & Enlace de un uso, sesión, CSRF y autorización por propietario o HMAC.             & Mitigado           & CP-05                         \\
+		R-06        & Proyección incremental, migraciones y pruebas con MySQL real.                     & Parcial            & CP-06; restauración pendiente \\
+		R-07        & Política publicada y minimización; definir purga uniforme y revisar terceros.     & Pendiente          & CP-07; brecha explícita       \\
+		R-08        & Verificar cobertura del índice y degradar la petición completa a literal.         & Mitigado           & CP-08                         \\
+		R-09        & Tags inmutables, objetivos de migración y copias; ensayar restauración completa.  & Pendiente          & CP-09; sin ensayo             \\
+		R-10        & Dos cortes fijos y separación de síntesis y evidencias en anexos.                 & Mitigado           & CP-10                         \\
+		R-11        & Revisar términos y licencias por editor antes de incorporar fuentes.              & Pendiente          & CP-11; revisión por fuente    \\
+		R-12        & Catálogos ES/EN y detección de descripciones faltantes por idioma.                & Parcial            & CP-12; backfill pendiente     \\
+		\bottomrule
+	\end{longtable}
+}
+
+Se acepta la exposición residual de R-04 porque las páginas de terceros pueden cambiar sin aviso .R-03, R-06 y R-12 siguen parcialmente mitigados, con las comprobaciones indicadas aún abiertas. Los riesgos R-07 y R-09 permanecen altos y pendientes en C2. Ninguna prueba focalizada ni observación de la web los convierte en riesgos cerrados. La tabla~\ref{tabla:respuestas-riesgos} enlaza cada respuesta con un caso del anexo~\ref{anexo:pruebas}, donde se distingue resultado ejecutado de comprobación documental o pendiente.
+
+\subsection{Actualización de seguridad: 27 de octubre de 2026}
+\label{sec:riesgos-seguridad-octubre}
+
+Los informes de Codex Security~\cite{codexSecurity} permiten establecer una nueva línea base específica de seguridad y compararla con las correcciones posteriores. El informe completado del 27 de octubre contiene un total de 10 registros marcados como vulnerabilidades.
+
+Se mantienen las escalas P e I y los umbrales de la tabla~\ref{tabla:matriz-riesgos}. Las puntuaciones siguientes son estimaciones ordinales de esta revisión, no severidades asignadas por el escáner ni probabilidades medidas. El impacto se conserva entre cortes; la reducción de probabilidad se apoya en el bloqueo del recorrido conocido y en pruebas de uso legítimo. Se asigna P=4 a entradas externas repetibles, P=3 a escenarios que requieren interacción o condiciones adicionales y P=2 al acceso previo al broker. En S1 se estima P=1 para recorridos bloqueados en las regresiones y P=2 cuando persisten mayor complejidad de red, concurrencia o dependencia del proveedor. Esta última valoración incorpora incertidumbre residual y no afirma que siga abierto el mismo fallo.
+
+Las condiciones de explotación importan. S-07 requiere abrir el CSV en una hoja de cálculo; S-08 presupone un archivo malicioso y un filtro tar permisivo, como \ruta{fully\_trusted}; S-09 afecta a la instalación de sistema; S-13 requiere poder leer y publicar mensajes en el broker. Los riesgos de sesión S-15 a S-17 dependen de la interacción con enlaces, cambios de cuenta o fallos del cierre de sesión. La matriz conserva esas diferencias de exposición.
+
+\begin{table}[H]
+	\centering\small
+	\begin{minipage}[t]{0.48\textwidth}
+		\centering
+		\textbf{S0: antes de corregir}\par
+		\ruta{cf97d2d}\par\medskip
+		\begin{tabular}{c|ccccc}
+			\toprule
+			\textbf{P/I} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} \\
+			\midrule
+			5 & --- & --- & --- & --- & --- \\
+			4 & --- & --- & 2 & 5 & 3 \\
+			3 & --- & --- & 1 & 8 & 4 \\
+			2 & --- & --- & --- & --- & 1 \\
+			1 & --- & --- & --- & --- & --- \\
+			\bottomrule
+		\end{tabular}
+	\end{minipage}\hfill
+	\begin{minipage}[t]{0.48\textwidth}
+		\centering
+		\textbf{S1: residual local}\par
+		\ruta{7f5b71c}\par\medskip
+		\begin{tabular}{c|ccccc}
+			\toprule
+			\textbf{P/I} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} \\
+			\midrule
+			5 & --- & --- & --- & --- & --- \\
+			4 & --- & --- & --- & --- & --- \\
+			3 & --- & --- & --- & --- & --- \\
+			2 & --- & --- & --- & 1 & 5 \\
+			1 & --- & --- & 3 & 12 & 3 \\
+			\bottomrule
+		\end{tabular}
+	\end{minipage}
+	\caption{Nueva matriz comparativa de seguridad. Cada celda indica el número de grupos con esa pareja (P,I); un guion indica ninguno. Cada corte contiene 24 grupos.}
+	\label{tabla:matriz-seguridad-s0-s1}
+\end{table}
+
+El registro de la tabla~\ref{tabla:riesgos-seguridad-s0-s1} reúne los 24 grupos revalidados de ambos informes e identifica su posición en las matrices. Cada evaluación expresa \emph{(P,I); puntuación}. El nivel se obtiene con los mismos umbrales que en el registro general. Los códigos E-J, E-S, E-W, E-L y E-N remiten a las comprobaciones de la tabla~\ref{tabla:evidencia-seguridad-s1}.
+
+\clearpage
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{@{}p{0.075\textwidth}>{\raggedright\arraybackslash}p{0.48\textwidth}p{0.13\textwidth}p{0.13\textwidth}p{0.12\textwidth}@{}}
+	\caption{Riesgos derivados de los hallazgos revalidados y avance de su mitigación local.}\label{tabla:riesgos-seguridad-s0-s1}\\
+	\toprule
+	\textbf{ID} & \textbf{Causa, efecto y corrección} & \textbf{S0} & \textbf{S1} & \textbf{Evid.}\\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{Causa, efecto y corrección} & \textbf{S0} & \textbf{S1} & \textbf{Evid.}\\
+	\midrule
+	\endhead
+	S-01 & Cabeceras de IP falsas eluden cuotas. Tomcat determina la dirección del cliente mediante la cadena de proxies de confianza. & $(4,4);16$ & $(1,4);4$ & E-J\\
+	S-02 & Páginas y redirecciones permiten acceso a la red interna. Se autoriza el destino público de cada conexión y cada salto. & $(4,5);20$ & $(2,5);10$ & E-S\\
+	S-03 & El navegador abre conexiones privadas desde páginas externas. Un proxy valida y fija las IP; se bloquean vías de salida que lo evitan. & $(4,5);20$ & $(2,5);10$ & E-S, E-N\\
+	S-04 & Cuerpos HTML y metadatos excesivos agotan memoria. Se leen en streaming con un presupuesto de bytes. & $(4,4);16$ & $(1,4);4$ & E-S\\
+	S-05 & Los reintentos escriben sin descontar reserva y saturan disco. El consumo se autoriza antes de escribir y solo se devuelve tras borrar. & $(4,5);20$ & $(2,5);10$ & E-J\\
+	S-06 & Un cuerpo de descarga bloqueado retiene capacidad. Un plazo total cierra la lectura y devuelve un error de tiempo agotado. & $(4,4);16$ & $(1,4);4$ & E-J\\
+	S-07 & Metadatos exportados se ejecutan como fórmulas CSV. Los campos peligrosos se marcan como texto antes del escape. & $(3,4);12$ & $(1,4);4$ & E-J\\
+	S-08 & Los enlaces tar afectan a archivos externos. Los enlaces duros solo copian miembros regulares internos y se valida el grafo final. & $(3,5);15$ & $(1,5);5$ & E-L\\
+	S-09 & Permisos escribibles permiten alterar una instalación de sistema. Se normalizan archivos y directorios, incluidos padres implícitos. & $(3,5);15$ & $(1,5);5$ & E-L\\
+	S-10 & Las cabeceras tar consumen recursos antes de los límites. Se acotan metadatos y miembros desde la primera cabecera. & $(3,4);12$ & $(1,4);4$ & E-L\\
+	S-11 & Una nueva resolución DNS evade la validación previa. La conexión utiliza la IP numérica aprobada y conserva la verificación TLS del origen. & $(3,5);15$ & $(2,5);10$ & E-S\\
+	S-12 & Texto largo provoca coste cuadrático al buscar instaladores. La expresión relativa exige el comienzo de un token. & $(4,3);12$ & $(1,3);3$ & E-S\\
+	S-13 & Un token cifrado se reutiliza para otro destinatario. El sobre \ruta{enc:v2} vincula destinatario y finalidad mediante datos autenticados. & $(2,5);10$ & $(1,5);5$ & E-J\\
+	S-14 & Un salto HTTP pierde su marca insegura al terminar en HTTPS. Se conserva la procedencia de toda la navegación. & $(3,4);12$ & $(1,4);4$ & E-S\\
+	S-15 & Un enlace cambia automáticamente la cuenta del navegador. El token se retira de la URL y solo se consume tras confirmación explícita. & $(3,4);12$ & $(1,4);4$ & E-W\\
+	S-16 & Trabajos privados permanecen visibles al cambiar de cuenta. Estado, continuaciones y entrega se vinculan al ámbito de la sesión. & $(3,4);12$ & $(1,4);4$ & E-W\\
+	S-17 & Un cierre fallido aparenta retirar una sesión aún válida. La interfaz conserva la cuenta, informa del error y permite reintentar. & $(3,4);12$ & $(1,4);4$ & E-W\\
+	S-18 & Nombres Unicode exceden el límite del sistema de archivos y provocan reencolado. Se limita su longitud en bytes UTF-8, reservando el sufijo. & $(3,3);9$ & $(1,3);3$ & E-J\\
+	S-19 & Consultas URL anidadas agotan pila o CPU. Se recorren de forma iterativa con límites de profundidad, caracteres, nodos y campos. & $(4,3);12$ & $(1,3);3$ & E-S\\
+	S-20 & Nombres de acceso enormes quedan retenidos en la caché de cuotas. Se guardan huellas de longitud fija, conservando la normalización. & $(4,4);16$ & $(1,4);4$ & E-J\\
+	S-21 & Respuestas lentas evitan el timeout por inactividad del scraper. Un plazo global incluye DNS, saltos y lectura del cuerpo. & $(4,4);16$ & $(1,4);4$ & E-S\\
+	S-22 & La adquisición de Winstall supera el presupuesto antes del límite por ejecución. Se acotan filas, páginas, bytes y plazo; un catálogo incompleto se rechaza. & $(3,4);12$ & $(2,4);8$ & E-S\\
+	S-23 & Respuestas JSON o HTML de Winstall se cargan sin límite. Se aplica lectura acotada con plazo, también al fallback HTML. & $(3,4);12$ & $(1,4);4$ & E-S\\
+	S-24 & Redirecciones del proveedor alcanzan servicios privados. Cada salto pasa por el transporte que autoriza la conexión pública. & $(3,5);15$ & $(2,5);10$ & E-S\\
+	\bottomrule
 \end{longtable}
+\endgroup
+
+\begin{table}[H]
+	\centering\small
+	\begin{tabularx}{\textwidth}{@{}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.18\textwidth}>{\raggedright\arraybackslash}X@{}}
+		\toprule
+		\textbf{Código} & \textbf{Ámbito} & \textbf{Evidencia ejecutada sobre S1}\\
+		\midrule
+		E-J & Java & 460 pruebas superadas: contratos 5, Core 282, worker 113, notificaciones 45 y traducciones 15. Verificación Maven en UTC con JaCoCo, SpotBugs y análisis de dependencias. Incluye cuotas, reservas, cuerpo HTTP bloqueado, CSV y contexto criptográfico.\\
+		E-S & Scraper & 395 pruebas superadas, incluidas las de MySQL real; cobertura del 70,88\,\%. Regresiones de transporte público, DNS, límites de lectura y tiempo, parsing y Winstall; Ruff y mypy correctos.\\
+		E-W & Interfaz & 289 pruebas superadas en 42 archivos; lint, tipos y construcción correctos. Se comprueban confirmación del enlace, sesión inicial diferida, cambio de cuenta, entrega cancelada y reintento de cierre.\\
+		E-L & Instalador Linux & 27 casos unittest: 25 superados y 2 omitidos por requerir Arch/RPM; además, 3 Bats superados y comprobación de ShellCheck/Bash. Los 5 casos tar pasan tanto en Python 3.10 como en 3.14; estas repeticiones no se suman como casos nuevos.\\
+		E-N & Navegador real & Chromium descubre el instalador público de prueba y registra cero conexiones al servidor privado al probar HTTP, TLS, redirecciones, fetch, ventanas emergentes y WebSocket, en un contenedor aislado.\\
+		\bottomrule
+	\end{tabularx}
+	\caption{Evidencias de las correcciones de seguridad, ejecutadas el 27 de octubre de 2026. Estos recuentos corresponden a S1 y no a las selecciones históricas de C1 y C2.}
+	\label{tabla:evidencia-seguridad-s1}
+\end{table}
+
+El avance comprobado es la reparación local de los 24 grupos revalidados, con regresiones de los recorridos afectados. La estimación pasa de 12 riesgos altos y 12 medios en S0 a 18 bajos y 6 medios en S1. Los seis medios residuales son S-02, S-03, S-05, S-11, S-22 y S-24. La comparación muestra una reducción estimada de exposición bajo las condiciones ensayadas; no mide un porcentaje de reducción real del riesgo ni acredita ausencia de nuevas vulnerabilidades. No se ha repetido un análisis completo del repositorio ni completado el análisis cancelado de octubre.
+
+S1 permanece en un commit local: no se ha publicado ni desplegado, por lo que la matriz residual no describe una mejora ya verificada en producción. Su publicación requiere actualizar Core y notificaciones de forma coordinada por el cambio a \ruta{enc:v2}; los sobres \ruta{enc:v1} aún en cola serán rechazados y sus destinatarios deberán solicitar un enlace nuevo. No se ha alterado la cola. Quedan fuera de estas evidencias el ensayo integral de restauración, la carga sostenida y las operaciones nativas omitidas del instalador. Esta actualización complementa el registro general; no cierra los riesgos legales u operativos que seguían pendientes en C2.
 
 \section{Estudio de viabilidad}
 
@@ -84,41 +276,44 @@ Falta de tiempo para manuales & Media & Media & Mantener esqueletos y completarl
 
 Las tecnologías seleccionadas disponen de documentación, bibliotecas para Java y ejecución mediante contenedores. El principal riesgo técnico no es la disponibilidad de herramientas, sino la variabilidad de las fuentes externas y el tratamiento seguro de descargas. Por este motivo se requiere un prototipo temprano con varias páginas de distinta complejidad.
 
-La arquitectura puede simplificarse para el desarrollo local: un frontend, una aplicación Spring modular, un worker y servicios Docker.
+A difernecia de otras aplicaciones web, este proyecto utiliza muchos recursos hardware, lo que obliga a poner límites en un montón de puntos, como por ejemplo: memoria, CPU, concurrencia, tamaño de descarga, tiempo de ejecución, almacenamiento temporal y persistente, número de trabajos simultáneos y caducidad de enlaces.
 
 \subsection{Viabilidad económica}
 
-La siguiente estimación representa el coste equivalente del trabajo y de la infraestructura de desarrollo. No corresponde a gastos ya realizados.
+A día de hoy, no hay anuncios ni cobros por el servicio. Los costos totales del desarrollo y despliegue son 20€/año, ya que solo pago por el dominio y la API de deepseek para generar las descripciones largas. El resto de servicios son gratuitos.
 
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{Xrrr}
-\toprule
-\textbf{Concepto} & \textbf{Cantidad} & \textbf{Precio estimado} & \textbf{Subtotal}\\
-\midrule
-Trabajo de análisis, desarrollo y documentación & 480 h & 15,00 €/h & 7200,00 €\\
-Infraestructura VPS & 5 meses & 15,00 €/mes & 75,00 €\\
-Dominio & 1 & 15,00 € & 15,00 €\\
-\midrule
-\multicolumn{3}{r}{\textbf{Total estimado}} & \textbf{7290,00 €}\\
-\bottomrule
-\end{tabularx}
-\caption{Estimación económica orientativa.}
-\label{tabla:viabilidad-economica}
-\end{table}
+El día de mañana, el plan es poner limitaciones a las cuentas registradas actuales, como un límite más estricto de aplicaciones por lote.
 
-TODO: Para la fase académica podrán utilizarse herramientas de código abierto y niveles gratuitos. El proveedor LLM deberá configurarse con límites de gasto. Un despliegue público real necesitaría revisar costes de transferencia, almacenamiento temporal, observabilidad y soporte.
+No sería un modelo de suscripción, sino un pago único por cuenta, para evitar almacenar datos de pago y que solo se utilicen al momento de ese pago.
 
 \subsection{Viabilidad legal}
 
-La plataforma tratará cuentas, direcciones IP, registros y solicitudes, por lo que deberá cumplir el Reglamento General de Protección de Datos~\cite{rgpd} y la Ley Orgánica 3/2018~\cite{lopdgdd}. Se aplicarán minimización, limitación de finalidad, plazos de conservación, información al usuario y mecanismos para ejercer derechos.
+El RGPD~\cite{rgpd} y la Ley Orgánica 3/2018~\cite{lopdgdd} son el marco para el tratamiento de cuentas, sesiones, IP, registros, búsquedas y descargas. La \href{https://batchdownloader.dev/privacy}{política pública de privacidad}, contrastada con los catálogos de idioma del commit final, identifica finalidades y bases jurídicas declaradas, los proveedores y el canal de ejercicio de derechos. Su publicación no demuestra que todos los plazos y transferencias estén resueltos.
 
-Si se presta como servicio web, deberán publicarse la identificación del responsable, condiciones de uso, política de privacidad y política de cookies conforme a la Ley 34/2002~\cite{lssi}. Los correos solo se enviarán para finalidades solicitadas y con mecanismos para evitar abuso.
+\begin{table}[H]
+	\centering\small
+	\begin{tabularx}{\textwidth}{p{0.22\textwidth}p{0.38\textwidth}X}
+		\toprule
+		\textbf{Ámbito}   & \textbf{Tratamiento o medida observada}                                                                  & \textbf{Límite o comprobación pendiente}                                                               \\
+		\midrule
+		Cuenta y acceso   & Correo y enlace de un solo uso para USER; hash de contraseña para ADMIN; sesiones y registros de acceso. & Limpieza automática de enlaces consumidos o caducados y sesiones caducadas, con cadencia de un minuto. \\
+		Descargas y abuso & Trabajos, recibos, cookies funcionales y huellas HMAC de cookie e IP; ZIP temporal.                      & Las huellas no son necesariamente datos anónimos; verificar plazos de logs, copias y auditoría.        \\
+		Terceros          & Oracle Cloud, Resend, fuentes de iconos y recursos del navegador descritos en la política.               & Revisar encargos, transferencias internacionales y cambios de proveedor efectivos.                     \\
+		Derechos          & Perfil editable, eliminación de cuenta desde el perfil y solicitudes por correo para ejercer derechos.   & Verificar la purga y los plazos de conservación de logs, copias y auditoría.                           \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Tratamientos declarados y límites observados en el corte final.}
+	\label{tabla:viabilidad-legal-datos}
+\end{table}
 
-Los instaladores pertenecen a sus respectivos titulares. Batch Downloader no alterará ni redistribuirá copias permanentes; los procesará temporalmente desde fuentes oficiales para atender una solicitud. Aun así, antes de incorporar cada aplicación deberán revisarse sus condiciones de uso y las limitaciones de automatización. La Ley de Propiedad Intelectual constituye el marco general español aplicable~\cite{propiedadIntelectual}.
+La cookie de propiedad anónima tiene una vigencia de 24 horas, independiente de la vida del ZIP. Los recibos mínimos se purgan una hora después de la limpieza y el mantenimiento retira los trabajos terminales sin almacenamiento asociado, conservando el historial mientras exista la cuenta. Los enlaces consumidos o caducados y las sesiones caducadas se limpian automáticamente; la cadencia de referencia es de un minuto. La auditoría y los identificadores de mensajes procesados tienen un objetivo máximo de 24 horas, descontando la cadencia del limpiador. El usuario puede eliminar su cuenta desde el perfil, previa confirmación: se deshabilita el acceso, se invalidan las sesiones y se eliminan bundles, historial y tokens; el borrado definitivo termina tras cancelar y limpiar los trabajos y ZIP. Las copias con datos de usuario se purgan por antigüedad real con un objetivo máximo de 24 horas y una cadencia de cinco minutos. Los plazos describen la configuración versionada; su ejecución efectiva, los bloqueos y las opciones del bucket deben verificarse en producción. El correo de contacto publicado sigue disponible para las solicitudes de ejercicio de derechos; la política indica un mes para responder, con la posible ampliación motivada del RGPD.
 
-TODO: El código propio se publicará bajo una licencia permisiva, previsiblemente GPL 3.0, tras confirmar que todas las dependencias y recursos son compatibles. La memoria conservará su licencia documental actual. Los nombres y logotipos de terceros se utilizarán únicamente con finalidad identificativa y deberán respetar sus marcas.
+La \href{https://batchdownloader.dev/terms}{página pública de condiciones} y la política de privacidad se contrastan con la Ley 34/2002~\cite{lssi}. La interfaz usa cookies y almacenamiento local funcionales. Los correos de acceso no se describen como publicidad. La verificación integral de las limpiezas en producción, la recuperación de bajas al restaurar una copia y la posible intervención de terceros fuera del Espacio Económico Europeo siguen vinculadas al riesgo R-07, sin afirmar cumplimiento integral. Los registros de acceso de Nginx omiten IP y URL; sus errores detallados se guardan localmente con acceso restringido y se vacían cada hora. El proxy externo y los proveedores requieren comprobación separada.
+
+Los instaladores y sus marcas pertenecen a sus titulares. La ausencia de archivo permanente no resuelve por sí sola las condiciones de descarga, reproducción temporal o automatización de cada editor. Antes de incorporar una fuente debe revisarse su licencia y sus términos; la Ley de Propiedad Intelectual es el marco español general~\cite{propiedadIntelectual}. Esta revisión por fuente permanece abierta como R-11.
+
+El repositorio de aplicación declara GNU GPL versión 3 para el código propio. Este repositorio documental incorpora una licencia Creative Commons BY-NC-ND 4.0 para la memoria~\cite{cc-by-nc-nd}. Ninguna de las dos licencias modifica los derechos sobre los instaladores de terceros.
 
 \section{Criterios de seguimiento}
 
-El avance se medirá por hitos demostrables y cobertura de riesgos, no únicamente por número de funcionalidades. En cada revisión se registrarán tareas completadas, incidencias abiertas, pruebas fallidas, decisiones pendientes y desviación respecto a la planificación. Si el calendario se reduce, se protegerán primero la seguridad, la descarga temporal y la trazabilidad; las capacidades semánticas y el despliegue avanzado se pospondrán antes que degradar esas garantías.
+El avance se medirá por hitos demostrables y cobertura de riesgos. En cada revisión se registrarán tareas completadas, incidencias abiertas, pruebas fallidas, decisiones pendientes y desviación respecto a la planificación.

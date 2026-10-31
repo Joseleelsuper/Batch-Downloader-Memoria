@@ -2,105 +2,107 @@
 
 \section{Catálogo centralizado y fuentes oficiales}
 
-Una plataforma de descarga puede almacenar los binarios o limitarse a mantener información para encontrarlos. Batch Downloader seguirá el segundo enfoque: conservará metadatos y reglas de resolución, mientras que los instaladores se obtendrán bajo demanda. Esta separación reduce la duplicación de ejecutables y evita que el catálogo se convierta en una fuente desactualizada respecto al editor original.
+Una plataforma de descarga puede almacenar los binarios o limitarse a mantener información para encontrarlos. Batch Downloader adopta el segundo enfoque: conserva metadatos y reglas de resolución, mientras que los instaladores se obtienen bajo demanda. Esta separación reduce la duplicación de ejecutables y evita que el catálogo se convierta en una fuente desactualizada respecto al editor original.
 
-El concepto de \emph{fuente oficial} no se limita a la URL visible de una página. Una descarga puede atravesar redirecciones o terminar en una red de distribución de contenidos. Por ello, cada aplicación tendrá una lista de dominios permitidos y la URL final se comprobará antes de aceptar el archivo. La interfaz mostrará tanto la página oficial como el estado y la fecha de la última comprobación disponible.
+El concepto de \emph{fuente oficial} no se limita a la URL visible de una página. Una descarga puede atravesar redirecciones o terminar en una red de distribución de contenidos. La URL final se comprueba antes de aceptar el archivo: se exige HTTPS, se inspeccionan host, puerto, respuestas DNS e IP efectiva y se rechazan destinos internos o reservados. La interfaz muestra la página oficial, el estado y la fecha de la última comprobación disponible.
 
-\section{Bundles y personalización temporal}
+\section{Bundles administrados}
 
-Un bundle es una colección identificable de aplicaciones. Puede representar una necesidad concreta, por ejemplo ``herramientas para desarrollo web'', o ser simplemente una selección personal. El modelo distingue:
+Un bundle es una colección identificable de aplicaciones. Puede representar una necesidad concreta, por ejemplo ``herramientas para desarrollo web'', y proporciona un enlace estable para consultar o descargar la selección completa. En la entrega se distinguen:
 
 \begin{description}
-	\item[Bundle oficial:] creado y mantenido por un administrador.
-	\item[Bundle público:] creado por un usuario registrado y visible mediante un enlace compartible.
-	\item[Bundle privado:] accesible únicamente para su propietario.
-	\item[Bundle temporal:] selección no persistente utilizada para una descarga concreta.
+	\item[Bundle oficial:] colección creada y mantenida desde la administración, consultable mediante la API pública cuando su estado lo permite.
+	\item[Bundle propio:] colección creada por una cuenta autenticada. Puede ser privada, accesible solo desde el panel personal, o pública, en cuyo caso aparece en el catálogo de bundles.
+	\item[Selección temporal:] conjunto de aplicaciones elegido directamente en el catálogo para una descarga concreta.
 \end{description}
 
-La personalización temporal evita confundir la composición publicada con las preferencias de quien la descarga. Al abrir un bundle público, cualquier usuario podrá añadir o retirar aplicaciones antes de generar su ZIP. Esos cambios vivirán solamente en la solicitud actual. La edición persistente seguirá reservada al propietario o, en el caso de bundles oficiales, a un administrador.
+La API pública permite listar, consultar y descargar bundles oficiales y propios públicos. Las rutas bajo \ruta{/api/v1/users/me/bundles} permiten crear, editar y eliminar los bundles de la cuenta autenticada; el control de propiedad usa el UUID de la cuenta y una versión esperada para detectar ediciones concurrentes. El panel personal también reúne el historial de descargas.
 
 \section{Resolución de enlaces y scraping}
 
 Las URL de descarga cambian por versiones, regiones, sistemas operativos o decisiones del proveedor. Un \emph{resolver} es el componente que transforma la información de una aplicación y el contexto solicitado en una URL descargable validada.
 
-La estrategia prevista será progresiva:
+La estrategia implementada es progresiva y combina información estructurada con navegación controlada:
 
 \begin{enumerate}
-	\item utilizar una URL directa configurada y todavía válida;
-	\item utilizar un resolver específico para el proveedor;
-	\item navegar por la página oficial mediante Playwright, inspeccionando enlaces, botones, redirecciones y tráfico de red;
-	\item marcar la fuente para revisión manual si no se obtiene un resultado seguro.
+	\item Consultar las API y datos JSON de Winstall.
+	\item Priorizar la web oficial y resolvers específicos, como GitHub Releases.
+	\item Analizar HTML y candidatos HTTP con reglas acotadas.
+	\item Navegar por la página oficial mediante Playwright como último respaldo, inspeccionando enlaces, botones, redirecciones y tráfico de red.
+	\item Marcar la fuente para revisión manual si no se obtiene un resultado seguro.
 \end{enumerate}
 
-Playwright permite controlar navegadores modernos desde Java y ejecutarlos en modo sin interfaz~\cite{playwright}. Su uso será apropiado para páginas que generan los enlaces mediante JavaScript o requieren interacción. La navegación automatizada no elimina las comprobaciones posteriores: el resultado deberá seguir utilizando HTTPS, pertenecer a un dominio permitido y cumplir los límites establecidos.
+Playwright permite controlar navegadores modernos en modo sin interfaz~\cite{playwright}. En el proyecto se encapsula como respaldo de los resolvers de Python; El resultado debe mantener HTTPS, resolver a una red pública, cumplir los límites establecidos y superar la validación del binario.
 
 \section{Procesamiento asíncrono}
 
 Resolver varias páginas, descargar archivos grandes y comprimirlos puede superar el tiempo razonable de una petición HTTP. El procesamiento asíncrono separa la creación de la solicitud de su ejecución.
 
-El backend validará la selección y publicará un mensaje en RabbitMQ. Un worker consumirá ese mensaje y actualizará el estado del trabajo a medida que avance. Spring AMQP proporciona abstracciones para enviar y recibir mensajes y para implementar consumidores dirigidos por mensajes~\cite{springamqp}. El usuario consultará el progreso mediante la API y descargará el ZIP cuando el estado sea \emph{ready}.
+El Core valida la selección y publica un mensaje mediante un patrón outbox en RabbitMQ. El mensaje transporta exclusivamente identificadores. El worker consume el comando de forma idempotente, solicita al scraper la resolución interna autenticada y actualiza el estado a través de eventos. Spring AMQP proporciona las abstracciones de envío y consumo~\cite{springamqp}. El usuario recibe progreso mediante SSE, dispone de sondeo como respaldo y descarga el ZIP cuando se completa el trabajo.
 
 Los estados previstos para un trabajo son:
 
 \begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Estado} & \textbf{Significado}\\
-\midrule
-\emph{queued} & Espera de un worker disponible.\\
-\emph{resolving} & Resolución y validación de fuentes.\\
-\emph{downloading} & Descarga temporal de instaladores.\\
-\emph{compressing} & Construcción del ZIP y del manifiesto.\\
-\emph{ready} & Archivo preparado para su entrega.\\
-\emph{failed} & No se ha podido producir un resultado válido.\\
-\emph{cancelled} & Trabajo cancelado por el usuario o el sistema.\\
-\emph{expired} & Resultado eliminado al superar su tiempo de vida.\\
-\bottomrule
-\end{tabular}
+	\begin{tabularx}{0.92\textwidth}{p{0.25\textwidth}X}
+		\toprule
+		\textbf{Estado}    & \textbf{Significado}                                 \\
+		\midrule
+		\emph{QUEUED}      & Espera de un worker disponible.                      \\
+		\emph{RESOLVING}   & Resolución interna de fuentes.                       \\
+		\emph{DOWNLOADING} & Descarga temporal y validación de instaladores.      \\
+		\emph{PACKAGING}   & Construcción del ZIP y del manifiesto.               \\
+		\emph{READY}       & Archivo completo preparado para su entrega.          \\
+		\emph{PARTIAL}     & Archivo preparado con al menos un instalador válido. \\
+		\emph{FAILED}      & No se ha podido producir un resultado válido.        \\
+		\emph{CANCELLED}   & Trabajo cancelado de forma idempotente.              \\
+		\emph{EXPIRED}     & Resultado y objetos temporales eliminados.           \\
+		\bottomrule
+	\end{tabularx}
 \end{center}
 
 \section{Generación temporal del ZIP}
 
-Cada trabajo utilizará un espacio aislado identificado por su código. Los instaladores no se incorporarán a un almacenamiento permanente del catálogo. MinIO podrá emplearse como almacenamiento de objetos temporal para compartir artefactos entre workers, aplicar tiempos de expiración y evitar que el servidor web mantenga archivos grandes en su sistema local.
+Cada trabajo utiliza un espacio aislado identificado por su código. Los instaladores no se incorporan a un almacenamiento permanente del catálogo. MinIO almacena temporalmente staging, el manifiesto y el ZIP para compartir artefactos entre workers. Core reserva capacidad, transmite el resultado desde MinIO y coordina la limpieza según los recibos de guardado, la cancelación y la inactividad; la retención no se determina por una caducidad fija del objeto.
 
-El ZIP incluirá una carpeta con los instaladores disponibles, un fichero \ruta{manifest.json} y un documento de lectura. El manifiesto registrará la aplicación, la fuente oficial, el sistema operativo, la arquitectura, el nombre del archivo y el resultado de la validación. Si alguna descarga falla, se añadirá una explicación y el ZIP podrá completarse con los archivos restantes.
+El ZIP incluye los instaladores disponibles en su raíz y un fichero \ruta{manifest.json}. El manifiesto registra la aplicación, el sistema operativo, la arquitectura, el nombre del archivo y el resultado del elemento. Si alguna descarga falla, el trabajo puede terminar como \emph{PARTIAL} y conservar el ZIP con los archivos restantes; si no se obtiene ninguno, finaliza como \emph{FAILED}.
 
-\section{Embeddings y búsqueda vectorial}
+\section{Embeddings y búsqueda semántica}
 
-Un embedding es una representación numérica de un elemento en un espacio vectorial. Textos con significado relacionado tienden a ocupar posiciones próximas según una medida de distancia. Para cada aplicación se generará un vector a partir de su nombre, descripción, categorías, sistemas soportados, arquitectura y otros metadatos relevantes.
+Un embedding es una representación numérica de un elemento en un espacio vectorial. Textos con significado relacionado tienden a ocupar posiciones próximas según una medida de distancia.
 
-PostgreSQL con pgvector permite almacenar estos vectores junto con los datos de referencia y realizar búsquedas de vecinos cercanos mediante distancia euclídea, producto interno o similitud coseno~\cite{pgvector}. Ante una consulta, el sistema generará su embedding y recuperará los candidatos más próximos. Después aplicará reglas deterministas: compatibilidad de sistema y arquitectura, estado activo, restricciones de seguridad y disponibilidad.
+PostgreSQL con pgvector permite almacenar vectores y realizar búsquedas de vecinos cercanos mediante distancia euclídea, producto interno o similitud coseno~\cite{pgvector}.
 
-La búsqueda semántica complementará, pero no sustituirá, la búsqueda por nombre. Las consultas exactas o parciales seguirán resolviéndose de forma convencional porque son más predecibles y económicas. La búsqueda vectorial se utilizará cuando la consulta exprese una intención, cuando no existan coincidencias suficientes o cuando el usuario active explícitamente el modo semántico.
+En Batch Downloader el vector no sustituye al registro transaccional. El scraper produce un documento canónico limitado a metadatos públicos y calcula un \ruta{contentHash}; el indexador vuelve a generar el embedding cuando cambia ese hash y marca como inactivos los documentos que desaparecen del barrido. El modelo activo se aprovisiona en la imagen o en un volumen persistente con un manifiesto de revisión; el servicio funciona offline y no requiere entrenamiento ni actualización de pesos.
 
-\section{Modelo de lenguaje y generación aumentada con recuperación}
+La búsqueda semántica enumera candidatos mediante similitud coseno y entrega a Core una colección acotada. Si falta el modelo, el índice está incompleto, la consulta no cumple el mínimo o la respuesta no puede enumerarse de forma íntegra, Core descarta la colección y repite la petición completa en modo literal. MySQL aplica después los filtros estructurales, los estados, las facetas, los desempates y la paginación.
 
-El modelo de lenguaje recibirá únicamente contexto recuperado desde el catálogo, los estados de los trabajos o registros internos autorizados. Este patrón, conocido como generación aumentada con recuperación, reduce la necesidad de confiar en conocimiento no verificable del modelo.
+\section{Modelo de lenguaje para enriquecimiento de descripciones}
 
-Durante el desarrollo se prevé utilizar Groq como proveedor de inferencia, cuya API ofrece compatibilidad con clientes del ecosistema OpenAI~\cite{groq}. La integración se encapsulará detrás de una interfaz propia para poder cambiar de proveedor o ejecutar un modelo local sin modificar el resto de la aplicación.
+El modelo de lenguaje recibe metadatos acotados de una aplicación para producir una descripción larga.
 
-Las respuestas se validarán contra esquemas estructurados antes de mostrarse o transformarse en acciones. Las responsabilidades del modelo quedarán limitadas a:
+El enriquecimiento admite Groq y DeepSeek mediante una interfaz desacoplada~\cite{groq}. La configuración selecciona el proveedor y los modelos sin modificar la cola ni el catálogo; los límites de concurrencia y cuota acotan el trabajo. El corte final conserva descripciones largas en español e inglés y permite detectar el idioma que falta para completar el enriquecimiento.
+
+Las respuestas se validan antes de persistirse. Las responsabilidades implementadas del modelo quedan limitadas a:
 
 \begin{itemize}
-	\item explicar por qué unas aplicaciones se ajustan a una consulta;
-	\item sugerir una selección inicial para un bundle;
-	\item resumir errores técnicos en un lenguaje comprensible;
-	\item ayudar al administrador a clasificar incidencias o detectar entradas similares.
+	\item Redactar una descripción larga a partir de metadatos existentes.
+	\item Registrar proveedor, modelo, fecha y error de generación.
+	\item Respetar una descripción manual y permitir reintentos controlados.
 \end{itemize}
 
-El modelo no podrá aprobar dominios, resolver una URL por sí solo, ejecutar descargas, cambiar reglas de scraping, generar un ZIP ni modificar el catálogo sin una operación autorizada y validada por los servicios correspondientes.
+El modelo de lenguaje no puede aprobar dominios, resolver una URL, ejecutar descargas, cambiar reglas de scraping ni generar un ZIP.
 
 \section{Seguridad en la descarga de recursos externos}
 
 El backend recibirá y seguirá URL externas, lo que introduce riesgo de falsificación de peticiones del lado del servidor o SSRF. Un atacante podría intentar acceder a servicios internos, metadatos de infraestructura o redes privadas. La mitigación prevista incluye:
 
 \begin{itemize}
-	\item admitir exclusivamente HTTPS;
-	\item resolver DNS y rechazar direcciones locales, privadas, de enlace local o reservadas;
-	\item repetir la validación después de cada redirección;
-	\item aceptar solo dominios incluidos en la configuración de la aplicación;
-	\item limitar redirecciones, tiempo, tamaño y concurrencia;
-	\item no ejecutar ningún archivo y sanitizar su nombre antes de incorporarlo al ZIP.
+	\item Admitir exclusivamente HTTPS.
+	\item Resolver DNS y rechazar direcciones locales, privadas, de enlace local o reservadas.
+	\item Repetir la validación después de cada redirección.
+	\item No degradar a HTTP y comprobar la red pública después de cada redirección.
+	\item Limitar redirecciones, tiempo, tamaño y concurrencia.
+	\item No ejecutar ningún archivo y sanitizar su nombre antes de incorporarlo al ZIP.
 \end{itemize}
 
-También se aplicarán controles de autenticación, autorización, limitación de frecuencia, cuotas y auditoría. Estas medidas evitan que la plataforma se utilice como proxy de descargas masivas y proporcionan evidencias para investigar incidencias.
+También se aplican controles de autenticación, autorización, limitación de frecuencia, cuotas y auditoría. Estas medidas reducen el riesgo de uso abusivo y proporcionan evidencias para investigar incidencias pero, por desgracia, no garantizan la seguridad absoluta.

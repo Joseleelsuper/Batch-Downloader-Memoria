@@ -1,0 +1,28 @@
+flowchart LR
+    B["Navegador"] -->|"HTTPS"| WEB["Nginx + React/Vite\nwebapp"]
+    WEB -->|"/api"| C["core-api\nSpring Boot"]
+    WEB -->|"/locales"| T["translation-service"]
+
+    C --> MYSQL[("MySQL 8.4 compartido\nFlyway + Alembic")]
+    SA["scraper-api"] --> MYSQL
+    SS["scraper-scheduler"] --> MYSQL
+    C -->|"espera health de scraper"| SA
+    SS -->|"pipeline persistente"| SA
+
+    C -->|"outbox / eventos"| R{{"RabbitMQ"}}
+    R --> W["download-worker"]
+    W --> H2W[("H2 inbox\nvolumen local")]
+    W -->|"sourceRef + token interno"| SA
+    W --> M[("MinIO temporal\nZIP y manifest")]
+
+    R --> N["notification-service"]
+    N --> H2N[("H2 inbox\nvolumen local")]
+    N --> MP["Mailpit\nSMTP local"]
+
+    SEM["semantic-service\nmodelo local + búsqueda"] --> PG[("PostgreSQL + pgvector\nproyección reconstruible")]
+
+    classDef service fill:#e6f6f8,stroke:#007f86,color:#123;
+    classDef data fill:#fff4d6,stroke:#b7791f,color:#423;
+    class WEB,C,T,SA,SS,W,N service;
+    class MYSQL,H2W,H2N,M,MP,PG data;
+    class SEM service;

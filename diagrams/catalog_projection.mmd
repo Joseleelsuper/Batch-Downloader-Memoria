@@ -1,0 +1,15 @@
+flowchart LR
+    RS["resolved_sources\ncatalog_downloadable"] -->|"trigger +1 / -1"| DS["download_sources\ncatalog_downloadable_count"]
+    DS --> GA["catalog_available\ngenerada"]
+    GA -->|"trigger disponible +1 / -1"| APP["software_apps\ncontadores por fuente"]
+    DS -->|"trigger revisión +1 / -1"| APP
+    APP --> GS["catalog_status generado\navailable > review > missing"]
+    GS -->|"trigger de transición"| CC[("catalog_counters, id=1\ntotal / available / review / missing\nversion + updated_at")]
+
+    INV["Invariante:\ntotal = available + review + missing"] -.-> CC
+    CHECK["catalog-projection-check\ncatalog-projection-repair"] -. "auditoría offline" .-> CC
+
+    classDef table fill:#fff4d6,stroke:#b7791f,color:#423;
+    classDef generated fill:#e6f6f8,stroke:#007f86,color:#123;
+    class RS,DS,APP,CC table;
+    class GA,GS generated;

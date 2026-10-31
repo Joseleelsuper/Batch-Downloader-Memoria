@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    participant U as Usuario
+    participant C as Core API
+    participant D as MySQL compartido (tablas Core)
+    participant R as RabbitMQ
+    participant N as Notification service
+    participant H as H2 inbox
+    participant M as Resend SMTP (producción) / Mailpit (local)
+
+    U->>C: Registro o recuperación de cuenta
+    C->>D: Guardar token como hash
+    C->>D: Persistir evento en outbox
+    C->>R: Publicar evento de identidad
+    R->>N: Mensaje al menos una vez
+    N->>H: Adquirir inbox idempotente
+    N->>M: Correo de verificación o recuperación
+    U->>C: Confirmar token e iniciar sesión
+    Note over U,C: Sesión JDBC, CSRF y cookie segura
+    C->>R: Evento terminal de job autenticado
+    R->>N: Notificación solicitada
+    N->>M: Correo READY o PARTIAL

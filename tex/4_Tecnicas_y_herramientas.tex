@@ -2,120 +2,165 @@
 
 \section{Criterios de selección}
 
-TODO: Las tecnologías se han seleccionado buscando tipado estático, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. Dado que esta memoria describe una arquitectura planificada, las elecciones deberán confirmarse con prototipos durante la implementación.
+Las tecnologías se han seleccionado por su tipado, separación de responsabilidades, facilidad de despliegue, observabilidad y posibilidad de escalar los procesos costosos de forma independiente. La selección se ha contrastado mediante la compilación de los servicios Java, las pruebas del scraper y del frontend, la validación de los contratos públicos y los smoke tests del despliegue en Oracle/Coolify.
+
+\section{Mapa tecnológico}
+
+\begin{landscape}
+\begin{figure}[p]
+\centering
+\includegraphics[width=0.96\linewidth,height=0.90\textheight,keepaspectratio]{system_architecture_layers.pdf}
+\caption{Arquitectura de sistema de Batch Downloader.}
+\label{fig:arquitectura-capas}
+\end{figure}
+\end{landscape}
+\FloatBarrier
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth,height=0.90\textheight,keepaspectratio]{technology_stack.pdf}
+\caption{Tecnologías del proyecto.}
+\label{fig:mapa-tecnologico}
+\end{figure}
+\FloatBarrier
 
 \section{Frontend}
 
-\subsection{Vite}
+\subsection{React, React Router, TypeScript y Vite}
 
-Vite se utilizará como herramienta de desarrollo y construcción del cliente. Proporciona un servidor de desarrollo basado en módulos ES y un proceso de construcción optimizado para producción~\cite{vite}. La propuesta evita introducir un framework de interfaz completo desde el inicio y mantiene el frontend próximo a las tecnologías web estándar.
+El cliente utiliza React~18.3 y React DOM para componer la interfaz, React Router~7.18 para representar navegación y filtros en la URL, y TypeScript~5.9 para tipar contratos, estados y formularios. Vite~8.2 proporciona el servidor de desarrollo y la construcción optimizada~\cite{vite}; el plugin oficial de React integra la transformación JSX. Lucide React aporta iconos de interfaz sin introducir una biblioteca de marcas.
 
-\subsection{HTML, CSS y TypeScript}
+HTML y CSS mantienen una tabla compacta y adaptable. Los eventos SSE notifican el progreso de trabajos y WebSocket anuncia cambios del catálogo y de la administración. \emph{translation-service} sirve catálogos JSON en español e inglés; el cliente detecta el idioma del navegador y permite cambiarlo en cualquier momento.
 
-HTML definirá una estructura semántica y accesible; CSS permitirá una interfaz compacta capaz de mostrar muchas aplicaciones; y TypeScript aportará tipos a modelos, respuestas de la API, estados de trabajos y formularios. El tipado compartido reducirá errores al evolucionar el contrato entre el frontend y el backend.
+\subsection{Entrega y pruebas del cliente}
+
+La imagen de producción se construye con Node.js~24 y se entrega mediante Nginx~1.27, que sirve los recursos estáticos y enruta \ruta{/api} al Core. Vitest~4.1, Testing Library, jest-dom y jsdom verifican componentes y flujos sin navegador completo; el proveedor V8 produce cobertura. Todas estas pruebas y código no se incluyen en la imagen de producción.
 
 \section{Backend}
 
-\subsection{Java 26}
+\subsection{Java 25 LTS}
 
-TODO: Java será el lenguaje principal del servidor por su sistema de tipos, madurez, bibliotecas y experiencia previa del autor. Se plantea utilizar Java 26, versión de la plataforma Java SE publicada en marzo de 2026~\cite{java26}. Antes de comenzar la implementación se verificará la compatibilidad de Spring Boot y de las dependencias elegidas; si fuera necesario se adoptará una versión LTS compatible sin cambiar el diseño.
-
+Se utiliza Java 25 LTS para compilar y ejecutar los cuatro servicios del servidor. Las imágenes incorporan Temurin 25.0.5+8~\cite{java25} para aplicar el Critical Patch Update de octubre de 2026 y la mitigación de CVE-2026-91403: se retiran del almacén de confianza las raíces emSign ECC Root CA - G3 y AAA Certificate Services indicadas por Oracle~\cite{oracle-cpu-oct2026,oracle-cve-2026-91403,oracle-emudhra-mitigation}.
 \subsection{Spring Boot}
 
-Spring Boot facilita la creación de aplicaciones autónomas con configuración inicial reducida y características de producción como métricas y comprobaciones de salud~\cite{springboot}. Se prevén los siguientes módulos:
+Los cuatro servicios Java usan Spring Boot~3.5.16~\cite{springboot}. Sus dependencias directas se distribuyen por responsabilidad:
 
 \begin{description}
-	\item[Spring Web:] API REST, validación del protocolo HTTP y entrega de resultados.
-	\item[Spring Security:] autenticación, sesiones o tokens, roles y protección de rutas.
-	\item[Spring Data JPA:] persistencia transaccional y repositorios.
+	\item[Spring Web MVC y WebSocket:] API REST, SSE, comprobaciones de salud y notificación de cambios del catálogo.
+	\item[Spring Security, BCrypt y Spring Session JDBC:] acceso de usuarios mediante enlaces de un solo uso, credencial administrativa con hash, sesiones persistentes, CSRF, cookies seguras, roles y protección de rutas~\cite{springsession}.
+	\item[Spring Data JPA y Spring JDBC:] repositorios transaccionales para identidad, outbox y trabajos, junto con consultas explícitas para las proyecciones de catálogo~\cite{springdatajpa}.
 	\item[Spring Validation:] validación declarativa de entradas y configuraciones.
 	\item[Spring Actuator:] salud, métricas y observabilidad de servicios.
-	\item[Spring AMQP:] publicación y consumo de trabajos mediante RabbitMQ.
+	\item[Spring AMQP:] publicación y consumo de comandos y eventos mediante RabbitMQ.
+	\item[Spring Mail:] envío SMTP desde el servicio de notificaciones.
 \end{description}
+
+Flyway administra las tablas propiedad del Core; el scraper mantiene las suyas con Alembic. El driver MySQL conecta Core con la base compartida, el SDK de MinIO gestiona objetos y H2 conserva los inbox locales del worker y de notificaciones. \emph{springdoc-openapi}~2.6 expone documentación navegable del contrato.
+
+Las pruebas Java usan JUnit~5, Spring Test, Mockito, AssertJ y Spring Rabbit Test. Testcontainers ejecuta los casos que requieren semántica real de MySQL~8.4~\cite{testcontainers}; H2 se limita a pruebas y a los inbox locales que no dependen de funciones MySQL. JaCoCo~0.8.14 genera cobertura. ArchUnit verifica la arquitectura y las dependencias de paquetes~\cite{archunit}.
 
 \subsection{OpenAPI}
 
-OpenAPI se empleará para describir el contrato de la API HTTP. La especificación permite que personas y herramientas comprendan las operaciones de un servicio sin inspeccionar su código~\cite{openapi}. La descripción servirá para generar documentación, validar compatibilidad y facilitar clientes de prueba. No se utilizará para realizar scraping.
+OpenAPI describe el contrato HTTP versionado bajo \ruta{/api/v1}~\cite{openapi}. AsyncAPI documenta los intercambios RabbitMQ y JSON Schema valida cada evento versionado. Estos contratos se comprueban en integración continua y no se utilizan para realizar scraping.
 
 \section{Resolución de fuentes}
 
-\subsection{TODO: Playwright para Java}
+\subsection{Playwright como respaldo del scraper Python}
 
-Playwright controlará un navegador en modo \emph{headless} para páginas que requieran JavaScript, interacción o inspección de red. Su API para Java se distribuye mediante módulos Maven y permite manejar Chromium, Firefox y WebKit~\cite{playwright}. Para cada proveedor se intentará limitar la automatización a pasos conocidos y selectores revisables.
+Playwright controla un navegador en modo \emph{headless} para páginas que requieren JavaScript, interacción o inspección de red~\cite{playwright}. En Batch Downloader se ejecuta desde el scraper Python como último recurso del registro de estrategias, después de los resolvers conocidos, GitHub Releases y análisis HTML. Cada proveedor limita la automatización a pasos conocidos y selectores revisables.
 
 La navegación generalista se mantendrá como mecanismo de respaldo. Los proveedores con procesos complejos podrán disponer de resolvers específicos, de forma que los cambios en una página no afecten al resto del catálogo.
 
-\subsection{TODO: Watcher en Python}
+\subsection{Scraper y supervisor de enriquecimiento en Python}
 
-Un watcher que cada cierto tiempo se ejecuta sobre las URLs para poder obtener información de las fuentes y comprobar si hay cambios.
+La imagen de producción compila CPython~3.14.6 desde la fuente verificada con \ruta{--disable-gil}. Al arrancar comprueba que el GIL permanece deshabilitado después de importar las extensiones nativas; una variable de entorno no puede ocultar una incompatibilidad. FastAPI y Uvicorn proporcionan la API y el servidor ASGI~\cite{fastapi}; Pydantic Settings valida la configuración. SQLAlchemy, Alembic y aiomysql gestionan el catálogo y sus migraciones MySQL~\cite{sqlalchemy,alembic}; aiosqlite se utiliza en pruebas ligeras. La distribución fuente de SQLAlchemy se instala con \ruta{DISABLE\_SQLALCHEMY\_CEXT=1}, tanto en 3.14t como en el control estándar, para usar su implementación Python y evitar que una extensión C reactive el GIL.
+
+HTTPX con HTTP/2 realiza peticiones controladas; selectolax analiza HTML y Playwright~1.61 resuelve páginas que requieren JavaScript. APScheduler inicia ejecuciones periódicas, Tenacity aplica reintentos, tldextract y dnspython apoyan las comprobaciones de dominio y DNS, cryptography cifra las URL, packaging interpreta versiones y structlog produce registros estructurados. Winstall se consulta mediante su API, \ruta{\_\_NEXT\_DATA\_\_} y HTML; GitHub Releases y los recursos de repositorio aportan versiones e iconos cuando existe evidencia suficiente.
+
+Se conserva un único event loop. Un \ruta{ThreadPoolExecutor} acotado recibe exclusivamente parseo HTML, normalización, scoring y deduplicación puros. Las sesiones SQLAlchemy, clientes HTTP, objetos Playwright, eventos, locks y cachés mutables no cruzan hilos. La imagen de producción se valida con CPython 3.14.6t y la configuración de ejecución queda fijada por los manifiestos.
+
+El scheduler adquiere leases y ejecuta \ruta{searcher\_filter}, \ruta{filter\_scraper}, \ruta{scraper\_so\_filter} y \ruta{so\_filter\_descriptor}. El enriquecimiento de descripciones tiene su propia cola persistente; los iconos se resuelven dentro del trabajador de plataforma. pytest, pytest-asyncio y respx cubren el comportamiento asíncrono y HTTP; Ruff y mypy se emplean como comprobaciones estáticas. \ruta{requirements.txt} bloquea las versiones de dependencias de ejecución y prueba para que la imagen y CI sean reproducibles.
 
 \section{Persistencia}
 
 \subsection{MySQL}
 
-MySQL almacenará los datos transaccionales: usuarios, aplicaciones, fuentes, bundles, estrellas, solicitudes, trabajos, estados y registros de auditoría. La elección mantiene un modelo relacional apropiado para restricciones de integridad, relaciones entre entidades y operaciones administrativas.
+MySQL~8.4.13, actualizado con el Critical Patch Update de octubre de 2026~\cite{oracle-cpu-oct2026}, almacena los datos transaccionales de identidad, catálogo, fuentes, bundles, trabajos, outbox y pipeline. Core y scraper comparten una instancia, pero cada uno es propietario de grupos de tablas distintos; las solicitudes públicas de aplicaciones ya no forman parte del esquema. La clasificación pública del catálogo se proyecta de forma incremental: los triggers trasladan los cambios de candidatos a fuentes, aplicaciones y una única fila de contadores, de modo que el endpoint de estadísticas no agrega las tablas operativas.
 
-\subsection{PostgreSQL y pgvector}
+\subsection{H2}
 
-La búsqueda semántica se aislará en PostgreSQL con pgvector. Esta extensión añade tipos y operadores para búsqueda exacta y aproximada de vectores~\cite{pgvector}. Separar este almacenamiento permite evolucionar la parte semántica sin condicionar el modelo transaccional principal.
+\emph{download-worker} y \emph{notification-service} utilizan bases H2 locales para sus inbox idempotentes. Esta persistencia no sustituye MySQL ni representa una copia del catálogo; evita reprocesar mensajes después de un reinicio. H2 también sirve en pruebas Java que no dependen de funciones específicas de MySQL.
 
-La duplicación de información se limitará a los identificadores y metadatos necesarios para generar embeddings. MySQL seguirá siendo la fuente de verdad del catálogo y cualquier vector incluirá la versión o fecha del contenido del que procede.
+\subsection{PostgreSQL, pgvector y servicio semántico}
+
+La composición incluye PostgreSQL~16 con pgvector y un servicio Python independiente. Sus migraciones crean documentos canónicos, una única revisión local del modelo, embeddings de dimensión validada, trabajos con lease y estado de índice. La comprobación en PostgreSQL rechaza cualquier vector cuya dimensión no coincida con el manifiesto del modelo.
+
+El servicio expone una búsqueda interna autenticada y devuelve candidatos, versión de modelo, versión de índice y una señal de degradación. El indexador reconcilia periódicamente el feed del scraper, actualiza solo hashes modificados y conserva el estado suficiente para reconstruir la proyección. MySQL continúa siendo la fuente de verdad efectiva para los datos públicos.
+
+\subsection{Modelo local y degradación segura}
+
+La imagen del servicio semántico contiene el runtime y recibe el modelo aprobado mediante un volumen persistente identificado por un manifiesto. El arranque valida la revisión, dimensión y hash; no descarga pesos de forma dinámica ni envía textos o consultas a Hugging Face. El indexador solo publica una versión cuando la cobertura del feed es coherente con el \ruta{contentHash} de los documentos activos.
+
+La API conserva dos modos explícitos: \ruta{lexical} y \ruta{semantic}. Si la consulta es demasiado corta, el modelo no está disponible, el índice está incompleto o se produce un error, Core ejecuta de nuevo la petición completa en modo léxico. Así se mantienen deterministas los filtros, las facetas y la paginación sin afirmar benchmarks históricos ni entrenamiento de varios modelos.
+
+El control de coherencia compara la cobertura declarada con el feed vigente y conserva una versión anterior para reconstrucción. No se presenta esta comprobación como un benchmark de modelos ni como entrenamiento de una familia de embeddings.
 
 \section{Mensajería y almacenamiento temporal}
 
 \subsection{RabbitMQ}
 
-RabbitMQ desacoplará la API de los workers encargados de resolver, descargar y comprimir. Spring AMQP ofrece una abstracción de alto nivel para soluciones basadas en AMQP y consumidores asíncronos~\cite{springamqp}. Se definirán colas o claves de enrutamiento para generación de ZIP, comprobación periódica de fuentes y notificaciones.
+RabbitMQ~3.13 desacopla la API de los workers encargados de descargar, comprimir y notificar~\cite{rabbitmq}. Spring AMQP ofrece una abstracción de alto nivel para consumidores asíncronos~\cite{springamqp}. Los exchanges versionados transportan comandos y eventos con \emph{eventId}, tipo, versión de esquema y correlación; la entrega es al menos una vez y los inbox proporcionan idempotencia.
 
 Los mensajes contendrán identificadores, no datos sensibles ni archivos. El estado persistente del trabajo permitirá reintentos controlados y evitará depender exclusivamente de la cola.
 
 \subsection{MinIO}
 
-MinIO se reservará para objetos temporales como ZIP preparados, manifiestos o archivos intermedios que deban compartirse entre instancias. Las políticas de expiración eliminarán resultados no descargados. No se utilizará como repositorio permanente de instaladores ni como base de conocimiento para el modelo.
+MinIO almacena temporalmente los ZIP preparados y los objetos intermedios que deben compartirse entre instancias~\cite{minio}. El cliente \ruta{mc} configura el bucket al arrancar. Core conserva el inventario y las reservas de almacenamiento, entrega el ZIP mediante streaming con soporte de rangos y coordina la limpieza al confirmarse el guardado, cancelarse el trabajo o agotarse la actividad. No se utiliza como repositorio permanente de instaladores.
 
-\section{Búsqueda semántica y LLM}
+\subsection{SMTP y Mailpit}
 
-\subsection{Embeddings}
+El servicio de notificaciones consume eventos, conserva su inbox en H2 y envía correo mediante Spring Mail y SMTP~\cite{smtp}. Mailpit~1.30 captura los mensajes en desarrollo; Resend mediante SMTP entrega en producción el enlace de acceso de un solo uso. Las credenciales administrativas siguen un flujo separado. Las variables de correo se inyectan como secretos y no se escriben en la memoria.
 
-Un servicio de embeddings convertirá las consultas y descripciones del catálogo en vectores compatibles. La interfaz del servicio incluirá el identificador del modelo y la dimensión para poder regenerar los datos cuando cambie la representación.
+\section{Enriquecimiento mediante LLM}
 
-\subsection{Groq y desacoplamiento del proveedor}
-
-TODO: Groq se propone como proveedor durante el desarrollo por su rapidez de inferencia y su API compatible con clientes OpenAI~\cite{groq}. El backend no expondrá directamente el SDK al resto de módulos: utilizará puertos propios para generación de embeddings y respuestas. Esto permitirá sustituir el servicio por un modelo local, otra nube o una implementación de prueba.
-TODO: Hacerlo compatible también con openrouter, aunque utilizando el patrón strategy para poder cambiar de proveedor sin modificar el resto de la aplicación.
+Groq y DeepSeek se utilizan exclusivamente para generar descripciones largas. El scraper no expone directamente el proveedor al resto de módulos: una interfaz de generación y una estrategia de fallback permiten cambiar modelo, proveedor o límites sin modificar la cola. Se registran el proveedor, modelo, hash de entrada, fecha y error; una descripción manual no se sustituye automáticamente. Los embeddings se calculan localmente en el servicio semántico y no reutilizan estos proveedores.
 
 \section{Contenedores y despliegue}
 
 \subsection{Docker}
 
-Cada componente se empaquetará en una imagen Docker. Los contenedores aíslan aplicaciones y dependencias y permiten ejecutar la misma unidad en diferentes entornos~\cite{docker}. Para desarrollo se preparará una composición con frontend, API, workers, bases de datos, RabbitMQ y MinIO.
+Cada componente se empaqueta en una imagen Docker~\cite{docker}. \ruta{docker-compose.yml} construye el árbol local y \ruta{docker-compose.ghcr.yml} consume imágenes publicadas en GHCR. La composición incluye Nginx, Core, scraper API y scheduler, worker, notificaciones, traducciones, servicio e indexador semánticos, MySQL, PostgreSQL/pgvector, RabbitMQ, MinIO/\ruta{mc} y Mailpit. Los healthchecks ordenan migraciones y arranque sin mezclar la propiedad de esquemas ni confundir el puerto publicado de PostgreSQL con su puerto interno 5432.
 
 \section{Herramientas de desarrollo y documentación}
 
-Git se utilizará para control de versiones; Maven gestionará dependencias y construcción del backend; npm gestionará el frontend; y \LaTeX{} se utilizará para mantener la memoria y la documentación técnica. Mermaid será la fuente editable de los diagramas de secuencia, que se exportarán a un formato vectorial antes de incorporarlos al documento.
+Git mantiene el control de versiones. Maven~3.9.16 compila y verifica el reactor Java; npm usa el lockfile del frontend. GitHub Actions valida contratos, pruebas y construcción, publica imágenes en GHCR y ejecuta el análisis configurado para SonarQube~\cite{sonarqube}.
+
+La memoria se mantiene con \LaTeX{}, pdf\LaTeX{}, latexmk y BibTeX. Mermaid CLI~11.12 es la fuente editable de los diagramas; Puppeteer utiliza Chromium para renderizarlos en SVG y PDF. Los scripts PowerShell reproducen el proceso y Poppler aporta \ruta{pdfinfo}, extracción de texto y conversión a PNG para la inspección visual final.
 
 \section{Resumen de correspondencia}
 
 \begin{table}[H]
-\centering
-\small
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
-\toprule
-\textbf{Necesidad} & \textbf{Tecnología propuesta}\\
-\midrule
-Cliente web & Vite, HTML, CSS y TypeScript\\
-API y lógica de negocio & Java 26 y Spring Boot\\
-Contrato HTTP & OpenAPI\\
-Datos transaccionales & MySQL\\
-Búsqueda vectorial & PostgreSQL y pgvector\\
-Trabajos asíncronos & RabbitMQ y Spring AMQP\\
-Scraping dinámico & Playwright para Java\\
-Objetos temporales & MinIO con expiración\\
-Asistencia semántica & Embeddings y Groq mediante una interfaz desacoplada\\
-Portabilidad y escalado & Docker \\
-Documentación & \LaTeX{} y Mermaid\\
-\bottomrule
-\end{tabularx}
-\caption{Tecnologías propuestas por responsabilidad.}
-\label{tabla:tecnologias-responsabilidad}
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
+		\toprule
+		\textbf{Necesidad}      & \textbf{Tecnología empleada}                                                 \\
+		\midrule
+		Cliente web             & React, React Router, TypeScript, Vite, Lucide y Nginx                        \\
+		API y lógica de negocio & Java 25 LTS y Spring Boot                                       \\
+		Contrato HTTP y eventos & OpenAPI, AsyncAPI y JSON Schema                                              \\
+		Datos transaccionales   & MySQL 8.4, Flyway, Alembic y proyecciones mediante triggers                  \\
+		Inbox idempotente       & H2 en worker y notificaciones                                                \\
+		Trabajos asíncronos     & RabbitMQ y Spring AMQP                                                       \\
+		Scraping dinámico       & CPython 3.14.6 \emph{free-threaded}, FastAPI, HTTPX, selectolax y Playwright \\
+		Objetos temporales      & MinIO con expiración                                                         \\
+		Descripciones largas    & Groq/DeepSeek mediante una interfaz desacoplada                              \\
+		Búsqueda semántica      & PostgreSQL 16, pgvector, runtime de embeddings y modelo local aprovisionado  \\
+		Pruebas                 & JUnit, Testcontainers, pytest, Vitest, ArchUnit y Testing Library                      \\
+		Portabilidad y entrega  & Docker Compose, GitHub Actions y GHCR                                        \\
+		Documentación           & \LaTeX{}, BibTeX, Mermaid, PowerShell y Poppler                              \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Tecnologías empleadas por responsabilidad.}
+	\label{tabla:tecnologias-responsabilidad}
 \end{table}

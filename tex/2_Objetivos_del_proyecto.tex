@@ -8,13 +8,12 @@ El objetivo general es diseñar e implementar una plataforma web que permita loc
 
 \begin{enumerate}
 	\item Construir un catálogo administrable de software con nombre, descripción, etiquetas, página oficial, sistemas operativos, arquitecturas y estado de disponibilidad.
-	\item Permitir búsquedas parciales por nombre y filtros por etiquetas. El filtrado podrá exigir todas las etiquetas seleccionadas o un mínimo configurado por el usuario.
+	\item Permitir búsqueda por nombre, editor o descripción y combinarla con filtros de estado, sistema operativo, etiquetas y editor, manteniendo la paginación en el servidor.
 	\item Permitir la selección de una o varias aplicaciones. Una selección múltiple se tratará como un bundle temporal para generar un ZIP.
-	\item Crear bundles oficiales, públicos y privados. Los usuarios anónimos podrán personalizar temporalmente los bundles públicos; los usuarios registrados podrán, además, guardar y publicar sus propios bundles.
-	\item Asignar un enlace estable a cada bundle público y ordenar el catálogo de bundles por popularidad, fecha, nombre o etiquetas.
-	\item Incorporar una estrella binaria por usuario y bundle. Cada usuario registrado podrá añadirla o retirarla una vez, y el número total servirá para ordenar los bundles.
-	\item Permitir a los usuarios registrados solicitar la incorporación de una aplicación, proporcionando al menos su nombre y su página oficial.
-	\item Proporcionar al administrador funciones para mantener aplicaciones, etiquetas, reglas de resolución, dominios permitidos y estados del catálogo.
+	\item Consultar y descargar bundles oficiales y propios mediante enlaces estables; cada cuenta puede crear, editar y eliminar sus bundles públicos o privados desde el panel personal.
+	\item Proporcionar acceso mediante enlace de un solo uso por correo, panel personal e historial de descargas, manteniendo separada la autenticación administrativa.
+	\item Proporcionar al administrador funciones para mantener aplicaciones, etiquetas, reglas de resolución, evidencias de fuente y estados del catálogo.
+	\item Clasificar cada aplicación activa de forma exhaustiva como disponible, en revisión o sin instalador, manteniendo contadores incrementales coherentes con el catálogo.
 	\item Informar del progreso de cada descarga, de los archivos incluidos y de los errores que impidan completar una parte de la solicitud.
 \end{enumerate}
 
@@ -23,36 +22,47 @@ El objetivo general es diseñar e implementar una plataforma web que permita loc
 \begin{enumerate}
 	\item Resolver dinámicamente el enlace del instalador desde una fuente oficial mediante una estrategia específica o, como respaldo, mediante navegación automatizada con Playwright.
 	\item Validar protocolo, dominio final, redirecciones, tipo de contenido, extensión y tamaño antes de aceptar un archivo.
-	\item Descargar los instaladores en el servidor, generar un ZIP con un manifiesto y eliminar todos los archivos temporales al terminar, cancelar o expirar el trabajo.
+	\item Descargar los instaladores en el servidor, generar un ZIP con un manifiesto, incluir accesos \ruta{.url} cuando el instalador no es accesible y limpiar el staging y el resultado conforme al guardado, la cancelación y la inactividad.
 	\item Procesar las solicitudes de manera asíncrona con RabbitMQ para separar la interacción web de las operaciones de resolución, descarga y compresión.
-	\item Aplicar reintentos controlados y permitir un resultado parcial cuando una aplicación falle, manteniendo una explicación individual para cada incidencia.
+	\item Aplicar reintentos controlados y permitir resultados \emph{PARTIAL} o \emph{MANUAL\_ONLY} cuando una aplicación falle o solo admita instalación manual, manteniendo una explicación individual para cada incidencia.
 	\item Calcular, cuando las fuentes lo permitan, un tamaño estimado antes de iniciar el trabajo y aplicar límites por archivo, ZIP, usuario, dirección IP y número de operaciones concurrentes.
 \end{enumerate}
+
+\section{Estado de consecución}
+
+La iteración documentada materializa el flujo esencial de catálogo y descarga. El catálogo devuelve los sistemas operativos con un candidato estructuralmente válido y el cliente permite combinarlos con semántica OR mediante parámetros repetidos en la URL. Una comprobación antigua no retira por sí sola una aplicación: la fuente se revalida justo antes de la descarga y solo un resultado terminal explícito modifica su clasificación. MySQL materializa el estado público y sus cuatro contadores mediante columnas generadas y triggers transaccionales.
+
+La creación de un trabajo es asíncrona: Core persiste el trabajo, sus elementos y el evento de salida en una única transacción; RabbitMQ entrega solo identificadores al worker. El resultado se publica como progreso y estado, y la ruta autorizada de Core transmite el ZIP desde MinIO con soporte de reanudación. La admisión reserva capacidad y ordena los trabajos que esperan recursos.
+
+La descarga funciona tanto para selecciones como para bundles. El servidor resuelve un bundle completo, no la previsualización mostrada por la interfaz, impone el máximo de cien aplicaciones y comunica las aplicaciones solicitadas, aceptadas y omitidas. Los trabajos anónimos se asocian a una cookie aleatoria cuyo HMAC se almacena en la base de datos; no se incluyen tokens de propiedad en mensajes, URL ni registros. Los trabajos autenticados y anónimos comparten los estados \emph{QUEUED}, \emph{RESOLVING}, \emph{DOWNLOADING}, \emph{PACKAGING}, \emph{READY}, \emph{PARTIAL}, \emph{MANUAL\_ONLY}, \emph{FAILED}, \emph{CANCELLED} y \emph{EXPIRED}. Para Linux se seleccionan perfiles APT, DNF, Pacman o Zypper y se conservan las comprobaciones SHA-256/GPG y la posibilidad de rollback.
 
 \section{Objetivos de búsqueda semántica}
 
 \begin{enumerate}
-	\item Representar las aplicaciones mediante embeddings generados a partir de sus metadatos y almacenarlos en PostgreSQL mediante pgvector.
-	\item Interpretar consultas en lenguaje natural y recuperar candidatos semánticamente próximos antes de aplicar los filtros ordinarios del catálogo.
-	\item Utilizar un modelo de lenguaje para proponer bundles, explicar recomendaciones y resumir errores a partir de información recuperada del sistema.
-	\item Validar las salidas del modelo mediante esquemas estrictos y mantener desacoplado el proveedor para poder sustituir Groq por un modelo local o por otro servicio.
-	\item Impedir que el modelo resuelva o apruebe enlaces, cambie dominios autorizados, ejecute descargas o modifique reglas sin revisión administrativa.
+	\item Construir un documento canónico por aplicación con nombre, package ID, editor, etiquetas, descripciones, plataformas, arquitecturas, versión y dominio registrado, acompañado de un hash determinista.
+	\item Representar esos documentos mediante un modelo de embeddings local aprovisionado y mantenerlos en PostgreSQL con pgvector como una proyección reconstruible del catálogo MySQL.
+	\item Interpretar consultas en lenguaje natural, enumerar candidatos mediante similitud coseno y aplicar después los filtros ordinarios en MySQL.
+	\item Validar la revisión, dimensión, manifiesto y cobertura del modelo local sin descargar pesos dinámicamente.
+	\item Degradar de forma íntegra al modo literal ante timeout, error, falta de cobertura o consulta no elegible; el índice vectorial nunca decide estados, totales o permisos.
 \end{enumerate}
 
 \section{Objetivos técnicos y de calidad}
 
 \begin{itemize}
-	\item Desarrollar un cliente ligero con Vite, HTML, CSS y TypeScript.
-	\item Construir el backend con Java 26 y Spring Boot, separando las responsabilidades en servicios desplegables y escalables.
+	\item Desarrollar un cliente con React, React Router, Vite, HTML, CSS y TypeScript, con las versiones de Vite/Vitest fijadas por el lockfile.
+	\item Compilar y ejecutar los servicios con Java 25 LTS, manteniendo una separación explícita entre Core API, worker de descarga, notificaciones y traducciones.
 	\item Documentar la API HTTP mediante OpenAPI, cuyo propósito es describir de forma independiente del lenguaje las capacidades de una API~\cite{openapi}.
-	\item Utilizar MySQL para la información transaccional y PostgreSQL con pgvector para la búsqueda vectorial.
-	\item Contenerizar los componentes con Docker y preparar su despliegue compatible con Compose.
+	\item Utilizar MySQL para la información transaccional y su proyección incremental del catálogo; mantener PostgreSQL con pgvector como proyección semántica reconstruible.
+	\item Ejecutar el scraper sobre CPython 3.14.6 \emph{free-threaded}, comprobar que el GIL continúa deshabilitado tras importar extensiones y reservar los hilos para funciones puras de CPU.
+	\item Contenerizar los componentes con Docker y desplegarlos en Compose local y en el VPS de Oracle mediante Coolify, usando imágenes multi-arquitectura de GHCR y tags inmutables.
+	\item Configurar Resend/SMTP, healthchecks, métricas expuestas, copias OCI y monitorización diaria sin afirmar un servidor Prometheus central.
 	\item Definir pruebas unitarias, de integración, de seguridad, de resolución de enlaces, de generación de ZIP y de extremo a extremo.
+	\item Relacionar requisitos no funcionales con características seleccionadas del modelo de calidad de producto ISO/IEC 25010:2023, siguiendo el marco de uso de modelos de ISO/IEC 25002:2024~\cite{iso25010,iso25002}.
 	\item Mantener trazabilidad mediante registros de administración, resolución, descargas y uso del asistente.
 \end{itemize}
 
 \section{Objetivos de seguridad y sostenibilidad}
 
-El sistema deberá reducir los riesgos derivados de procesar URL externas y ejecutables. Para ello se definirán listas de dominios oficiales, bloqueo de redes privadas, límites de redirección, sanitización de nombres, protección frente a SSRF, control de acceso y cuotas de uso. La plataforma no ejecutará los instaladores descargados.
+El sistema reduce los riesgos derivados de procesar URL externas y ejecutables validando HTTPS, host, puerto, todas las direcciones DNS y la IP efectiva tras cada redirección. Se rechazan redes privadas, reservadas, de enlace local y puntos de metadatos; no se degrada a HTTP. A ello se añaden sanitización de nombres, validación de MIME y firma, control de acceso, CSRF y cuotas de uso. La plataforma no ejecuta los instaladores descargados.
 
 Desde el punto de vista de sostenibilidad, se buscará evitar copias permanentes, eliminar temporales, limitar trabajos innecesarios, reutilizar metadatos válidos y escalar los servicios según su carga. También se atenderá a la accesibilidad, la claridad de la información, la protección de datos y el acceso equitativo a la funcionalidad básica.

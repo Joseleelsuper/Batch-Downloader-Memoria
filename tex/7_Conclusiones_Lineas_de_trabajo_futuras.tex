@@ -1,55 +1,41 @@
 \capitulo{7}{Conclusiones y líneas de trabajo futuras}
 
-\section{Conclusiones de la fase de análisis y diseño}
+\section{Conclusiones de la implementación}
 
-La fase documentada permite concretar Batch Downloader como algo más que una página con enlaces. La generación conjunta de instaladores exige resolver fuentes cambiantes, validar destinos, procesar archivos grandes de forma asíncrona, comunicar progreso y eliminar temporales. Estos requisitos justifican la separación entre API, workers, resolvers y almacenamiento temporal.
+Batch Downloader es más que una página con enlaces. La generación conjunta de instaladores exige resolver fuentes cambiantes, validar destinos, procesar archivos grandes de forma asíncrona, comunicar progreso y eliminar temporales. Estos requisitos justifican la separación entre API, workers, resolvers y almacenamiento temporal.
 
-La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacenará conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtendrá en el contexto de un trabajo. Esta política reduce duplicación y favorece la actualización, aunque obliga a asumir que las páginas externas pueden cambiar y que será necesario mantener resolvers y registros.
+La decisión de no conservar instaladores permanentemente se mantiene como principio central. El catálogo almacena conocimiento sobre las aplicaciones y sus fuentes, pero cada archivo se obtiene en el contexto de un trabajo. MinIO conserva temporalmente el staging y el ZIP; las cuotas y la admisión por capacidad impiden aceptar trabajos que no puedan ejecutarse con el espacio disponible.
 
-Los bundles aportan reutilización sin perder control sobre la versión publicada. La personalización temporal permite adaptar una colección a una descarga concreta y la restricción de edición permanente protege la autoría del bundle. La estrella binaria ofrece un mecanismo sencillo de popularidad sin convertir el proyecto en una plataforma de reseñas.
+Los bundles aportan reutilización sin perder control sobre su composición. Las rutas públicas permiten consultar y descargar bundles oficiales y propios públicos; cada cuenta gestiona sus bundles públicos o privados desde el panel personal y consulta su historial de descargas. El acceso ordinario usa enlaces de un solo uso por correo, mientras que la administración mantiene una credencial separada.
 
-La búsqueda semántica resulta útil para consultas por intención, pero solo si permanece subordinada al catálogo y a las reglas deterministas. El modelo de lenguaje se ha delimitado como herramienta explicativa y de propuesta. No tendrá capacidad para aprobar enlaces, descargar archivos ni modificar configuraciones críticas.
+La búsqueda semántica se incorpora sin convertir el modelo en autoridad del catálogo. El modelo se aprovisiona localmente y el índice de PostgreSQL/pgvector se reconstruye desde el feed canónico. Ante una consulta no elegible, un modelo ausente, un índice incompleto o un error de servicio, Core degrada la petición completa a búsqueda literal.
 
-La arquitectura propuesta es amplia y deberá implementarse por etapas. La prioridad será validar un núcleo seguro y observable antes de introducir el LLM. Esta conclusión evita que componentes llamativos oculten los riesgos esenciales del tratamiento de URL y ejecutables externos.
+La entrega también materializa la selección de versiones y perfiles de instalador, el descubrimiento e inspección manual, los accesos \ruta{.url}, los estados \emph{PACKAGING} y \emph{MANUAL\_ONLY} y los bundles Linux para APT, DNF, Pacman y Zypper. El corte final añade traducciones españolas e inglesas y entrega del ZIP por streaming con reanudación y reserva de capacidad. Estas decisiones reducen fricción y riesgo operativo, sin garantizar que todas las fuentes externas estén disponibles.
 
-\section{Limitaciones actuales}
+\section{Limitaciones actuales y verificación}
 
-TODO: El documento no incluye mediciones reales, porque todavía no existe una implementación. Tampoco se ha comprobado la estabilidad de los resolvers frente a proveedores concretos, el consumo de disco durante descargas concurrentes ni la calidad de los embeddings sobre un catálogo real.
+La compatibilidad con Windows, Linux y macOS depende de la disponibilidad y condiciones de las fuentes oficiales. La antigüedad de una resolución no retira por sí sola un candidato estructuralmente válido: si ha caducado, se revalida bajo bloqueo justo antes de descargar. Un fallo terminal invalida el candidato; uno transitorio conserva la categoría y permite reintentar. Cuando solo existe página oficial, el resultado puede contener un acceso \ruta{.url} y finalizar como \emph{MANUAL\_ONLY}.
 
-TODO: La compatibilidad con Windows, Linux y macOS dependerá de la disponibilidad y condiciones de las fuentes oficiales. Algunos proveedores pueden exigir autenticación, aceptación manual de condiciones, elección regional o uso de tiendas propietarias. Esos casos deberán marcarse como no automatizables o requerir una estrategia específica.
-
-TODO: La elección de Java 26 y de versiones concretas de las herramientas deberá revisarse al iniciar el desarrollo. La arquitectura no depende de una versión puntual, pero las combinaciones de Spring Boot, controladores y bibliotecas sí requieren una matriz compatible.
+El repositorio describe un despliegue Oracle/Coolify con imágenes multi-arquitectura, tags inmutables, healthchecks y copias OCI. La observación del sitio confirma que la web pública responde y ofrece el flujo actual de acceso y los textos legales; no demuestra qué revisión exacta ejecuta cada servicio.
 
 \section{Líneas de trabajo futuras}
 
-\subsection{Primera versión funcional}
+\subsection{Rendimiento y pruebas de extremo a extremo}
 
-La primera línea de trabajo será construir un producto mínimo con catálogo, búsqueda por nombre, autenticación, URL directas, Playwright como respaldo, RabbitMQ, generación de ZIP, bundles, estrellas y registros básicos. Las pruebas de SSRF y limpieza temporal serán criterios de aceptación, no mejoras opcionales.
+La siguiente línea de trabajo es ejecutar una campaña reproducible con MySQL, RabbitMQ, MinIO, SMTP de producción y un servidor HTTP controlado. Debe cubrir el flujo visitante--bundle--job--ZIP, revalidación JIT, cancelación, resultados parciales, alternativas manuales, recuperación tras caída y los límites de admisión. Las pruebas de SSRF y limpieza temporal seguirán siendo criterios de aceptación.
 
 \subsection{Resolvers y salud del catálogo}
 
-Se podrán desarrollar resolvers específicos para proveedores frecuentes, comprobaciones programadas y un panel que priorice aplicaciones rotas. El historial permitirá detectar cambios repetidos y decidir qué entradas necesitan mantenimiento manual.
+Se podrán desarrollar resolvers específicos para proveedores frecuentes y mejorar el panel que prioriza aplicaciones rotas. El historial permitirá detectar cambios repetidos y decidir qué entradas necesitan mantenimiento manual. El estado público continuará dependiendo de invalidaciones explícitas, no del paso del tiempo.
 
 \subsection{Rendimiento y streaming}
 
 Tras medir el uso de disco y memoria se estudiará añadir archivos al ZIP mediante streaming. Esta técnica reduciría almacenamiento temporal, pero requiere resolver cuidadosamente los fallos parciales, la cancelación y la imposibilidad de conocer el tamaño final.
 
-\subsection{Búsqueda semántica}
+\subsection{Accesibilidad y calidad de la localización}
 
-Será necesario evaluar modelos de embeddings, umbrales y métricas sobre consultas representativas. La utilidad se medirá comparando resultados semánticos con búsquedas convencionales y verificando que los filtros de compatibilidad nunca se omiten.
-
-\subsection{Modelo local y privacidad}
-
-La interfaz desacoplada permitirá probar un modelo ejecutado localmente. Deberán compararse calidad, latencia, consumo energético, coste y privacidad frente al proveedor remoto. Los registros enviados al modelo se minimizarán y anonimizarán cuando sea posible.
-
-\subsection{Despliegue y escalado}
-
-Docker Compose cubrirá el entorno inicial. Un despliegue distribuido deberá incluir gestión de secretos, límites de recursos, copias de seguridad y observabilidad.
-
-\subsection{Accesibilidad e internacionalización}
-
-La interfaz podrá ampliarse con varios idiomas, navegación completa por teclado, mensajes compatibles con lectores de pantalla y pruebas sobre criterios WCAG. La accesibilidad deberá validarse desde las primeras pantallas y no añadirse únicamente al final.
+La interfaz ya publica catálogos en español e inglés. Queda por revisar con usuarios la calidad de traducciones y completar las descripciones largas pendientes en cada idioma.
 
 \section{Cierre}
 
-Batch Downloader propone reunir en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles y búsqueda semántica. El diseño establece límites claros para cada componente y proporciona una base verificable para comenzar la implementación sin presentar como terminadas funcionalidades que todavía deben construirse y probarse.
+Batch Downloader reúne en una experiencia sencilla un conjunto complejo de responsabilidades: catálogo, seguridad, procesamiento asíncrono, bundles con propiedad explícita, enriquecimiento de descripciones, instaladores Linux y recuperación semántica degradable. La implementación establece límites claros para cada componente y proporciona una base verificable para continuar el trabajo sin presentar como terminadas funciones retiradas, campañas de carga o cambios contractivos de base de datos aún no promovidos.

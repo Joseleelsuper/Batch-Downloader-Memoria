@@ -25,7 +25,7 @@
 	linkcolor = {blue!45!black},
 	citecolor = {blue!45!black},
 	urlcolor = {blue!55!black},
-	pdftitle = {Plataforma web para la descarga centralizada de software},
+	pdftitle = {Aplicación web de descarga centralizada de software con gestión de bundles y búsqueda semántica mediante embeddings},
 	pdfauthor = {José Gallardo Caballero}
 }
 \urlstyle{same}
@@ -380,7 +380,7 @@
 \newcommand{\nombre}{José Gallardo Caballero}
 
 % Datos de portada
-\title{Plataforma web para la descarga centralizada de software con gestión de bundles y búsqueda semántica mediante LLMs}
+\title{Aplicación web de descarga centralizada de software con gestión de bundles y búsqueda semántica mediante embeddings}
 \author{\nombre}
 \tutor{José Manuel Aroca Fernández, Rodrigo Pascual García}
 \date{\today}
@@ -403,7 +403,7 @@
 
 \noindent Expone:
 
-\noindent Que el alumno D. \nombre, con DNI 71478806G, ha realizado el Trabajo final de Grado en Ingeniería Informática titulado Plataforma web para la descarga centralizada de software con gestión de bundles y búsqueda semántica mediante LLMs.
+\noindent Que el alumno D. \nombre, con DNI 71478806G, ha realizado el Trabajo final de Grado en Ingeniería Informática titulado \emph{Aplicación web de descarga centralizada de software con gestión de bundles y búsqueda semántica mediante embeddings}.
 
 \noindent Y que dicho trabajo ha sido realizado por el alumno bajo la dirección del que suscribe, en virtud de lo cual se autoriza su presentación y defensa.
 
@@ -447,18 +447,18 @@ En Burgos, {\large \today}
 % Abstract en castellano
 \renewcommand*\abstractname{Resumen}
 \begin{abstract}
-La instalación inicial de un equipo obliga habitualmente a localizar y descargar cada aplicación desde una página distinta. Este Trabajo de Fin de Grado plantea el diseño de \emph{Batch Downloader}, una plataforma web que centralizará un catálogo de software y permitirá seleccionar varias aplicaciones para obtener sus instaladores oficiales agrupados en un único archivo ZIP.
+La instalación inicial de un equipo obliga habitualmente a localizar y descargar cada aplicación desde una página distinta. Este Trabajo de Fin de Grado presenta \emph{Batch Downloader}, una plataforma web que centraliza un catálogo de software y permite seleccionar varias aplicaciones para obtener sus instaladores oficiales agrupados en un único archivo ZIP.
 
-La plataforma no mantendrá ejecutables almacenados de forma permanente. Cada solicitud dará lugar a un trabajo asíncrono que resolverá los enlaces oficiales, validará los destinos, descargará temporalmente los archivos, generará el ZIP y eliminará los artefactos cuando termine o expire el proceso. El sistema incorporará cuentas de usuario, bundles públicos y privados, una valoración binaria mediante estrellas, solicitudes de nuevas aplicaciones y un panel de administración para mantener el catálogo y revisar errores.
+La plataforma no mantiene ejecutables de forma permanente. Cada solicitud crea un trabajo asíncrono que resuelve y valida fuentes externas, descarga temporalmente los archivos y prepara un ZIP que Core entrega mediante streaming y limpia según el estado de guardado y la actividad. El scraper y la búsqueda semántica constituyen dos partes centrales del proyecto. El sistema admite descargas anónimas, bundles oficiales y personales, acceso de usuarios mediante enlaces de un solo uso por correo y una interfaz en español e inglés.
 
-Como ampliación, se diseña una capa de búsqueda semántica basada en embeddings y un modelo de lenguaje. Esta capa permitirá interpretar consultas expresadas en lenguaje natural, proponer bundles y explicar incidencias, pero no tendrá autoridad para descargar archivos, modificar dominios permitidos ni eludir las validaciones de seguridad.
+La búsqueda ofrece modos literal y semántico. El servicio semántico usa un modelo local aprovisionado en la imagen o en el volumen persistente, sin descargar pesos dinámicamente; PostgreSQL con pgvector mantiene una proyección reconstruible, mientras MySQL conserva la autoridad sobre filtros, estados, facetas y paginación. Ante un índice incompleto, una consulta no elegible o un fallo, la petición completa se degrada a modo literal. Esta ampliación no introduce recomendaciones generativas ni creación automática de bundles.
 
-La arquitectura propuesta utiliza Vite y TypeScript en el cliente, Java 26 y Spring Boot en el servidor, MySQL para los datos transaccionales, PostgreSQL con pgvector para los vectores semánticos, RabbitMQ para el procesamiento asíncrono, Playwright para la resolución dinámica de páginas y contenedores Docker para cada servicio.
+La arquitectura utiliza Vite y TypeScript en el cliente, Java 25 y Spring Boot en el servidor, MySQL para los datos transaccionales, PostgreSQL con pgvector para la proyección semántica, RabbitMQ para el procesamiento asíncrono, Playwright para la resolución dinámica de páginas y contenedores Docker. La evaluación relaciona requisitos, riesgos y pruebas en dos cortes identificados de Git; los resultados no ejecutados se distinguen de los verificados.
 \end{abstract}
 
 \renewcommand*\abstractname{Descriptores}
 \begin{abstract}
-descarga de software, bundles, Spring Boot, Playwright, procesamiento asíncrono, búsqueda semántica, embeddings, modelos de lenguaje, seguridad web
+descarga de software, bundles, Spring Boot, Playwright, procesamiento asíncrono, búsqueda semántica, embeddings locales, pgvector, seguridad web
 \end{abstract}
 
 \clearpage
@@ -466,18 +466,18 @@ descarga de software, bundles, Spring Boot, Playwright, procesamiento asíncrono
 % Abstract en inglés
 \renewcommand*\abstractname{Abstract}
 \begin{abstract}
-Setting up a computer usually requires locating and downloading every application from a different website. This Bachelor's Degree Final Project proposes the design of \emph{Batch Downloader}, a web platform that will provide a centralized software catalogue and allow users to select several applications and obtain their official installers grouped into a single ZIP archive.
+Setting up a computer usually requires locating and downloading every application from a different website. This Bachelor's Degree Final Project presents \emph{Batch Downloader}, a web platform that provides a centralized software catalogue and allows users to select several applications and obtain their official installers grouped into a single ZIP archive.
 
-The platform will not store executable files permanently. Each request will create an asynchronous job that resolves official links, validates destinations, temporarily downloads the files, generates the ZIP archive, and removes all temporary artefacts when the process finishes or expires. The system will include user accounts, public and private bundles, binary star ratings, software requests, and an administration panel for catalogue maintenance and error review.
+The platform does not store executable files permanently. Each request creates an asynchronous job that resolves and validates external sources, temporarily downloads the files, and prepares a ZIP archive. Core streams the archive to the user and cleans up storage according to save and activity state. Source scraping and semantic search are both central to the project. The system supports anonymous downloads, official and user-owned bundles, single-use email links for user sign-in, and a Spanish and English interface.
 
-As an extension, the design includes a semantic search layer based on embeddings and a language model. This layer will interpret natural-language queries, suggest bundles, and provide clearer explanations of failures. However, it will not be allowed to download files, change trusted domains, or bypass the platform's security controls.
+Search supports lexical and semantic modes. A locally provisioned embedding model runs without dynamic weight downloads; PostgreSQL with pgvector stores a rebuildable projection, while MySQL remains authoritative for filters, status, facets, and pagination. An incomplete or unavailable semantic index, an ineligible query, or a service failure causes the entire request to fall back to lexical search. This extension does not add generative recommendations or automatic bundle creation.
 
-The proposed architecture uses Vite and TypeScript for the client, Java 26 and Spring Boot for the server, MySQL for transactional data, PostgreSQL with pgvector for semantic vectors, RabbitMQ for asynchronous processing, Playwright for dynamic page resolution, and Docker containers for each service.
+The architecture uses Vite and TypeScript for the client, Java 25 and Spring Boot for the server, MySQL for transactional data, PostgreSQL with pgvector for the semantic projection, RabbitMQ for asynchronous processing, Playwright for dynamic page resolution, and Docker containers. The evaluation links requirements, risks, and tests across two identified Git revisions and distinguishes executed results from unverified claims.
 \end{abstract}
 
 \renewcommand*\abstractname{Keywords}
 \begin{abstract}
-software download, bundles, Spring Boot, Playwright, asynchronous processing, semantic search, embeddings, large language models, web security
+software download, bundles, Spring Boot, Playwright, asynchronous processing, semantic search, local embeddings, pgvector, web security
 \end{abstract}
 
 \clearpage
@@ -495,6 +495,8 @@ software download, bundles, Spring Boot, Playwright, asynchronous processing, se
 \clearpage
 
 \input{./tex/0_Acronimos}
+\clearpage
+\input{./tex/0_Glosario}
 \clearpage
 
 \mainmatter
