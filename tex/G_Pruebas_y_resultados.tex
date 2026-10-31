@@ -1,0 +1,90 @@
+\apendice{Pruebas y resultados}
+\label{anexo:pruebas}
+
+\section{Alcance y método de repetición}
+
+Se compararon dos árboles Git de la aplicación:
+\begin{description}
+\item[C1] 19 de septiembre de 2026; \ruta{afb30bb6dddb584fabce86358ff679cd7a7e9aa7}.
+\item[C2] 14 de octubre de 2026; \ruta{79d3a3de401b757f92c4ee2d6360628cbe17a37e}.
+\end{description}
+Las ejecuciones se efectuaron el 15 de octubre de 2026 en Windows, con Python 3.14, Node y Vitest para la interfaz, y Maven dentro de la imagen \ruta{maven:3.9.16-eclipse-temurin-26} para Java. Las pruebas de persistencia usaron contenedores locales reales de MySQL y PostgreSQL/pgvector. C1 se ejecutó en un worktree del commit indicado. C2 se ejecutó en el checkout \ruta{cd55d96}; se comprobó que su objeto Git \ruta{tree} coincide con el de \ruta{79d3a3d}. Así, los resultados C2 corresponden al mismo contenido, aunque no al mismo objeto de commit. No se modificó el producto para esta memoria.
+
+Para repetir el ciclo, se obtiene un árbol limpio de cada SHA y se ejecutan las suites seleccionadas de la tabla~\ref{tabla:ciclos-prueba}. En Python se invoca \ruta{py -3.14 -m pytest -q} con los ficheros indicados; en la interfaz, \ruta{npx vitest run} con los ficheros indicados; en Java, \ruta{mvn test} con selección \ruta{-Dtest} para los módulos Core y worker, después de disponer de sus dependencias Maven. La integración de MySQL y PostgreSQL requiere Docker operativo. El nombre de cada fichero de prueba y el SHA hacen reproducible la selección; los XML de Surefire y la salida de pytest/Vitest son la evidencia de ejecución local, no una medición de producción.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\textwidth}{p{0.16\textwidth}p{0.33\textwidth}p{0.25\textwidth}X}
+\toprule
+\textbf{Corte} & \textbf{Selección} & \textbf{Resultado real} & \textbf{Alcance}\\
+\midrule
+C1 & Java: cuatro clases; scraper: tres ficheros; semántica: tres; web: tres. & 27 + 41 + 8 + 24 = 100 superadas; ninguna fallida. & Incluye una prueba MySQL y dos PostgreSQL.\\
+C2 & Java: doce clases; scraper: cinco ficheros; semántica: cuatro; web: cinco. & 73 + 65 + 19 + 30 = 187 superadas; ninguna fallida. & Incluye dos pruebas MySQL y seis PostgreSQL.\\
+\bottomrule
+\end{tabularx}
+\caption{Ciclos focalizados ejecutados el 15 de octubre de 2026.}
+\label{tabla:ciclos-prueba}
+\end{table}
+
+En C1, las clases Java fueron \ruta{DownloadJobServiceTest}, \ruta{PublicHttpsUriPolicyTest}, \ruta{ZipArchiveBuilderTest} y \ruta{DownloadJobProcessorTest}. En C2 se añadieron \ruta{IdentityServiceTokenTest}, \ruta{IdentityControllerTest}, \ruta{CatalogControllerTest}, \ruta{SemanticSearchClientTest}, \ruta{DownloadDeliveryServiceTest}, \ruta{DownloadJobControllerTest}, \ruta{DownloadStorageBudgetTest} y \ruta{OperationalRetentionPrunerTest}. Core reside en \ruta{services/core-api}; el worker, en \ruta{services/download-worker}. Los resultados Java se comprobaron en los informes XML de Surefire de ambos módulos.
+
+Para el scraper, C1 ejecutó \ruta{test\_validator.py}, \ruta{test\_safe\_http\_wrappers.py} y \ruta{test\_catalog\_projection\_mysql.py}; C2 añadió \ruta{test\_catalog\_projection.py} y \ruta{test\_description\_enricher.py}. Sus fuentes están en \ruta{api/scraper/tests}. Para semántica, C1 ejecutó \ruta{test\_model\_validation.py}, \ruta{test\_http\_policies.py} y \ruta{test\_store\_postgres.py}; C2 ejecutó \ruta{test\_search.py}, \ruta{test\_model\_validation.py}, \ruta{test\_indexer.py} y \ruta{test\_store\_postgres.py}, dentro de \ruta{services/semantic-service}. En la web, C1 ejecutó \ruta{AccountPages.test.tsx}, \ruta{AppSearchBar.test.tsx} y \ruta{i18n.test.tsx}; C2 añadió \ruta{account.test.ts} y \ruta{AdminScraperPage.test.tsx}. Estas pruebas están en el cliente de \ruta{services/webapp}. Los recuentos corresponden a estas selecciones, no a todas las pruebas del repositorio.
+
+\section{Casos ligados a los riesgos}
+
+Cada caso especifica condición, acción, expectativa y resultado observado. La referencia CP coincide con la tabla de trazabilidad~\ref{tabla:trazabilidad} y con el registro de riesgos~\ref{tabla:respuestas-riesgos}. \emph{Superado localmente} significa que pasó la selección indicada; \emph{parcial} o \emph{pendiente} impiden inferir el cierre del riesgo completo.
+
+\begingroup\small\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.08\textwidth}>{\raggedright\arraybackslash}p{0.42\textwidth}>{\raggedright\arraybackslash}p{0.40\textwidth}}
+\caption{Casos de prueba y resultado observado en C2.}\label{tabla:casos-prueba}\\
+\toprule
+\textbf{ID} & \textbf{Precondición, acción y expectativa} & \textbf{Resultado, estado y evidencia}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Precondición, acción y expectativa} & \textbf{Resultado, estado y evidencia}\\
+\midrule
+\endhead
+CP-01 & Dadas URL controladas con IP privada, HTTP o redirección insegura, validar el destino antes de descargar; debe rechazarse. & \textbf{Superado local.} Pasaron los validadores del scraper y \ruta{PublicHttpsUriPolicyTest}. No se atacó la web pública.\\
+CP-02 & Dadas respuestas simuladas de proveedores, resolver y revalidar una fuente; una página o wrapper no debe aceptarse como instalador. & \textbf{Parcial.} Pasaron los validadores y la proyección del scraper. No se ensayó la disponibilidad futura de cada editor.\\
+CP-03 & Dado un nombre o contenido no confiable, empaquetar solo entradas aceptadas y producir un manifiesto coherente; los casos parciales han de conservar estado. & \textbf{Superado local.} Pasaron \ruta{ZipArchiveBuilderTest} y \ruta{DownloadJobProcessorTest} en C1 y C2. No se inspeccionó cada instalador real.\\
+CP-04 & Dados trabajos simultáneos y límites de espacio, aplicar presupuesto, cola y entrega autorizada; no liberar reserva antes de limpiar. & \textbf{Parcial.} Pasaron las pruebas de presupuesto, entrega y retención en C2. Faltan carga y fallo de disco.\\
+CP-05 & Dado un enlace de acceso válido o ya usado y un trabajo de otro propietario, autenticar una sola vez y restringir operaciones. & \textbf{Parcial.} Pasaron las pruebas de identidad, acceso y trabajos en C2. No se certificó toda la autorización de extremo a extremo.\\
+CP-06 & Dado MySQL real con historial de esquema, aplicar migraciones, cambiar fuentes y revisar proyección, contadores y rollback. & \textbf{Superado local.} Pasó la prueba MySQL del scraper: un caso en C1 y dos en C2. No se restauró una copia de producción.\\
+CP-07 & Inventariar datos, terceros y retenciones y comprobar purga efectiva en sesiones, autenticación y auditoría. & \textbf{Pendiente en C2.} En ese corte no se acreditó una comprobación integral de la purga. La actualización posterior se recoge en la sección~\ref{sec:pruebas-retencion}.\\
+CP-08 & Dado un índice ausente o incompleto, buscar y degradar la petición completa a literal; con índice sano, respetar filtros y página de MySQL. & \textbf{Superado local.} Pasaron búsqueda, indexador, PostgreSQL y clientes Core en C2. Incluye seis casos PostgreSQL reales; no mide latencia pública.\\
+CP-09 & Dada una copia de los datos y volúmenes de producción, restaurar en un entorno aislado, verificar migraciones y abrir un trabajo completo. & \textbf{Pendiente.} Existen procedimiento y scripts, pero no evidencia de restauración completa ejecutada.\\
+CP-10 & Dadas las dos revisiones, contrastar afirmaciones con código y pruebas, compilar fuentes y revisar páginas y referencias. & \textbf{Superado en documentación.} Los tres documentos compilan y se revisaron páginas clave; no se valida aquí el contrato OpenAPI.\\
+CP-11 & Para cada editor, comparar licencia y términos de descarga con la automatización prevista antes de incorporarlo. & \textbf{Pendiente.} Se revisó el marco general, pero no se acredita autorización individual para todas las fuentes.\\
+CP-12 & Dadas preferencias ES/EN y descripciones incompletas, cambiar idioma y detectar ausencia por idioma. & \textbf{Parcial.} Pasaron cuatro pruebas i18n en C1 y seis en C2, además de las de descripciones; faltan backfill completo y revisión humana.\\
+\bottomrule
+\end{longtable}
+\endgroup
+
+\section{Observación pública, incidencias y límites}
+
+La consulta funcional de \url{https://batchdownloader.dev/} permitió observar la interfaz, el acceso por correo y las páginas \ruta{/privacy} y \ruta{/terms}.
+
+No se registraron fallos en las selecciones automatizadas anteriores. En C2 quedaron abiertas como incidencias de verificación: la comprobación integral de la purga y revisión de terceros (R-07), la restauración completa (R-09), las condiciones por editor (R-11), el backfill bilingüe (R-12) y la capacidad bajo carga (R-03). Los resultados históricos del informe cronológico se utilizan para localizar cambios, pero no se suman a los recuentos ejecutados ni se presentan como comprobaciones actuales.
+
+\section{Actualización de retención: 24 de octubre de 2026}
+\label{sec:pruebas-retencion}
+
+Esta selección posterior corresponde al árbol de trabajo de la rama \ruta{development}; se registra por separado de C1 y C2. Se ejecutaron pruebas Java con Maven, Temurin 25.0.5+8 y contenedores desechables, y pruebas Python de copias y Compose. Los recuentos de la tabla no duplican los casos repetidos durante la corrección.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\textwidth}{p{0.20\textwidth}p{0.14\textwidth}X}
+\toprule
+\textbf{Selección} & \textbf{Superadas} & \textbf{Comprobación}\\
+\midrule
+Core & 29 & Retención, descarte de correo caducado, retirada de destinatarios, baja de cuenta y coordinador de almacenamiento; incluye 22 casos con MySQL real.\\
+Worker & 1 & Retirada de identificadores completados, conservando reservas asociadas a trabajos.\\
+Notificaciones & 9 & Clasificación de errores sin persistir su contenido personal y limpieza de mensajes procesados o fallidos; incluye una prueba con H2 real.\\
+Traducciones & 12 & Compilación y lectura de catálogos español e inglés y su contrato HTTP.\\
+Copias & 7 & Fechas, límites y rutas; integra el script Bash con repositorios Restic locales y verifica que un fallo de listado impide ejecutar el borrado.\\
+Compose & 18 & Agregación de salud, dependencias y capacidades de la composición.\\
+\bottomrule
+\end{tabularx}
+\caption{Pruebas focalizadas de la política de retención: 51 Java y 25 Python.}
+\end{table}
